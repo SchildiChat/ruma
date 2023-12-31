@@ -479,6 +479,15 @@ pub struct SlidingSyncRoom {
     /// relying on the latest event.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<MilliSecondsSinceUnixEpoch>,
+
+    /// The number of unread events since the latest read receipt.
+    ///
+    /// This uses the unstable prefix in [MSC2654].
+    ///
+    /// [MSC2654]: https://github.com/matrix-org/matrix-spec-proposals/pull/2654
+    #[cfg(feature = "unstable-msc2654")]
+    #[serde(rename = "org.matrix.msc2654.unread_count", skip_serializing_if = "Option::is_none")]
+    pub unread_count: Option<UInt>,
 }
 
 impl SlidingSyncRoom {
