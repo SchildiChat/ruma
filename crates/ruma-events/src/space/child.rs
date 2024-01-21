@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 #[ruma_event(type = "m.space.child", kind = State, state_key_type = OwnedRoomId)]
 pub struct SpaceChildEventContent {
     /// List of candidate servers that can be used to join the room.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub via: Vec<OwnedServerName>,
 
     /// Provide a default ordering of siblings in the room list.
