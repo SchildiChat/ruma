@@ -1,5 +1,31 @@
 # [unreleased]
 
+Breaking changes:
+
+- The properties of `SecretStorageV1AesHmacSha2Properties` are now `Option`al.
+- Remove `event_id` methods from relation types
+- The required power level is different whether the user wants to redact their
+  own event or an event from another user:
+  -`RoomPowerLevels::user_can_redact` is split into `user_can_redact_own_event`
+    and `user_can_redact_event_of_other`,
+  - `PowerLevelAction::Redact` is split into `RedactOwn` and `RedactOther`.
+
+Improvements:
+
+- Don't fail event content parsing on invalid relation
+  - We previously already accepted custom or slightly malformed relations
+  - Now, even invalid / missing `rel_type` and `event_id` are accepted
+- Implement `From<RoomPowerLevels>` for `ruma_common::push::PushConditionPowerLevelsCtx`
+- Add methods on `PowerLevels` to check if some actions are permitted based on
+  the target user's power level.
+
+# 0.27.11
+
+- Add unstable support for `m.call.notify` events
+  (unstable type `org.matrix.msc4075.call.notify`)
+
+# 0.27.10
+
 Deprecations:
 
 - Deprecate `event_id` methods on `Relation` types

@@ -12,7 +12,7 @@ mod spec_links;
 
 use spec_links::check_spec_links;
 
-const MSRV: &str = "1.70";
+const MSRV: &str = "1.75";
 
 #[derive(Args)]
 pub struct CiArgs {
@@ -277,7 +277,7 @@ impl CiTask {
         cmd!(
             "
             rustup run {NIGHTLY} cargo clippy --target wasm32-unknown-unknown
-                -p ruma-common --features api,events,js,markdown,rand
+                -p ruma-common --features api,js,rand
             "
         )
         .run()

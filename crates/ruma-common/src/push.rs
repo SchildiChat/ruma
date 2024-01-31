@@ -38,8 +38,9 @@ pub use self::condition::RoomVersionFeature;
 pub use self::{
     action::{Action, Tweak},
     condition::{
-        ComparisonOperator, FlattenedJson, FlattenedJsonValue, PushCondition, PushConditionRoomCtx,
-        RoomMemberCountIs, ScalarJsonValue, _CustomPushCondition,
+        ComparisonOperator, FlattenedJson, FlattenedJsonValue, PushCondition,
+        PushConditionPowerLevelsCtx, PushConditionRoomCtx, RoomMemberCountIs, ScalarJsonValue,
+        _CustomPushCondition,
     },
     iter::{AnyPushRule, AnyPushRuleRef, RulesetIntoIter, RulesetIter},
     predefined::{
@@ -56,23 +57,27 @@ pub use self::{
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 pub struct Ruleset {
     /// These rules configure behavior for (unencrypted) messages that match certain patterns.
+    #[serde(default, skip_serializing_if = "IndexSet::is_empty")]
     pub content: IndexSet<PatternedPushRule>,
 
     /// These user-configured rules are given the highest priority.
     ///
     /// This field is named `override_` instead of `override` because the latter is a reserved
     /// keyword in Rust.
-    #[serde(rename = "override")]
+    #[serde(rename = "override", default, skip_serializing_if = "IndexSet::is_empty")]
     pub override_: IndexSet<ConditionalPushRule>,
 
     /// These rules change the behavior of all messages for a given room.
+    #[serde(default, skip_serializing_if = "IndexSet::is_empty")]
     pub room: IndexSet<SimplePushRule<OwnedRoomId>>,
 
     /// These rules configure notification behavior for messages from a specific Matrix user ID.
+    #[serde(default, skip_serializing_if = "IndexSet::is_empty")]
     pub sender: IndexSet<SimplePushRule<OwnedUserId>>,
 
     /// These rules are identical to override rules, but have a lower priority than `content`,
     /// `room` and `sender` rules.
+    #[serde(default, skip_serializing_if = "IndexSet::is_empty")]
     pub underride: IndexSet<ConditionalPushRule>,
 }
 
@@ -988,7 +993,9 @@ mod tests {
 
     use super::{
         action::{Action, Tweak},
-        condition::{PushCondition, PushConditionRoomCtx, RoomMemberCountIs},
+        condition::{
+            PushCondition, PushConditionPowerLevelsCtx, PushConditionRoomCtx, RoomMemberCountIs,
+        },
         AnyPushRule, ConditionalPushRule, PatternedPushRule, Ruleset, SimplePushRule,
     };
     use crate::{
@@ -1014,6 +1021,14 @@ mod tests {
         });
 
         set
+    }
+
+    fn power_levels() -> PushConditionPowerLevelsCtx {
+        PushConditionPowerLevelsCtx {
+            users: BTreeMap::new(),
+            users_default: int!(50),
+            notifications: NotificationPowerLevels { room: int!(50) },
+        }
     }
 
     #[test]
@@ -1264,7 +1279,6 @@ mod tests {
                         "enabled": true
                     },
                 ],
-                "room": [],
                 "content": [
                     {
                         "actions": [
@@ -1283,8 +1297,6 @@ mod tests {
                         "enabled": true
                     }
                 ],
-                "sender": [],
-                "underride": [],
             })
         );
     }
@@ -1431,9 +1443,7 @@ mod tests {
             member_count: uint!(2),
             user_id: owned_user_id!("@jj:server.name"),
             user_display_name: "Jolly Jumper".into(),
-            users_power_levels: BTreeMap::new(),
-            default_power_level: int!(50),
-            notification_power_levels: NotificationPowerLevels { room: int!(50) },
+            power_levels: Some(power_levels()),
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Default::default(),
         };
@@ -1443,9 +1453,7 @@ mod tests {
             member_count: uint!(100),
             user_id: owned_user_id!("@jj:server.name"),
             user_display_name: "Jolly Jumper".into(),
-            users_power_levels: BTreeMap::new(),
-            default_power_level: int!(50),
-            notification_power_levels: NotificationPowerLevels { room: int!(50) },
+            power_levels: Some(power_levels()),
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Default::default(),
         };
@@ -1536,9 +1544,7 @@ mod tests {
             member_count: uint!(2),
             user_id: owned_user_id!("@jj:server.name"),
             user_display_name: "Jolly Jumper".into(),
-            users_power_levels: BTreeMap::new(),
-            default_power_level: int!(50),
-            notification_power_levels: NotificationPowerLevels { room: int!(50) },
+            power_levels: Some(power_levels()),
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Default::default(),
         };
@@ -1677,9 +1683,7 @@ mod tests {
             member_count: uint!(100),
             user_id: owned_user_id!("@jj:server.name"),
             user_display_name: "Jolly Jumper".into(),
-            users_power_levels: BTreeMap::new(),
-            default_power_level: int!(50),
-            notification_power_levels: NotificationPowerLevels { room: int!(50) },
+            power_levels: Some(power_levels()),
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Default::default(),
         };
@@ -1789,9 +1793,7 @@ mod tests {
             member_count: uint!(100),
             user_id: owned_user_id!("@jj:server.name"),
             user_display_name: "Jolly Jumper".into(),
-            users_power_levels: BTreeMap::new(),
-            default_power_level: int!(50),
-            notification_power_levels: NotificationPowerLevels { room: int!(50) },
+            power_levels: Some(power_levels()),
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Default::default(),
         };
@@ -1832,6 +1834,39 @@ mod tests {
         assert_eq!(
             set.get_match(&message, context).unwrap().rule_id(),
             PredefinedOverrideRuleId::IsRoomMention.as_ref()
+        );
+    }
+
+    #[test]
+    fn invite_for_me_applies() {
+        let set = Ruleset::server_default(user_id!("@jolly_jumper:server.name"));
+
+        let context = &PushConditionRoomCtx {
+            room_id: owned_room_id!("!far_west:server.name"),
+            member_count: uint!(100),
+            user_id: owned_user_id!("@jj:server.name"),
+            user_display_name: "Jolly Jumper".into(),
+            // `invite_state` usually doesn't include the power levels.
+            power_levels: None,
+            #[cfg(feature = "unstable-msc3931")]
+            supported_features: Default::default(),
+        };
+
+        let message = serde_json::from_str::<Raw<JsonValue>>(
+            r#"{
+                "content": {
+                    "membership": "invite"
+                },
+                "state_key": "@jolly_jumper:server.name",
+                "sender": "@admin:server.name",
+                "type": "m.room.member"
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            set.get_match(&message, context).unwrap().rule_id(),
+            PredefinedOverrideRuleId::InviteForMe.as_ref()
         );
     }
 }

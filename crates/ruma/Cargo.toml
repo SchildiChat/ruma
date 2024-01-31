@@ -7,7 +7,7 @@ homepage = "https://ruma.io/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.9.3"
+version = "0.9.4"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -212,8 +212,8 @@ unstable-msc3932 = ["ruma-common/unstable-msc3932"]
 unstable-msc3954 = ["ruma-events?/unstable-msc3954"]
 unstable-msc3955 = ["ruma-events?/unstable-msc3955"]
 unstable-msc3956 = ["ruma-events?/unstable-msc3956"]
-unstable-msc3958 = ["ruma-common/unstable-msc3958"]
 unstable-msc3983 = ["ruma-client-api?/unstable-msc3983"]
+unstable-msc4075 = ["ruma-events?/unstable-msc4075"]
 unstable-pdu = ["ruma-events?/unstable-pdu"]
 unstable-unspecified = [
     "ruma-common/unstable-unspecified",
@@ -257,8 +257,8 @@ __ci = [
     "unstable-msc3954",
     "unstable-msc3955",
     "unstable-msc3956",
-    "unstable-msc3958",
     "unstable-msc3983",
+    "unstable-msc4075",
 ]
 
 [dependencies]

@@ -1,5 +1,23 @@
 # [unreleased]
 
+Bug fixes:
+
+- Allow to deserialize `Ruleset` with missing fields.
+
+Breaking changes:
+- The power levels fields in `PushConditionRoomCtx` are grouped in an optional `power_levels` field.
+  If the field is missing, push rules that depend on it will never match. However, this allows to
+  match the `.m.rule.invite_for_me` push rule because usually the `invite_state` doesn't include
+  `m.room.power_levels`.
+
+Improvements:
+
+- Stabilize support for `.m.rule.suppress_edits` push rule (MSC3958 / Matrix 1.9)
+- Add `MatrixVersion::V1_9`
+- Point links to the Matrix 1.9 specification
+- Implement `as_str()` and `AsRef<str>` for `push::PredefinedRuleId`
+- Implement `kind()` for `push::Predefined{*}RuleId`
+
 # 0.12.1
 
 Bug fixes:

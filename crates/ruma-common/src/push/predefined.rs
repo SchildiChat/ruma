@@ -6,7 +6,7 @@ use ruma_macros::StringEnum;
 
 use super::{
     Action::*, ConditionalPushRule, PatternedPushRule, PushCondition::*, RoomMemberCountIs,
-    Ruleset, Tweak,
+    RuleKind, Ruleset, Tweak,
 };
 use crate::{PrivOwnedStr, UserId};
 
@@ -40,7 +40,6 @@ impl Ruleset {
                 ConditionalPushRule::tombstone(),
                 ConditionalPushRule::reaction(),
                 ConditionalPushRule::server_acl(),
-                #[cfg(feature = "unstable-msc3958")]
                 ConditionalPushRule::suppress_edits(),
                 #[cfg(feature = "unstable-msc3930")]
                 ConditionalPushRule::poll_response(),
@@ -314,7 +313,6 @@ impl ConditionalPushRule {
     /// Matches [event replacements].
     ///
     /// [event replacements]: https://spec.matrix.org/latest/client-server-api/#event-replacements
-    #[cfg(feature = "unstable-msc3958")]
     pub fn suppress_edits() -> Self {
         Self {
             actions: vec![],
@@ -557,6 +555,32 @@ pub enum PredefinedRuleId {
     Content(PredefinedContentRuleId),
 }
 
+impl PredefinedRuleId {
+    /// Creates a string slice from this `PredefinedRuleId`.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Override(id) => id.as_str(),
+            Self::Underride(id) => id.as_str(),
+            Self::Content(id) => id.as_str(),
+        }
+    }
+
+    /// Get the kind of this `PredefinedRuleId`.
+    pub fn kind(&self) -> RuleKind {
+        match self {
+            Self::Override(id) => id.kind(),
+            Self::Underride(id) => id.kind(),
+            Self::Content(id) => id.kind(),
+        }
+    }
+}
+
+impl AsRef<str> for PredefinedRuleId {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
 /// The rule IDs of the predefined override server push rules.
 #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, StringEnum)]
@@ -601,8 +625,6 @@ pub enum PredefinedOverrideRuleId {
     RoomServerAcl,
 
     /// `.m.rule.suppress_edits`
-    #[cfg(feature = "unstable-msc3958")]
-    #[ruma_enum(rename = ".org.matrix.msc3958.suppress_edits")]
     SuppressEdits,
 
     /// `.m.rule.poll_response`
@@ -616,6 +638,13 @@ pub enum PredefinedOverrideRuleId {
 
     #[doc(hidden)]
     _Custom(PrivOwnedStr),
+}
+
+impl PredefinedOverrideRuleId {
+    /// Get the kind of this `PredefinedOverrideRuleId`.
+    pub fn kind(&self) -> RuleKind {
+        RuleKind::Override
+    }
 }
 
 /// The rule IDs of the predefined underride server push rules.
@@ -679,6 +708,13 @@ pub enum PredefinedUnderrideRuleId {
     _Custom(PrivOwnedStr),
 }
 
+impl PredefinedUnderrideRuleId {
+    /// Get the kind of this `PredefinedUnderrideRuleId`.
+    pub fn kind(&self) -> RuleKind {
+        RuleKind::Underride
+    }
+}
+
 /// The rule IDs of the predefined content server push rules.
 #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, StringEnum)]
@@ -691,6 +727,13 @@ pub enum PredefinedContentRuleId {
 
     #[doc(hidden)]
     _Custom(PrivOwnedStr),
+}
+
+impl PredefinedContentRuleId {
+    /// Get the kind of this `PredefinedContentRuleId`.
+    pub fn kind(&self) -> RuleKind {
+        RuleKind::Content
+    }
 }
 
 #[cfg(test)]

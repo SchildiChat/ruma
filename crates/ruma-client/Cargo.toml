@@ -16,7 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-client-api = ["dep:ruma-client-api"]
+client-api = ["dep:as_variant", "dep:ruma-client-api"]
 
 # HTTP clients
 hyper = ["dep:hyper"]
@@ -32,9 +32,9 @@ reqwest-rustls-webpki-roots = ["reqwest", "reqwest?/rustls-tls-webpki-roots"]
 reqwest-rustls-native-roots = ["reqwest", "reqwest?/rustls-tls-native-roots"]
 
 [dependencies]
+as_variant = { workspace = true, optional = true }
 assign = { workspace = true }
 async-stream = "0.3.0"
-async-trait = "0.1.50"
 bytes = "1.0.1"
 futures-core = "0.3.8"
 futures-lite = { version = "1.11.3", optional = true }

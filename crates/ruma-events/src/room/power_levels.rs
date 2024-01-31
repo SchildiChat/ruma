@@ -7,6 +7,7 @@ use std::{cmp::max, collections::BTreeMap};
 use js_int::{int, Int};
 use ruma_common::{
     power_levels::{default_power_level, NotificationPowerLevels},
+    push::PushConditionPowerLevelsCtx,
     OwnedUserId, RoomVersionId, UserId,
 };
 use ruma_macros::EventContent;
@@ -371,6 +372,44 @@ impl RoomPowerLevels {
         self.for_user(user_id) >= self.ban
     }
 
+    /// Whether the acting user can ban the target user based on the power levels.
+    ///
+    /// On top of `power_levels.user_can_ban(acting_user_id)`, this performs an extra check
+    /// to make sure the acting user has at greater power level than the target user.
+    ///
+    /// Shorthand for `power_levels.user_can_do_to_user(acting_user_id, target_user_id,
+    /// PowerLevelUserAction::Ban)`.
+    pub fn user_can_ban_user(&self, acting_user_id: &UserId, target_user_id: &UserId) -> bool {
+        let acting_pl = self.for_user(acting_user_id);
+        let target_pl = self.for_user(target_user_id);
+        acting_pl >= self.ban && target_pl < acting_pl
+    }
+
+    /// Whether the given user can unban other users based on the power levels.
+    ///
+    /// This action requires to be allowed to ban and to kick.
+    ///
+    /// Shorthand for `power_levels.user_can_do(user_id, PowerLevelAction::Unban)`.
+    pub fn user_can_unban(&self, user_id: &UserId) -> bool {
+        let pl = self.for_user(user_id);
+        pl >= self.ban && pl >= self.kick
+    }
+
+    /// Whether the acting user can unban the target user based on the power levels.
+    ///
+    /// This action requires to be allowed to ban and to kick.
+    ///
+    /// On top of `power_levels.user_can_unban(acting_user_id)`, this performs an extra check
+    /// to make sure the acting user has at greater power level than the target user.
+    ///
+    /// Shorthand for `power_levels.user_can_do_to_user(acting_user_id, target_user_id,
+    /// PowerLevelUserAction::Unban)`.
+    pub fn user_can_unban_user(&self, acting_user_id: &UserId, target_user_id: &UserId) -> bool {
+        let acting_pl = self.for_user(acting_user_id);
+        let target_pl = self.for_user(target_user_id);
+        acting_pl >= self.ban && acting_pl >= self.kick && target_pl < acting_pl
+    }
+
     /// Whether the given user can invite other users based on the power levels.
     ///
     /// Shorthand for `power_levels.user_can_do(user_id, PowerLevelAction::Invite)`.
@@ -385,11 +424,31 @@ impl RoomPowerLevels {
         self.for_user(user_id) >= self.kick
     }
 
-    /// Whether the given user can redact events based on the power levels.
+    /// Whether the acting user can kick the target user based on the power levels.
     ///
-    /// Shorthand for `power_levels.user_can_do(user_id, PowerLevelAction::Redact)`.
-    pub fn user_can_redact(&self, user_id: &UserId) -> bool {
-        self.for_user(user_id) >= self.redact
+    /// On top of `power_levels.user_can_kick(acting_user_id)`, this performs an extra check
+    /// to make sure the acting user has at least the same power level as the target user.
+    ///
+    /// Shorthand for `power_levels.user_can_do_to_user(acting_user_id, target_user_id,
+    /// PowerLevelUserAction::Kick)`.
+    pub fn user_can_kick_user(&self, acting_user_id: &UserId, target_user_id: &UserId) -> bool {
+        let acting_pl = self.for_user(acting_user_id);
+        let target_pl = self.for_user(target_user_id);
+        acting_pl >= self.kick && target_pl < acting_pl
+    }
+
+    /// Whether the given user can redact their own events based on the power levels.
+    ///
+    /// Shorthand for `power_levels.user_can_do(user_id, PowerLevelAction::RedactOwn)`.
+    pub fn user_can_redact_own_event(&self, user_id: &UserId) -> bool {
+        self.user_can_send_message(user_id, MessageLikeEventType::RoomRedaction)
+    }
+
+    /// Whether the given user can redact events of other users based on the power levels.
+    ///
+    /// Shorthand for `power_levels.user_can_do(user_id, PowerLevelAction::RedactOthers)`.
+    pub fn user_can_redact_event_of_other(&self, user_id: &UserId) -> bool {
+        self.user_can_redact_own_event(user_id) && self.for_user(user_id) >= self.redact
     }
 
     /// Whether the given user can send message events based on the power levels.
@@ -424,13 +483,43 @@ impl RoomPowerLevels {
         self.for_user(user_id) >= self.notifications.room
     }
 
+    /// Whether the acting user can change the power level of the target user.
+    ///
+    /// Shorthand for `power_levels.user_can_do_to_user(acting_user_id, target_user_id,
+    /// PowerLevelUserAction::ChangePowerLevel`.
+    pub fn user_can_change_user_power_level(
+        &self,
+        acting_user_id: &UserId,
+        target_user_id: &UserId,
+    ) -> bool {
+        // Check that the user can change the power levels first.
+        if !self.user_can_send_state(acting_user_id, StateEventType::RoomPowerLevels) {
+            return false;
+        }
+
+        // A user can change their own power level.
+        if acting_user_id == target_user_id {
+            return true;
+        }
+
+        // The permission is different whether the target user is added or changed/removed, so
+        // we need to check that.
+        if let Some(target_pl) = self.users.get(target_user_id).copied() {
+            self.for_user(acting_user_id) > target_pl
+        } else {
+            true
+        }
+    }
+
     /// Whether the given user can do the given action based on the power levels.
     pub fn user_can_do(&self, user_id: &UserId, action: PowerLevelAction) -> bool {
         match action {
             PowerLevelAction::Ban => self.user_can_ban(user_id),
+            PowerLevelAction::Unban => self.user_can_unban(user_id),
             PowerLevelAction::Invite => self.user_can_invite(user_id),
             PowerLevelAction::Kick => self.user_can_kick(user_id),
-            PowerLevelAction::Redact => self.user_can_redact(user_id),
+            PowerLevelAction::RedactOwn => self.user_can_redact_own_event(user_id),
+            PowerLevelAction::RedactOther => self.user_can_redact_event_of_other(user_id),
             PowerLevelAction::SendMessage(message_type) => {
                 self.user_can_send_message(user_id, message_type)
             }
@@ -439,6 +528,25 @@ impl RoomPowerLevels {
             }
             PowerLevelAction::TriggerNotification(NotificationPowerLevelType::Room) => {
                 self.user_can_trigger_room_notification(user_id)
+            }
+        }
+    }
+
+    /// Whether the acting user can do the given action to the target user based on the power
+    /// levels.
+    pub fn user_can_do_to_user(
+        &self,
+        acting_user_id: &UserId,
+        target_user_id: &UserId,
+        action: PowerLevelUserAction,
+    ) -> bool {
+        match action {
+            PowerLevelUserAction::Ban => self.user_can_ban_user(acting_user_id, target_user_id),
+            PowerLevelUserAction::Unban => self.user_can_unban_user(acting_user_id, target_user_id),
+            PowerLevelUserAction::Invite => self.user_can_invite(acting_user_id),
+            PowerLevelUserAction::Kick => self.user_can_kick_user(acting_user_id, target_user_id),
+            PowerLevelUserAction::ChangePowerLevel => {
+                self.user_can_change_user_power_level(acting_user_id, target_user_id)
             }
         }
     }
@@ -500,6 +608,12 @@ impl From<RoomPowerLevels> for RoomPowerLevelsEventContent {
     }
 }
 
+impl From<RoomPowerLevels> for PushConditionPowerLevelsCtx {
+    fn from(c: RoomPowerLevels) -> Self {
+        Self { users: c.users, users_default: c.users_default, notifications: c.notifications }
+    }
+}
+
 /// The actions that can be limited by power levels.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
@@ -507,14 +621,20 @@ pub enum PowerLevelAction {
     /// Ban a user.
     Ban,
 
+    /// Unban a user.
+    Unban,
+
     /// Invite a user.
     Invite,
 
     /// Kick a user.
     Kick,
 
-    /// Redact an event.
-    Redact,
+    /// Redact one's own event.
+    RedactOwn,
+
+    /// Redact the event of another user.
+    RedactOther,
 
     /// Send a message-like event.
     SendMessage(MessageLikeEventType),
@@ -532,6 +652,26 @@ pub enum PowerLevelAction {
 pub enum NotificationPowerLevelType {
     /// `@room` notifications.
     Room,
+}
+
+/// The actions to other users that can be limited by power levels.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum PowerLevelUserAction {
+    /// Ban a user.
+    Ban,
+
+    /// Unban a user.
+    Unban,
+
+    /// Invite a user.
+    Invite,
+
+    /// Kick a user.
+    Kick,
+
+    /// Change a user's power level.
+    ChangePowerLevel,
 }
 
 #[cfg(test)]
