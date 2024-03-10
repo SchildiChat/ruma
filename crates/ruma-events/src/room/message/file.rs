@@ -3,7 +3,6 @@ use ruma_common::OwnedMxcUri;
 use serde::{Deserialize, Serialize};
 
 use super::FormattedBody;
-
 use crate::room::{EncryptedFile, MediaSource, ThumbnailInfo};
 
 /// The payload for a file message.
@@ -13,10 +12,11 @@ use crate::room::{EncryptedFile, MediaSource, ThumbnailInfo};
 pub struct FileMessageEventContent {
     /// A human-readable description of the file.
     ///
-    /// This is recommended to be the filename of the original upload.
+    /// If the `filename` field is not set or has the same value, this is the filename of the
+    /// uploaded file. Otherwise, this should be interpreted as a user-written media caption.
     pub body: String,
 
-    /// Formatted form of the message `body`.
+    /// Formatted form of the message `body`, if `body` is a caption.
     #[serde(flatten)]
     pub formatted: Option<FormattedBody>,
 

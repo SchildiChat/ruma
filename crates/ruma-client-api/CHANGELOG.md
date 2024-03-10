@@ -1,10 +1,16 @@
 # [unreleased]
 
+Bug fixes:
+
+- Don't require the `failures` field in the
+  `ruma_client_api::keys::upload_signatures::Response` type.
+
 Breaking changes:
 
 - The conversion from `PushRule` to `ConditionalPushRule` is infallible since
   the `conditions` field is optional.
   - `MissingConditionsError` was removed.
+- The `ts` field in `Request` for `get_media_preview` is now `Option`.
 
 Improvements:
 
@@ -14,6 +20,15 @@ Improvements:
 - Add `error_kind` accessor method to `ruma_client_api::Error`
 - Add `FromHttpResponseErrorExt` trait that adds an `error_kind` accessor to
   `FromHttpResponseError<ruma_client_api::Error>`
+- Add deprecated `user` fields for `m.login.password` and `m.login.appservice`
+  login types.
+- Add deprecated `address` and `medium` 3PID fields for `m.login.password`
+  login type.
+- Add optional cookie field to `session::sso_login*::v3` responses.
+- Add support for local user erasure to `account::deactivate::v3::Request`,
+  according to MSC4025.
+- Allow `discovery::get_supported_versions::v1` to optionally accept
+  authentication, according to MSC4026.
 
 # 0.17.4
 

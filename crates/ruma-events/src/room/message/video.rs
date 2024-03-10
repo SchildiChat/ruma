@@ -5,7 +5,6 @@ use ruma_common::OwnedMxcUri;
 use serde::{Deserialize, Serialize};
 
 use super::FormattedBody;
-
 use crate::room::{EncryptedFile, MediaSource, ThumbnailInfo};
 
 /// The payload for a video message.
@@ -13,11 +12,13 @@ use crate::room::{EncryptedFile, MediaSource, ThumbnailInfo};
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 #[serde(tag = "msgtype", rename = "m.video")]
 pub struct VideoMessageEventContent {
-    /// A description of the video, e.g. "Gangnam Style", or some kind of content description for
-    /// accessibility, e.g. "video attachment".
+    /// A description of the video.
+    ///
+    /// If the `filename` field is not set or has the same value, this is the filename of the
+    /// uploaded file. Otherwise, this should be interpreted as a user-written media caption.
     pub body: String,
 
-    /// Formatted form of the message `body`.
+    /// Formatted form of the message `body`, if `body` is a caption.
     #[serde(flatten)]
     pub formatted: Option<FormattedBody>,
 

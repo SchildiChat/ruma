@@ -5,7 +5,6 @@ use ruma_common::OwnedMxcUri;
 use serde::{Deserialize, Serialize};
 
 use super::FormattedBody;
-
 use crate::room::{EncryptedFile, MediaSource};
 
 /// The payload for an audio message.
@@ -14,9 +13,12 @@ use crate::room::{EncryptedFile, MediaSource};
 #[serde(tag = "msgtype", rename = "m.audio")]
 pub struct AudioMessageEventContent {
     /// The textual representation of this message.
+    ///
+    /// If the `filename` field is not set or has the same value, this is the filename of the
+    /// uploaded file. Otherwise, this should be interpreted as a user-written media caption.
     pub body: String,
 
-    /// Formatted form of the message `body`.
+    /// Formatted form of the message `body`, if `body` is a caption.
     #[serde(flatten)]
     pub formatted: Option<FormattedBody>,
 
