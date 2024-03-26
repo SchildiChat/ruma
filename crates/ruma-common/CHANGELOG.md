@@ -10,9 +10,13 @@ Breaking changes:
   match the `.m.rule.invite_for_me` push rule because usually the `invite_state` doesn't include
   `m.room.power_levels`.
 - Add support for endpoints that take an optional authentication
+- Add support for endpoints that require authentication for appservices
 
 Improvements:
 
+- Use the [web-time](https://github.com/daxpedda/web-time) crate to return a
+  `SystemTime` that works under WASM in the
+  `MilliSecondsSinceUnixEpoch::to_system_time()` method.
 - Stabilize support for `.m.rule.suppress_edits` push rule (MSC3958 / Matrix 1.9)
 - Add `MatrixVersion::V1_9`
 - Point links to the Matrix 1.9 specification

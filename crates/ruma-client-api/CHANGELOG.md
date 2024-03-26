@@ -11,6 +11,8 @@ Breaking changes:
   the `conditions` field is optional.
   - `MissingConditionsError` was removed.
 - The `ts` field in `Request` for `get_media_preview` is now `Option`.
+- The query parameter of `check_registration_token_validity` endpoint
+  has been renamed from `registration_token` to `token`
 
 Improvements:
 
@@ -29,6 +31,8 @@ Improvements:
   according to MSC4025.
 - Allow `discovery::get_supported_versions::v1` to optionally accept
   authentication, according to MSC4026.
+- Allow `account::register::v3` and `account::login::v3` to accept
+  authentication for appservices.
 
 # 0.17.4
 

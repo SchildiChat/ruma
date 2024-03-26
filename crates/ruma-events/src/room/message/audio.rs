@@ -18,7 +18,9 @@ pub struct AudioMessageEventContent {
     /// uploaded file. Otherwise, this should be interpreted as a user-written media caption.
     pub body: String,
 
-    /// Formatted form of the message `body`, if `body` is a caption.
+    /// Formatted form of the message `body`.
+    ///
+    /// This should only be set if the body represents a caption.
     #[serde(flatten)]
     pub formatted: Option<FormattedBody>,
 
@@ -67,7 +69,7 @@ impl AudioMessageEventContent {
         }
     }
 
-    /// Creates a new non-encrypted `AudioMessageEventContent` with the given bod and url.
+    /// Creates a new non-encrypted `AudioMessageEventContent` with the given body and url.
     pub fn plain(body: String, url: OwnedMxcUri) -> Self {
         Self::new(body, MediaSource::Plain(url))
     }
@@ -76,24 +78,6 @@ impl AudioMessageEventContent {
     /// file.
     pub fn encrypted(body: String, file: EncryptedFile) -> Self {
         Self::new(body, MediaSource::Encrypted(Box::new(file)))
-    }
-
-    /// Creates a new `AudioMessageEventContent` from `self` with the `filename` field set to the
-    /// given value.
-    ///
-    /// Since the field is public, you can also assign to it directly. This method merely acts
-    /// as a shorthand for that, because it is very common to set this field.
-    pub fn filename(self, filename: impl Into<Option<String>>) -> Self {
-        Self { filename: filename.into(), ..self }
-    }
-
-    /// Creates a new `AudioMessageEventContent` from `self` with the `formatted` field set to the
-    /// given value.
-    ///
-    /// Since the field is public, you can also assign to it directly. This method merely acts
-    /// as a shorthand for that, because it is very common to set this field.
-    pub fn formatted(self, formatted: impl Into<Option<FormattedBody>>) -> Self {
-        Self { formatted: formatted.into(), ..self }
     }
 
     /// Creates a new `AudioMessageEventContent` from `self` with the `info` field set to the given
