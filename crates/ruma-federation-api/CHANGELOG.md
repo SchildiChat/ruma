@@ -1,8 +1,17 @@
 # [unreleased]
 
+Breaking changes:
+
+* Use `RawValue` to represent body of `/v1/send_join` request, rather than incorrectly using
+  query parameters
+
 Improvements:
 
 * Implement `From<SpaceHierarchyParentSummary>` for `SpaceHierarchyChildSummary`
+* Add unstable support for optional `via` field on the `create_invite` endpoint request from
+  MSC4125 behind the `unstable-msc4125` feature.
+* Add unstable support for the `report_content` endpoint from MSC3843 behind the
+  `unstable-msc3843` feature.
 
 # 0.8.0
 

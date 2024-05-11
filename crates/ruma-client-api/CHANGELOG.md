@@ -13,10 +13,16 @@ Breaking changes:
 - The `ts` field in `Request` for `get_media_preview` is now `Option`.
 - The query parameter of `check_registration_token_validity` endpoint
   has been renamed from `registration_token` to `token`
+- `Error` is now non-exhaustive.
+- `ErrorKind::Forbidden` is now a non-exhaustive struct variant that can be
+  constructed with `ErrorKind::forbidden()`.
+- The `retry_after_ms` field of `ErrorKind::LimitExceeded` was renamed to
+  `retry_after` and is now an `Option<RetryAfter>`, to add support for the
+  Retry-After header, according to MSC4041 / Matrix 1.10 
 
 Improvements:
 
-- Point links to the Matrix 1.9 specification
+- Point links to the Matrix 1.10 specification
 - Add the `get_authentication_issuer` endpoint from MSC2965 behind the
   `unstable-msc2965` feature.
 - Add `error_kind` accessor method to `ruma_client_api::Error`
@@ -28,11 +34,19 @@ Improvements:
   login type.
 - Add optional cookie field to `session::sso_login*::v3` responses.
 - Add support for local user erasure to `account::deactivate::v3::Request`,
-  according to MSC4025.
+  according to MSC4025 / Matrix 1.10.
 - Allow `discovery::get_supported_versions::v1` to optionally accept
-  authentication, according to MSC4026.
+  authentication, according to MSC4026 / Matrix 1.10.
 - Allow `account::register::v3` and `account::login::v3` to accept
   authentication for appservices.
+- Add support for recursion on the `get_relating_events` endpoints, according to
+  MSC3981 / Matrix 1.10
+- Add server support discovery endpoint, according to MSC1929 / Matrix 1.10
+- Add `dir` `Request` field on the `get_relating_events_with_rel_types` and
+  `get_relating_events_with_rel_type_and_event_type` endpoints
+- Add unstable support for moderator server support discovery, according to MSC4121
+- Add unstable support for the room summary endpoint from MSC3266 behind the
+  `unstable-msc3266` feature.
 
 # 0.17.4
 
@@ -72,7 +86,7 @@ Breaking changes:
 
 Improvements:
 
-- Add convenience constructors for enabling lazy-loading in filters 
+- Add convenience constructors for enabling lazy-loading in filters
 - Add support for using an existing session to log in another (MSC3882 / Matrix 1.7)
 - Add support for media download redirects (MSC3860 / Matrix 1.7)
 - Stabilize support for asynchronous media uploads (MSC2246 / Matrix 1.7)

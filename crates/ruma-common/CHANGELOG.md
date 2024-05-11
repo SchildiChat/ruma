@@ -11,6 +11,8 @@ Breaking changes:
   `m.room.power_levels`.
 - Add support for endpoints that take an optional authentication
 - Add support for endpoints that require authentication for appservices
+- `deserialize_as_f64_or_string` has been extended to also support parsing integers, and renamed to
+  `deserialize_as_number_or_string` to reflect that.
 
 Improvements:
 
@@ -18,10 +20,11 @@ Improvements:
   `SystemTime` that works under WASM in the
   `MilliSecondsSinceUnixEpoch::to_system_time()` method.
 - Stabilize support for `.m.rule.suppress_edits` push rule (MSC3958 / Matrix 1.9)
-- Add `MatrixVersion::V1_9`
-- Point links to the Matrix 1.9 specification
+- Add `MatrixVersion::V1_9` and `V1_10`
+- Point links to the Matrix 1.10 specification
 - Implement `as_str()` and `AsRef<str>` for `push::PredefinedRuleId`
 - Implement `kind()` for `push::Predefined{*}RuleId`
+- Implement `Clone` for `MatrixToUri` and `MatrixUri`
 
 # 0.12.1
 

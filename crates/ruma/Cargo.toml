@@ -3,7 +3,7 @@ name = "ruma"
 categories = ["api-bindings", "web-programming"]
 keywords = ["matrix", "chat", "messaging", "ruma"]
 description = "Types and traits for working with the Matrix protocol."
-homepage = "https://ruma.io/"
+homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
@@ -195,6 +195,7 @@ unstable-msc3245 = ["ruma-events?/unstable-msc3245"]
 # https://github.com/matrix-org/matrix-spec-proposals/blob/83f6c5b469c1d78f714e335dcaa25354b255ffa5/proposals/3245-voice-messages.md
 unstable-msc3245-v1-compat = ["ruma-events?/unstable-msc3245-v1-compat"]
 unstable-msc3246 = ["ruma-events?/unstable-msc3246"]
+unstable-msc3266 = ["ruma-client-api?/unstable-msc3266"]
 unstable-msc3381 = ["ruma-events?/unstable-msc3381"]
 unstable-msc3401 = ["ruma-events?/unstable-msc3401"]
 unstable-msc3488 = ["ruma-client-api?/unstable-msc3488", "ruma-events?/unstable-msc3488"]
@@ -206,6 +207,7 @@ unstable-msc3575 = ["ruma-client-api?/unstable-msc3575"]
 unstable-msc3618 = ["ruma-federation-api?/unstable-msc3618"]
 unstable-msc3723 = ["ruma-federation-api?/unstable-msc3723"]
 unstable-msc3814 = ["ruma-client-api?/unstable-msc3814"]
+unstable-msc3843 = ["ruma-client-api?/unstable-msc3843", "ruma-federation-api?/unstable-msc3843"]
 unstable-msc3927 = ["ruma-events?/unstable-msc3927"]
 unstable-msc3930 = ["ruma-common/unstable-msc3930"]
 unstable-msc3931 = ["ruma-common/unstable-msc3931"]
@@ -215,6 +217,8 @@ unstable-msc3955 = ["ruma-events?/unstable-msc3955"]
 unstable-msc3956 = ["ruma-events?/unstable-msc3956"]
 unstable-msc3983 = ["ruma-client-api?/unstable-msc3983"]
 unstable-msc4075 = ["ruma-events?/unstable-msc4075"]
+unstable-msc4121 = ["ruma-client-api?/unstable-msc4121"]
+unstable-msc4125 = ["ruma-federation-api?/unstable-msc4125"]
 unstable-pdu = ["ruma-events?/unstable-pdu"]
 unstable-unspecified = [
     "ruma-common/unstable-unspecified",
@@ -242,6 +246,7 @@ __ci = [
     "unstable-msc3245",
     "unstable-msc3245-v1-compat",
     "unstable-msc3246",
+    "unstable-msc3266",
     "unstable-msc3381",
     "unstable-msc3401",
     "unstable-msc3488",
@@ -253,20 +258,25 @@ __ci = [
     "unstable-msc3618",
     "unstable-msc3723",
     "unstable-msc3814",
+    "unstable-msc3843",
     "unstable-msc3927",
     "unstable-msc3930",
+    "unstable-msc3931",
     "unstable-msc3932",
     "unstable-msc3954",
     "unstable-msc3955",
     "unstable-msc3956",
     "unstable-msc3983",
     "unstable-msc4075",
+    "unstable-msc4121",
+    "unstable-msc4125",
 ]
 
 [dependencies]
 assign = { workspace = true }
 js_int = { workspace = true }
 js_option = "0.1.1"
+web-time = { workspace = true }
 
 ruma-common = { workspace = true }
 

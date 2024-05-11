@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Check xtask cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: xtask-cache
         with:
           path: target/debug/xtask
@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install rust nightly toolchain
         uses: dtolnay/rust-toolchain@master
@@ -50,7 +50,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check spelling
-        uses: crate-ci/typos@v1.16.17
+        uses: crate-ci/typos@v1.20.3
 
       - name: Install cargo-sort
         uses: taiki-e/cache-cargo-install-action@v1
@@ -58,7 +58,7 @@ jobs:
           tool: cargo-sort
 
       - name: Get xtask
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target/debug/xtask
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install MSRV toolchain
         uses: dtolnay/rust-toolchain@master
@@ -105,7 +105,7 @@ jobs:
           shared-key: msrv1.75
 
       - name: Get xtask
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target/debug/xtask
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
@@ -137,7 +137,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install rust stable toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -145,7 +145,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Get xtask
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target/debug/xtask
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
@@ -180,7 +180,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install rust nightly toolchain
         uses: dtolnay/rust-toolchain@master
@@ -191,7 +191,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Get xtask
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target/debug/xtask
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
@@ -205,13 +205,14 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
+      actions: read
       contents: read
       pages: write
       id-token: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install nightly rust toolchain
         # Nightly needed for use of unstable options
@@ -222,13 +223,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Get xtask
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: target/debug/xtask
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
 
       - name: Build docs
         run: target/debug/xtask doc --deny-warnings
+
+      - name: Remove .lock file
+        run: rm target/doc/.lock
 
       - name: Compress docs
         if: github.event_name == 'pull_request'
@@ -237,17 +241,17 @@ jobs:
 
       - name: Upload docs as artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docs
           path: docs.tar.zstd
 
       - name: Upload docs as pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: target/doc
 
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
