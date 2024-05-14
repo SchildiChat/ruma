@@ -11,25 +11,25 @@ rust-version = "1.75"
 as_variant = "1.2.0"
 assert_matches2 = "0.1.0"
 assign = "1.1.1"
-base64 = "0.21.0"
+base64 = "0.22.0"
 criterion = "0.5.0"
-http = "0.2.8"
+http = "1.1.0"
 js_int = "0.2.2"
 maplit = "1.0.2"
-ruma-appservice-api = { version = "0.9.0", path = "crates/ruma-appservice-api" }
-ruma-common = { version = "0.12.1", path = "crates/ruma-common" }
-ruma-client = { version = "0.12.0", path = "crates/ruma-client" }
-ruma-client-api = { version = "0.17.4", path = "crates/ruma-client-api" }
-ruma-events = { version = "0.27.11", path = "crates/ruma-events" }
-ruma-federation-api = { version = "0.8.0", path = "crates/ruma-federation-api" }
-ruma-html = { version = "0.1.0", path = "crates/ruma-html" }
-ruma-identifiers-validation = { version = "0.9.3", path = "crates/ruma-identifiers-validation" }
-ruma-identity-service-api = { version = "0.8.0", path = "crates/ruma-identity-service-api" }
-ruma-macros = { version = "=0.12.0", path = "crates/ruma-macros" }
-ruma-push-gateway-api = { version = "0.8.0", path = "crates/ruma-push-gateway-api" }
-ruma-signatures = { version = "0.14.0", path = "crates/ruma-signatures" }
-ruma-server-util = { version = "0.2.0", path = "crates/ruma-server-util" }
-ruma-state-res = { version = "0.10.0", path = "crates/ruma-state-res" }
+ruma-appservice-api = { version = "0.10.0", path = "crates/ruma-appservice-api" }
+ruma-common = { version = "0.13.0", path = "crates/ruma-common" }
+ruma-client = { version = "0.13.0", path = "crates/ruma-client" }
+ruma-client-api = { version = "0.18.0", path = "crates/ruma-client-api" }
+ruma-events = { version = "0.28.1", path = "crates/ruma-events" }
+ruma-federation-api = { version = "0.9.0", path = "crates/ruma-federation-api" }
+ruma-html = { version = "0.2.0", path = "crates/ruma-html" }
+ruma-identifiers-validation = { version = "0.9.5", path = "crates/ruma-identifiers-validation" }
+ruma-identity-service-api = { version = "0.9.0", path = "crates/ruma-identity-service-api" }
+ruma-macros = { version = "=0.13.0", path = "crates/ruma-macros" }
+ruma-push-gateway-api = { version = "0.9.0", path = "crates/ruma-push-gateway-api" }
+ruma-signatures = { version = "0.15.0", path = "crates/ruma-signatures" }
+ruma-server-util = { version = "0.3.0", path = "crates/ruma-server-util" }
+ruma-state-res = { version = "0.11.0", path = "crates/ruma-state-res" }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_html_form = "0.2.0"
 serde_json = "1.0.87"

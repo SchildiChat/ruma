@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.9.4"
+version = "0.10.1"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -28,9 +28,9 @@ state-res = ["dep:ruma-state-res"]
 client-ext-client-api = ["client", "ruma-client?/client-api"]
 client-hyper = ["client", "ruma-client?/hyper"]
 client-hyper-native-tls = ["client", "ruma-client?/hyper-native-tls"]
-client-isahc = ["client", "ruma-client?/isahc"]
 client-reqwest = ["client", "ruma-client?/reqwest"]
 client-reqwest-native-tls = ["client", "ruma-client?/reqwest-native-tls"]
+client-reqwest-native-tls-alpn = ["client", "ruma-client?/reqwest-native-tls-alpn"]
 client-reqwest-native-tls-vendored = ["client", "ruma-client?/reqwest-native-tls-vendored"]
 client-reqwest-rustls-manual-roots = ["client", "ruma-client?/reqwest-rustls-manual-roots"]
 client-reqwest-rustls-webpki-roots = ["client", "ruma-client?/reqwest-rustls-webpki-roots"]
@@ -71,6 +71,7 @@ js = ["ruma-common/js"]
 rand = ["ruma-common/rand"]
 markdown = ["ruma-events?/markdown"]
 html = ["dep:ruma-html", "ruma-events?/html"]
+html-matrix = ["html", "ruma-html/matrix"]
 
 # Everything except compat, js and unstable features
 full = [
@@ -88,6 +89,7 @@ full = [
     "rand",
     "markdown",
     "html",
+    "html-matrix",
 ]
 
 # Enable all compatibility hacks. Deprecated.
@@ -163,6 +165,7 @@ unstable-exhaustive-types = [
     "ruma-federation-api?/unstable-exhaustive-types",
     "ruma-identity-service-api?/unstable-exhaustive-types",
     "ruma-push-gateway-api?/unstable-exhaustive-types",
+    "ruma-signatures?/unstable-exhaustive-types",
     "ruma-state-res?/unstable-exhaustive-types",
     "ruma-events?/unstable-exhaustive-types"
 ]
@@ -182,6 +185,7 @@ unstable-msc2448 = [
 ]
 unstable-msc2654 = ["ruma-client-api?/unstable-msc2654"]
 unstable-msc2666 = ["ruma-client-api?/unstable-msc2666"]
+unstable-msc2705 = ["ruma-client-api?/unstable-msc2705"]
 unstable-msc2747 = ["ruma-events?/unstable-msc2747"]
 unstable-msc2867 = ["ruma-events?/unstable-msc2867"]
 unstable-msc2870 = ["ruma-common/unstable-msc2870"]
@@ -196,6 +200,7 @@ unstable-msc3245 = ["ruma-events?/unstable-msc3245"]
 unstable-msc3245-v1-compat = ["ruma-events?/unstable-msc3245-v1-compat"]
 unstable-msc3246 = ["ruma-events?/unstable-msc3246"]
 unstable-msc3266 = ["ruma-client-api?/unstable-msc3266"]
+unstable-msc3291 = ["ruma-events?/unstable-msc3291"]
 unstable-msc3381 = ["ruma-events?/unstable-msc3381"]
 unstable-msc3401 = ["ruma-events?/unstable-msc3401"]
 unstable-msc3488 = ["ruma-client-api?/unstable-msc3488", "ruma-events?/unstable-msc3488"]
@@ -236,6 +241,7 @@ __ci = [
     "unstable-msc2448",
     "unstable-msc2654",
     "unstable-msc2666",
+    "unstable-msc2705",
     "unstable-msc2747",
     "unstable-msc2867",
     "unstable-msc2870",
@@ -247,6 +253,7 @@ __ci = [
     "unstable-msc3245-v1-compat",
     "unstable-msc3246",
     "unstable-msc3266",
+    "unstable-msc3291",
     "unstable-msc3381",
     "unstable-msc3401",
     "unstable-msc3488",

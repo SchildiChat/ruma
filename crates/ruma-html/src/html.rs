@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, fmt, io};
+use std::{collections::BTreeSet, fmt, io, iter::FusedIterator};
 
 use as_variant::as_variant;
 use html5ever::{
@@ -9,6 +9,9 @@ use html5ever::{
     Attribute, ParseOpts, QualName,
 };
 use tracing::debug;
+
+#[cfg(feature = "matrix")]
+pub mod matrix;
 
 use crate::SanitizerConfig;
 
@@ -44,11 +47,11 @@ impl Html {
     /// `SanitizerConfig::compat().remove_reply_fallback()`.
     pub fn sanitize(&mut self) {
         let config = SanitizerConfig::compat().remove_reply_fallback();
-        self.sanitize_with(config);
+        self.sanitize_with(&config);
     }
 
     /// Sanitize this HTML according to the given configuration.
-    pub fn sanitize_with(&mut self, config: SanitizerConfig) {
+    pub fn sanitize_with(&mut self, config: &SanitizerConfig) {
         config.clean(self);
     }
 
@@ -111,6 +114,40 @@ impl Html {
         } else if let Some(parent) = parent {
             self.nodes[parent].first_child = next_sibling;
         }
+    }
+
+    /// Get the ID of the root node of the HTML.
+    pub(crate) fn root_id(&self) -> usize {
+        self.nodes[0].first_child.expect("html should always have a root node")
+    }
+
+    /// Get the root node of the HTML.
+    pub(crate) fn root(&self) -> &Node {
+        &self.nodes[self.root_id()]
+    }
+
+    /// Whether the root node of the HTML has children.
+    pub fn has_children(&self) -> bool {
+        self.root().first_child.is_some()
+    }
+
+    /// The first child node of the root node of the HTML.
+    ///
+    /// Returns `None` if the root node has no children.
+    pub fn first_child(&self) -> Option<NodeRef<'_>> {
+        self.root().first_child.map(|id| NodeRef::new(self, id))
+    }
+
+    /// The last child node of the root node of the HTML .
+    ///
+    /// Returns `None` if the root node has no children.
+    pub fn last_child(&self) -> Option<NodeRef<'_>> {
+        self.root().last_child.map(|id| NodeRef::new(self, id))
+    }
+
+    /// Iterate through the children of the root node of the HTML.
+    pub fn children(&self) -> Children<'_> {
+        Children::new(self.first_child())
     }
 }
 
@@ -252,9 +289,9 @@ impl Serialize for Html {
     {
         match traversal_scope {
             TraversalScope::IncludeNode => {
-                let root = self.nodes[0].first_child.unwrap();
+                let root = self.root();
 
-                let mut next_child = self.nodes[root].first_child;
+                let mut next_child = root.first_child;
                 while let Some(child) = next_child {
                     let child = &self.nodes[child];
                     child.serialize(self, serializer)?;
@@ -287,7 +324,7 @@ impl fmt::Display for Html {
 /// An HTML node.
 #[derive(Debug)]
 #[non_exhaustive]
-pub struct Node {
+pub(crate) struct Node {
     pub(crate) parent: Option<usize>,
     pub(crate) prev_sibling: Option<usize>,
     pub(crate) next_sibling: Option<usize>,
@@ -310,13 +347,18 @@ impl Node {
     }
 
     /// Returns the data of this `Node` if it is an Element (aka an HTML tag).
-    pub fn as_element(&self) -> Option<&ElementData> {
+    pub(crate) fn as_element(&self) -> Option<&ElementData> {
         as_variant!(&self.data, NodeData::Element)
     }
 
     /// Returns the mutable `ElementData` of this `Node` if it is a `NodeData::Element`.
     pub(crate) fn as_element_mut(&mut self) -> Option<&mut ElementData> {
         as_variant!(&mut self.data, NodeData::Element)
+    }
+
+    /// Returns the text content of this `Node`, if it is a `NodeData::Text`.
+    fn as_text(&self) -> Option<&StrTendril> {
+        as_variant!(&self.data, NodeData::Text)
     }
 
     /// Returns the mutable text content of this `Node`, if it is a `NodeData::Text`.
@@ -365,9 +407,9 @@ impl Node {
 }
 
 /// The data of a `Node`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::exhaustive_enums)]
-pub(crate) enum NodeData {
+pub enum NodeData {
     /// The root node of the `Html`.
     Document,
 
@@ -382,7 +424,7 @@ pub(crate) enum NodeData {
 }
 
 /// The data of an HTML element.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::exhaustive_structs)]
 pub struct ElementData {
     /// The qualified name of the element.
@@ -391,6 +433,133 @@ pub struct ElementData {
     /// The attributes of the element.
     pub attrs: BTreeSet<Attribute>,
 }
+
+impl ElementData {
+    /// Convert this element data to typed data as [suggested by the Matrix Specification][spec].
+    ///
+    /// [spec]: https://spec.matrix.org/latest/client-server-api/#mroommessage-msgtypes
+    #[cfg(feature = "matrix")]
+    pub fn to_matrix(&self) -> matrix::MatrixElementData {
+        matrix::MatrixElementData::parse(&self.name, &self.attrs)
+    }
+}
+
+/// A reference to an HTML node.
+#[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
+pub struct NodeRef<'a> {
+    /// The `Html` struct containing the nodes.
+    pub(crate) html: &'a Html,
+    /// The referenced node.
+    pub(crate) node: &'a Node,
+}
+
+impl<'a> NodeRef<'a> {
+    /// Construct a new `NodeRef` for the given HTML and node ID.
+    fn new(html: &'a Html, id: usize) -> Self {
+        Self { html, node: &html.nodes[id] }
+    }
+
+    /// Construct a new `NodeRef` from the same HTML as this node with the given node ID.
+    fn with_id(&self, id: usize) -> Self {
+        let html = self.html;
+        Self::new(html, id)
+    }
+
+    /// The data of the node.
+    pub fn data(&self) -> &'a NodeData {
+        &self.node.data
+    }
+
+    /// Returns the data of this node if it is a `NodeData::Element`.
+    pub fn as_element(&self) -> Option<&'a ElementData> {
+        self.node.as_element()
+    }
+
+    /// Returns the text content of this node, if it is a `NodeData::Text`.
+    pub fn as_text(&self) -> Option<&'a StrTendril> {
+        self.node.as_text()
+    }
+
+    /// The parent node of this node.
+    ///
+    /// Returns `None` if the parent is the root node.
+    pub fn parent(&self) -> Option<NodeRef<'a>> {
+        let parent_id = self.node.parent?;
+
+        // We don't want users to be able to navigate to the root.
+        if parent_id == self.html.root_id() {
+            return None;
+        }
+
+        Some(self.with_id(parent_id))
+    }
+
+    /// The next sibling node of this node.
+    ///
+    /// Returns `None` if this is the last of its siblings.
+    pub fn next_sibling(&self) -> Option<NodeRef<'a>> {
+        Some(self.with_id(self.node.next_sibling?))
+    }
+
+    /// The previous sibling node of this node.
+    ///
+    /// Returns `None` if this is the first of its siblings.
+    pub fn prev_sibling(&self) -> Option<NodeRef<'a>> {
+        Some(self.with_id(self.node.prev_sibling?))
+    }
+
+    /// Whether this node has children.
+    pub fn has_children(&self) -> bool {
+        self.node.first_child.is_some()
+    }
+
+    /// The first child node of this node.
+    ///
+    /// Returns `None` if this node has no children.
+    pub fn first_child(&self) -> Option<NodeRef<'a>> {
+        Some(self.with_id(self.node.first_child?))
+    }
+
+    /// The last child node of this node.
+    ///
+    /// Returns `None` if this node has no children.
+    pub fn last_child(&self) -> Option<NodeRef<'a>> {
+        Some(self.with_id(self.node.last_child?))
+    }
+
+    /// Get an iterator through the children of this node.
+    pub fn children(&self) -> Children<'a> {
+        Children::new(self.first_child())
+    }
+}
+
+/// An iterator through the children of a node.
+///
+/// Can be constructed with [`Html::children()`] or [`NodeRef::children()`].
+#[derive(Debug, Clone, Copy)]
+pub struct Children<'a> {
+    next: Option<NodeRef<'a>>,
+}
+
+impl<'a> Children<'a> {
+    /// Construct a `Children` starting from the given node.
+    fn new(start_node: Option<NodeRef<'a>>) -> Self {
+        Self { next: start_node }
+    }
+}
+
+impl<'a> Iterator for Children<'a> {
+    type Item = NodeRef<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.next?;
+        self.next = next.next_sibling();
+        Some(next)
+    }
+}
+
+impl<'a> FusedIterator for Children<'a> {}
 
 #[cfg(test)]
 mod tests {

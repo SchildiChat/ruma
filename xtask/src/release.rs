@@ -1,12 +1,7 @@
 use std::io::{stdin, stdout, BufRead, Write};
 
 use clap::Args;
-use isahc::{
-    auth::{Authentication, Credentials},
-    config::Configurable,
-    http::StatusCode,
-    HttpClient, ReadResponseExt, Request,
-};
+use reqwest::{blocking::Client, StatusCode};
 use semver::Version;
 use serde_json::json;
 
@@ -40,7 +35,7 @@ pub struct ReleaseTask {
     version: Version,
 
     /// The http client to use for requests.
-    http_client: HttpClient,
+    http_client: Client,
 
     /// The github configuration required to publish a release.
     config: GithubConfig,
@@ -63,7 +58,7 @@ impl ReleaseTask {
 
         let config = crate::Config::load()?.github;
 
-        let http_client = HttpClient::new()?;
+        let http_client = Client::builder().user_agent("ruma xtask").build()?;
 
         Ok(Self { metadata, package, version, http_client, config, dry_run })
     }
@@ -72,7 +67,8 @@ impl ReleaseTask {
     pub(crate) fn run(&mut self) -> Result<()> {
         let title = &self.title();
         let prerelease = !self.version.pre.is_empty();
-        let publish_only = self.package.name == "ruma-identifiers-validation";
+        let publish_only =
+            ["ruma-identifiers-validation", "ruma-macros"].contains(&self.package.name.as_str());
 
         println!(
             "Starting {} for {title}…",
@@ -163,7 +159,7 @@ impl ReleaseTask {
         }
 
         println!("Creating release on GitHub…");
-        let request_body = &json!({
+        let request_body = json!({
             "tag_name": tag,
             "name": title,
             "body": changes.trim_softbreaks(),
@@ -260,21 +256,23 @@ impl ReleaseTask {
 
     /// Check if the tag for the current version of the crate has been pushed on GitHub.
     fn is_released(&self) -> Result<bool> {
-        let response =
-            self.http_client.get(format!("{GITHUB_API_RUMA}/releases/tags/{}", self.tag_name()))?;
+        let response = self
+            .http_client
+            .get(format!("{GITHUB_API_RUMA}/releases/tags/{}", self.tag_name()))
+            .send()?;
 
         Ok(response.status() == StatusCode::OK)
     }
 
     /// Create the release on GitHub with the given `config` and `credentials`.
-    fn release(&self, body: &str) -> Result<()> {
-        let request = Request::post(format!("{GITHUB_API_RUMA}/releases"))
-            .authentication(Authentication::basic())
-            .credentials(Credentials::new(&self.config.user, &self.config.token))
+    fn release(&self, body: String) -> Result<()> {
+        let response = self
+            .http_client
+            .post(format!("{GITHUB_API_RUMA}/releases"))
+            .basic_auth(&self.config.user, Some(&self.config.token))
             .header("Accept", "application/vnd.github.v3+json")
-            .body(body)?;
-
-        let mut response = self.http_client.send(request)?;
+            .body(body)
+            .send()?;
 
         if response.status() == StatusCode::CREATED {
             Ok(())

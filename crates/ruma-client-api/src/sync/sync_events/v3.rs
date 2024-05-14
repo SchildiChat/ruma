@@ -349,7 +349,6 @@ pub struct Timeline {
     pub prev_batch: Option<String>,
 
     /// A list of events.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<Raw<AnySyncTimelineEvent>>,
 }
 
@@ -360,8 +359,11 @@ impl Timeline {
     }
 
     /// Returns true if there are no timeline updates.
+    ///
+    /// A `Timeline` is considered non-empty if it has at least one event, a
+    /// `prev_batch` value, or `limited` is `true`.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        !self.limited && self.prev_batch.is_none() && self.events.is_empty()
     }
 }
 
@@ -603,16 +605,17 @@ mod tests {
     #[test]
     fn timeline_serde() {
         let timeline = assign!(Timeline::new(), { limited: true });
-        let timeline_serialized = json!({ "limited": true });
+        let timeline_serialized = json!({ "events": [], "limited": true });
         assert_eq!(to_json_value(timeline).unwrap(), timeline_serialized);
 
         let timeline_deserialized = from_json_value::<Timeline>(timeline_serialized).unwrap();
         assert!(timeline_deserialized.limited);
 
         let timeline_default = Timeline::default();
-        assert_eq!(to_json_value(timeline_default).unwrap(), json!({}));
+        assert_eq!(to_json_value(timeline_default).unwrap(), json!({ "events": [] }));
 
-        let timeline_default_deserialized = from_json_value::<Timeline>(json!({})).unwrap();
+        let timeline_default_deserialized =
+            from_json_value::<Timeline>(json!({ "events": [] })).unwrap();
         assert!(!timeline_default_deserialized.limited);
     }
 }

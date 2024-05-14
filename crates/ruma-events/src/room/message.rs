@@ -218,30 +218,12 @@ impl RoomMessageEventContent {
     /// Panics if this is a reply within the thread and `self` has a `formatted_body` with a format
     /// other than HTML.
     pub fn make_for_thread(
-        mut self,
+        self,
         previous_message: &OriginalRoomMessageEvent,
         is_reply: ReplyWithinThread,
         add_mentions: AddMentions,
     ) -> Self {
-        if is_reply == ReplyWithinThread::Yes {
-            self = self.make_reply_to(previous_message, ForwardThread::No, add_mentions);
-        }
-
-        let thread_root = if let Some(Relation::Thread(Thread { event_id, .. })) =
-            &previous_message.content.relates_to
-        {
-            event_id.clone()
-        } else {
-            previous_message.event_id.clone()
-        };
-
-        self.relates_to = Some(Relation::Thread(Thread {
-            event_id: thread_root,
-            in_reply_to: Some(InReplyTo { event_id: previous_message.event_id.clone() }),
-            is_falling_back: is_reply == ReplyWithinThread::No,
-        }));
-
-        self
+        self.without_relation().make_for_thread(previous_message, is_reply, add_mentions)
     }
 
     /// Turns `self` into a [replacement] (or edit) for a given message.
@@ -259,9 +241,9 @@ impl RoomMessageEventContent {
     /// `original_message`.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/rich_reply.md"))]
     ///
-    /// If the message that is replaced contains [`Mentions`], they are copied into
-    /// `m.new_content` to keep the same mentions, but not into `content` to avoid repeated
-    /// notifications.
+    /// If this message contains [`Mentions`], they are copied into `m.new_content` to keep the same
+    /// mentions, but the ones in `content` are filtered with the ones in the
+    /// [`ReplacementMetadata`] so only new mentions will trigger a notification.
     ///
     /// # Panics
     ///
@@ -270,31 +252,11 @@ impl RoomMessageEventContent {
     /// [replacement]: https://spec.matrix.org/latest/client-server-api/#event-replacements
     #[track_caller]
     pub fn make_replacement(
-        mut self,
+        self,
         metadata: impl Into<ReplacementMetadata>,
         replied_to_message: Option<&OriginalRoomMessageEvent>,
     ) -> Self {
-        let metadata = metadata.into();
-
-        // Prepare relates_to with the untouched msgtype.
-        let relates_to = Relation::Replacement(Replacement {
-            event_id: metadata.event_id,
-            new_content: RoomMessageEventContentWithoutRelation {
-                msgtype: self.msgtype.clone(),
-                mentions: metadata.mentions,
-            },
-        });
-
-        self.msgtype.make_replacement_body();
-
-        // Add reply fallback if needed.
-        if let Some(original_message) = replied_to_message {
-            self = self.make_reply_to(original_message, ForwardThread::No, AddMentions::No);
-        }
-
-        self.relates_to = Some(relates_to);
-
-        self
+        self.without_relation().make_replacement(metadata, replied_to_message)
     }
 
     /// Set the [mentions] of this event.
@@ -308,6 +270,7 @@ impl RoomMessageEventContent {
     /// used instead.
     ///
     /// [mentions]: https://spec.matrix.org/latest/client-server-api/#user-and-room-mentions
+    #[deprecated = "Call add_mentions before adding the relation instead."]
     pub fn set_mentions(mut self, mentions: Mentions) -> Self {
         if let Some(Relation::Replacement(replacement)) = &mut self.relates_to {
             let old_mentions = &replacement.new_content.mentions;
@@ -344,9 +307,8 @@ impl RoomMessageEventContent {
     /// mentions by extending the previous `user_ids` with the new ones, and applies a logical OR to
     /// the values of `room`.
     ///
-    /// This is recommended over [`Self::set_mentions()`] to avoid to overwrite any mentions set
-    /// automatically by another method, like [`Self::make_reply_to()`]. However, this method has no
-    /// special support for replacements.
+    /// This should be called before methods that add a relation, like [`Self::make_reply_to()`] and
+    /// [`Self::make_replacement()`], for the mentions to be correctly set.
     ///
     /// [mentions]: https://spec.matrix.org/latest/client-server-api/#user-and-room-mentions
     pub fn add_mentions(mut self, mentions: Mentions) -> Self {
@@ -686,6 +648,8 @@ impl MessageType {
             if let Some(formatted) = formatted {
                 formatted.sanitize_html(mode, remove_reply_fallback);
             }
+            // This is a false positive, see <https://github.com/rust-lang/rust-clippy/issues/12444>
+            #[allow(clippy::assigning_clones)]
             if remove_reply_fallback == RemoveReplyFallback::Yes {
                 *body = remove_plain_reply_fallback(body).to_owned();
             }
@@ -894,7 +858,7 @@ pub struct CustomEventContent {
 
 #[cfg(feature = "markdown")]
 pub(crate) fn parse_markdown(text: &str) -> Option<String> {
-    use pulldown_cmark::{Event, Options, Parser, Tag};
+    use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 
     const OPTIONS: Options = Options::ENABLE_TABLES.union(Options::ENABLE_STRIKETHROUGH);
 
@@ -919,7 +883,7 @@ pub(crate) fn parse_markdown(text: &str) -> Option<String> {
         } else {
             false
         };
-        let is_paragraph_end = matches!(event, Event::End(Tag::Paragraph));
+        let is_paragraph_end = matches!(event, Event::End(TagEnd::Paragraph));
 
         !is_text && !is_break && !is_first_paragraph_start && !is_paragraph_end
     });

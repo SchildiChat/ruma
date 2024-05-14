@@ -1,6 +1,6 @@
 //! Convenience methods and types to sanitize HTML messages.
 
-use crate::{Html, SanitizerConfig};
+use crate::{Html, HtmlSanitizerMode, SanitizerConfig};
 
 /// Sanitize the given HTML string.
 ///
@@ -24,21 +24,7 @@ pub fn sanitize_html(
         config = config.remove_reply_fallback();
     }
 
-    sanitize_inner(s, config)
-}
-
-/// What HTML [tags and attributes] should be kept by the sanitizer.
-///
-/// [tags and attributes]: https://spec.matrix.org/latest/client-server-api/#mroommessage-msgtypes
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(clippy::exhaustive_enums)]
-pub enum HtmlSanitizerMode {
-    /// Keep only the tags and attributes listed in the Matrix specification.
-    Strict,
-
-    /// Like `Strict` mode, with additional tags and attributes that are not yet included in
-    /// the spec, but are reasonable to keep.
-    Compat,
+    sanitize_inner(s, &config)
 }
 
 /// Whether to remove the [rich reply fallback] while sanitizing.
@@ -62,10 +48,10 @@ pub enum RemoveReplyFallback {
 /// [rich reply fallback]: https://spec.matrix.org/latest/client-server-api/#fallbacks-for-rich-replies
 pub fn remove_html_reply_fallback(s: &str) -> String {
     let config = SanitizerConfig::new().remove_reply_fallback();
-    sanitize_inner(s, config)
+    sanitize_inner(s, &config)
 }
 
-fn sanitize_inner(s: &str, config: SanitizerConfig) -> String {
+fn sanitize_inner(s: &str, config: &SanitizerConfig) -> String {
     let mut html = Html::parse(s);
     html.sanitize_with(config);
     html.to_string()

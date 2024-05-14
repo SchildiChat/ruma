@@ -1,7 +1,16 @@
 # [unreleased]
 
+# 0.10.1
+
+Upgrade `ruma-events` to 0.28.1.
+
+# 0.10.0
+
 - Bump MSRV to 1.75
-- re-export the `ruma-events`'s `unstable-msc2867` feature, manually marking rooms as unread
+- The http crate had a major version bump to version 1.1
+- The `client-isahc` feature was removed
+- Most ruma crates had breaking changes, refer to their changelogs for more
+  details
 
 # 0.9.4
 

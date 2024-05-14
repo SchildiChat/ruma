@@ -1,5 +1,16 @@
 # [unreleased]
 
+# 0.28.1
+
+Improvements:
+
+- Implement `make_for_thread` and `make_replacement` for
+  `RoomMessageEventContentWithoutRelation`
+- `RoomMessageEventContent::set_mentions` is deprecated and replaced by
+  `add_mentions` that should be called before `make_replacement`.
+
+# 0.28.0
+
 Bug fixes:
 
 - The `MembershipState::Invite` to `MembershipState::Knock` membership change
@@ -32,6 +43,7 @@ Improvements:
 - Add `filename` and `formatted` fields to media event contents to support media captions
   as per [MSC2530](https://github.com/matrix-org/matrix-spec-proposals/pull/2530) / Matrix 1.10
 - Add support for multi-stream VoIP, according to MSC3077 / Matrix 1.10
+- Add unstable support for muting in VoIP calls, according to MSC3291
 
 # 0.27.11
 

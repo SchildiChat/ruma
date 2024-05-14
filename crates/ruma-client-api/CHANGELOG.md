@@ -1,9 +1,15 @@
 # [unreleased]
 
+# 0.18.0
+
 Bug fixes:
 
 - Don't require the `failures` field in the
   `ruma_client_api::keys::upload_signatures::Response` type.
+- `sync::sync_events::v3::Timeline::is_empty` now returns `false` when the
+  `limited` or `prev_batch` fields are set.
+- `login_fallback::Response` now returns the proper content type
+- `sso_login[_with_provider]` responses now use the proper HTTP status code.
 
 Breaking changes:
 
@@ -18,7 +24,11 @@ Breaking changes:
   constructed with `ErrorKind::forbidden()`.
 - The `retry_after_ms` field of `ErrorKind::LimitExceeded` was renamed to
   `retry_after` and is now an `Option<RetryAfter>`, to add support for the
-  Retry-After header, according to MSC4041 / Matrix 1.10 
+  Retry-After header, according to MSC4041 / Matrix 1.10
+- Make `get_uiaa_fallback::v3::Response` an enum for a redirect or an HTML page.
+  It will now return the proper status code and headers depending on the variant
+  used.
+- The http crate had a major version bump to version 1.1
 
 Improvements:
 
@@ -47,6 +57,7 @@ Improvements:
 - Add unstable support for moderator server support discovery, according to MSC4121
 - Add unstable support for the room summary endpoint from MSC3266 behind the
   `unstable-msc3266` feature.
+- Add unstable support for animated thumbnails, according to MSC2705
 
 # 0.17.4
 

@@ -1,10 +1,18 @@
 # [unreleased]
 
+# 0.11.0
+
+Breaking changes:
+
+- Upgrade dependencies
+
 Bug fixes:
 
-* Disallow `invite` -> `knock` membership transition
-  * The spec was determined to be right about rejecting it in the first place:
-    <https://github.com/matrix-org/matrix-spec/pull/1717>
+- Disallow `invite` -> `knock` membership transition.
+  The spec was determined to be right about rejecting it in the first place:
+  <https://github.com/matrix-org/matrix-spec/pull/1717>
+- Perform extra redaction checks on room versions 1 and 2, rather than for
+  version 3 and onwards
 
 # 0.10.0
 

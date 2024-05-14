@@ -1,9 +1,14 @@
-use std::path::PathBuf;
+#![allow(clippy::disallowed_types)]
 
-use isahc::{HttpClient, ReadResponseExt};
+use std::{collections::HashMap, path::PathBuf};
+
+#[cfg(feature = "default")]
+use reqwest::blocking::Client;
 use semver::Version;
 use serde::{de::IgnoredAny, Deserialize};
+#[cfg(feature = "default")]
 use toml_edit::{value, Document};
+#[cfg(feature = "default")]
 use xshell::{cmd, pushd, read_file, write_file};
 
 use crate::{util::ask_yes_no, Metadata, Result};
@@ -22,11 +27,51 @@ pub struct Package {
     /// The package's manifest path.
     pub manifest_path: PathBuf,
 
-    /// A map of the package dependencies.
+    /// A list of the package dependencies.
     #[serde(default)]
     pub dependencies: Vec<Dependency>,
+
+    /// A map of the package features.
+    #[serde(default)]
+    pub features: HashMap<String, Vec<String>>,
 }
 
+impl Package {
+    /// Whether this package has a way to enable the given feature from the given package.
+    pub fn can_enable_feature(&self, package_name: &str, feature_name: &str) -> bool {
+        for activated_feature in self.features.values().flatten() {
+            // Remove optional `dep:` at the start.
+            let remaining = activated_feature.trim_start_matches("dep:");
+
+            // Check that we have the package name.
+            let Some(remaining) = remaining.strip_prefix(package_name) else {
+                continue;
+            };
+
+            if remaining.is_empty() {
+                // The feature only enables the dependency.
+                continue;
+            }
+
+            // Remove optional `?`.
+            let remaining = remaining.trim_start_matches('?');
+
+            let Some(remaining) = remaining.strip_prefix('/') else {
+                // This is another package name starting with the same string.
+                continue;
+            };
+
+            // Finally, only the feature name is remaining.
+            if remaining == feature_name {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+#[cfg(feature = "default")]
 impl Package {
     /// Update the version of this crate.
     pub fn update_version(&mut self, version: &Version, dry_run: bool) -> Result<()> {
@@ -105,6 +150,11 @@ impl Package {
     ///
     /// If `update` is `true`, update the changelog for the release of the given version.
     pub fn changes(&self, update: bool) -> Result<String> {
+        if self.name == "ruma-macros" {
+            // ruma-macros doesn't have a changelog and won't create a tag.
+            return Ok(String::new());
+        }
+
         let mut changelog_path = self.manifest_path.clone();
         changelog_path.set_file_name("CHANGELOG.md");
 
@@ -153,15 +203,15 @@ impl Package {
     }
 
     /// Check if the current version of the crate is published on crates.io.
-    pub fn is_published(&self, client: &HttpClient) -> Result<bool> {
+    pub fn is_published(&self, client: &Client) -> Result<bool> {
         let response: CratesIoCrate =
-            client.get(format!("{CRATESIO_API}/{}/{}", self.name, self.version))?.json()?;
+            client.get(format!("{CRATESIO_API}/{}/{}", self.name, self.version)).send()?.json()?;
 
         Ok(response.version.is_some())
     }
 
     /// Publish this package on crates.io.
-    pub fn publish(&self, client: &HttpClient, dry_run: bool) -> Result<()> {
+    pub fn publish(&self, client: &Client, dry_run: bool) -> Result<()> {
         println!("Publishing {} {} on crates.io…", self.name, self.version);
         let _dir = pushd(self.manifest_path.parent().unwrap())?;
 
@@ -198,6 +248,7 @@ pub enum DependencyKind {
     Build,
 }
 
+#[cfg(feature = "default")]
 /// A crate from the `GET /crates/{crate}` endpoint of crates.io.
 #[derive(Deserialize)]
 struct CratesIoCrate {
