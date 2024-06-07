@@ -56,6 +56,10 @@ compat-optional = []
 # Allow TagInfo to contain a stringified floating-point value for the `order` field.
 compat-tag-info = []
 
+# Support encrypted stickers, as sent by several bridges.
+# https://github.com/matrix-org/matrix-spec/issues/1667
+compat-encrypted-stickers = []
+
 [dependencies]
 as_variant = { workspace = true }
 indexmap = { version = "2.0.0", features = ["serde"] }
@@ -72,7 +76,7 @@ serde = { workspace = true }
 serde_json = { workspace = true, features = ["raw_value"] }
 thiserror = { workspace = true }
 tracing = { workspace = true, features = ["attributes"] }
-url = "2.2.2"
+url = { workspace = true }
 wildmatch = "2.0.0"
 
 # dev-dependencies can't be optional, so this is a regular dependency

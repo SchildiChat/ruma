@@ -1,5 +1,12 @@
 # [unreleased]
 
+Improvements:
+
+- Add support for MSC4108 OIDC sign in and E2EE set up via QR code
+- Heroes in `sync::sync_events::v4`: `SyncRequestList` and `RoomSubscription`
+  both have a new `include_heroes` field. `SlidingSyncRoom` has a new `heroes`
+  field, with a new type `SlidingSyncRoomHero`.
+
 # 0.18.0
 
 Bug fixes:
@@ -29,6 +36,8 @@ Breaking changes:
   It will now return the proper status code and headers depending on the variant
   used.
 - The http crate had a major version bump to version 1.1
+- `RoomSummary::heroes` now properly contains only `UserId` instead of `String`
+  as before.
 
 Improvements:
 
