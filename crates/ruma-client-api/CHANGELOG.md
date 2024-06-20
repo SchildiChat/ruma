@@ -1,11 +1,27 @@
 # [unreleased]
 
+Breaking changes:
+
+- `RoomSummary::heroes` now properly contains only `UserId` instead of `String`
+  as before.
+- Change type of `client_secret` field in `ThirdpartyIdCredentials`
+  from `Box<ClientSecret>` to `OwnedClientSecret`
+
 Improvements:
 
 - Add support for MSC4108 OIDC sign in and E2EE set up via QR code
 - Heroes in `sync::sync_events::v4`: `SyncRequestList` and `RoomSubscription`
   both have a new `include_heroes` field. `SlidingSyncRoom` has a new `heroes`
   field, with a new type `SlidingSyncRoomHero`.
+- Add unstable support for authenticated media endpoints, according to MSC3916.
+
+Bug fixes:
+
+- Rename `avatar` to `avatar_url` when (De)serializing
+
+Bug fixes:
+
+- `user_id` of `SlidingSyncRoomHero` is now mandatory
 
 # 0.18.0
 
@@ -36,8 +52,6 @@ Breaking changes:
   It will now return the proper status code and headers depending on the variant
   used.
 - The http crate had a major version bump to version 1.1
-- `RoomSummary::heroes` now properly contains only `UserId` instead of `String`
-  as before.
 
 Improvements:
 

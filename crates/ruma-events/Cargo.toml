@@ -12,7 +12,6 @@ rust-version = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 canonical-json = ["ruma-common/canonical-json"]
@@ -34,6 +33,7 @@ unstable-msc3291 = []
 unstable-msc3381 = ["unstable-msc1767"]
 unstable-msc3401 = []
 unstable-msc3488 = ["unstable-msc1767"]
+unstable-msc3489 = ["unstable-msc3488"]
 unstable-msc3551 = ["unstable-msc3956"]
 unstable-msc3552 = ["unstable-msc3551"]
 unstable-msc3553 = ["unstable-msc3552"]
@@ -42,7 +42,7 @@ unstable-msc3927 = ["unstable-msc3551"]
 unstable-msc3954 = ["unstable-msc1767"]
 unstable-msc3955 = ["unstable-msc1767"]
 unstable-msc3956 = ["unstable-msc1767"]
-unstable-msc4075 = []
+unstable-msc4075 = ["unstable-msc3401"]
 unstable-pdu = []
 
 # Allow some mandatory fields to be missing, defaulting them to an empty string

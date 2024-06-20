@@ -13,7 +13,6 @@ rust-version = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 # OutgoingRequest and IncomingResponse implementations
@@ -49,6 +48,7 @@ unstable-msc3488 = []
 unstable-msc3575 = []
 unstable-msc3814 = []
 unstable-msc3843 = []
+unstable-msc3916 = []
 unstable-msc3983 = []
 unstable-msc4108 = []
 unstable-msc4121 = []
