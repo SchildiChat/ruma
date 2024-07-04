@@ -17,7 +17,7 @@ const OLD_URL_WHITELIST: &[&str] =
 
 /// Authorized versions in URLs pointing to the new specs.
 const NEW_VERSION_WHITELIST: &[&str] = &[
-    "v1.1", "v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10",
+    "v1.1", "v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10", "v1.11",
     "latest",
     // This should only be enabled if a legitimate use case is found.
     // "unstable",
@@ -220,48 +220,72 @@ fn get_page_ids(url: &str) -> Result<HashMap<String, HasDuplicates>> {
             continue;
         };
 
+        // For the URLs using the "latest" version, log the actual version we got.
+        if url[URL_PREFIX.len()..].starts_with("latest/") {
+            // Let's use the `meta` element with the `og:url` property, it contains the original
+            // relative URL of the page.
+            if tag.name.0 == b"meta"
+                && tag
+                    .attributes
+                    .get(b"property".as_slice())
+                    .is_some_and(|value| value.0 == b"og:url")
+            {
+                match tag.attributes.get(b"content".as_slice()) {
+                    Some(value) => {
+                        println!(
+                            "Original URL for latest spec page: {}",
+                            String::from_utf8_lossy(value)
+                        );
+                    }
+                    None => println!(
+                        "Could not get original URL for latest spec page: /{}",
+                        &url[URL_PREFIX.len()..]
+                    ),
+                }
+            }
+        }
+
         let Some(id) =
             tag.attributes.get(b"id".as_slice()).and_then(|s| String::from_utf8(s.0.clone()).ok())
         else {
             continue;
         };
 
-        let (id, has_duplicates) = uniquify_heading_id(id, &mut ids);
+        let has_duplicates = heading_id_has_duplicates(&id, &mut ids);
+
         ids.insert(id, has_duplicates);
     }
 
     Ok(ids)
 }
 
-/// Make sure the ID is unique in the page, if not make it unique.
+/// Check whether the given heading ID has duplicates in the given map.
 ///
-/// This is necessary because Matrix spec pages do that in JavaScript, so IDs
-/// are not unique in the source.
-///
-/// This is a reimplementation of the algorithm used for the spec.
-///
-/// See <https://github.com/matrix-org/matrix-spec/blob/6b02e393082570db2d0a651ddb79a365bc4a0f8d/static/js/toc.js#L25-L37>.
-fn uniquify_heading_id(
-    mut id: String,
+/// This check is necessary because duplicates IDs have a number depending on their occurrence in a
+/// HTML page. If a duplicate ID is added, moved or removed from the spec, its number might change
+/// from one version to the next.
+fn heading_id_has_duplicates(
+    id: &str,
     unique_ids: &mut HashMap<String, HasDuplicates>,
-) -> (String, HasDuplicates) {
-    let base_id = id.clone();
-    let mut counter: u16 = 0;
-    let mut has_duplicates = HasDuplicates::No;
+) -> HasDuplicates {
+    // IDs that should be duplicates end with `-{number}`.
+    let Some((start, _end)) =
+        id.rsplit_once('-').filter(|(_start, end)| end.chars().all(|c| c.is_ascii_digit()))
+    else {
+        return HasDuplicates::No;
+    };
 
-    while let Some(other_id_has_dup) = unique_ids.get_mut(&id) {
-        has_duplicates = HasDuplicates::Yes;
+    // Update the first duplicate ID, because it doesn't end with a number.
+    if let Some(other_id_has_dup) = unique_ids.get_mut(start) {
         *other_id_has_dup = HasDuplicates::Yes;
-        counter += 1;
-        id = format!("{base_id}-{counter}");
     }
 
-    (id, has_duplicates)
+    HasDuplicates::Yes
 }
 
 fn print_link_err(error: &str, link: &SpecLink) {
     println!(
-        "\n{error}\nfile: {}:{}\nlink: {}",
+        "\n{error}\n  file: {}:{}\n  link: {}",
         link.path.display(),
         link.line,
         link.url.get(..80).unwrap_or(&link.url),

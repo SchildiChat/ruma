@@ -57,7 +57,7 @@ fn is_default_bits(val: &UInt) -> bool {
 ///
 /// The only algorithm currently specified is `m.secret_storage.v1.aes-hmac-sha2`, so this
 /// essentially represents `AesHmacSha2KeyDescription` in the
-/// [spec](https://spec.matrix.org/latest/client-server-api/#msecret_storagev1aes-hmac-sha2).
+/// [spec](https://spec.matrix.org/v1.11/client-server-api/#msecret_storagev1aes-hmac-sha2).
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 #[derive(Clone, Debug, Serialize, EventContent)]
 #[ruma_event(type = "m.secret_storage.key.*", kind = GlobalAccountData)]
@@ -137,7 +137,7 @@ impl SecretStorageEncryptionAlgorithm {
 /// The key properties for the `m.secret_storage.v1.aes-hmac-sha2` algorithm.
 ///
 /// Corresponds to the AES-specific properties of `AesHmacSha2KeyDescription` in the
-/// [spec](https://spec.matrix.org/latest/client-server-api/#msecret_storagev1aes-hmac-sha2).
+/// [spec](https://spec.matrix.org/v1.11/client-server-api/#msecret_storagev1aes-hmac-sha2).
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 pub struct SecretStorageV1AesHmacSha2Properties {
@@ -182,7 +182,7 @@ mod tests {
         PassPhrase, SecretStorageEncryptionAlgorithm, SecretStorageKeyEventContent,
         SecretStorageV1AesHmacSha2Properties,
     };
-    use crate::{EventContentFromType, GlobalAccountDataEvent};
+    use crate::{AnyGlobalAccountDataEvent, EventContentFromType, GlobalAccountDataEvent};
 
     #[test]
     fn key_description_serialization() {
@@ -326,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn event_serialization() {
+    fn event_content_serialization() {
         let mut content = SecretStorageKeyEventContent::new(
             "my_key_id".into(),
             SecretStorageEncryptionAlgorithm::V1AesHmacSha2(SecretStorageV1AesHmacSha2Properties {
@@ -347,6 +347,31 @@ mod tests {
     }
 
     #[test]
+    fn event_serialization() {
+        let mut content = SecretStorageKeyEventContent::new(
+            "my_key_id".into(),
+            SecretStorageEncryptionAlgorithm::V1AesHmacSha2(SecretStorageV1AesHmacSha2Properties {
+                iv: Some(Base64::parse("YWJjZGVmZ2hpamtsbW5vcA").unwrap()),
+                mac: Some(Base64::parse("aWRvbnRrbm93d2hhdGFtYWNsb29rc2xpa2U").unwrap()),
+            }),
+        );
+        content.name = Some("my_key".to_owned());
+        let event = GlobalAccountDataEvent { content };
+
+        let json = json!({
+            "type": "m.secret_storage.key.my_key_id",
+            "content": {
+                "name": "my_key",
+                "algorithm": "m.secret_storage.v1.aes-hmac-sha2",
+                "iv": "YWJjZGVmZ2hpamtsbW5vcA",
+                "mac": "aWRvbnRrbm93d2hhdGFtYWNsb29rc2xpa2U"
+            }
+        });
+
+        assert_eq!(to_json_value(&event).unwrap(), json);
+    }
+
+    #[test]
     fn event_deserialization() {
         let json = json!({
             "type": "m.secret_storage.key.my_key_id",
@@ -358,8 +383,8 @@ mod tests {
             }
         });
 
-        let ev =
-            from_json_value::<GlobalAccountDataEvent<SecretStorageKeyEventContent>>(json).unwrap();
+        let any_ev = from_json_value::<AnyGlobalAccountDataEvent>(json).unwrap();
+        assert_matches!(any_ev, AnyGlobalAccountDataEvent::SecretStorageKey(ev));
         assert_eq!(ev.content.key_id, "my_key_id");
         assert_eq!(ev.content.name.unwrap(), "my_key");
         assert_matches!(ev.content.passphrase, None);

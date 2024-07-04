@@ -6,6 +6,7 @@ Breaking changes:
   as before.
 - Change type of `client_secret` field in `ThirdpartyIdCredentials`
   from `Box<ClientSecret>` to `OwnedClientSecret`
+- Make `id_server` and `id_access_token` in `ThirdpartyIdCredentials` optional
 
 Improvements:
 
@@ -13,15 +14,19 @@ Improvements:
 - Heroes in `sync::sync_events::v4`: `SyncRequestList` and `RoomSubscription`
   both have a new `include_heroes` field. `SlidingSyncRoom` has a new `heroes`
   field, with a new type `SlidingSyncRoomHero`.
-- Add unstable support for authenticated media endpoints, according to MSC3916.
+- Add support for authenticated media endpoints, according to MSC3916 / Matrix
+  1.11.
+  - They replace the newly deprecated `media::get_*` endpoints.
+- Stabilize support for animated thumbnails, according to Matrix 1.11
+- Add support for terms of service at registration, according to MSC1692 /
+  Matrix 1.11
 
 Bug fixes:
 
-- Rename `avatar` to `avatar_url` when (De)serializing
-
-Bug fixes:
-
+- Rename `avatar` to `avatar_url` when (De)serializing `SlidingSyncRoomHero`
 - `user_id` of `SlidingSyncRoomHero` is now mandatory
+- Make authentication with access token optional for the `change_password` and
+  `deactivate` endpoints.
 
 # 0.18.0
 

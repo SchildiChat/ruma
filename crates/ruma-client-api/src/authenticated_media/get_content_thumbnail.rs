@@ -2,10 +2,10 @@
 //!
 //! Get a thumbnail of content from the media store.
 
-pub mod unstable {
-    //! `/unstable/org.matrix.msc3916/` ([MSC])
+pub mod v1 {
+    //! `/v1/` ([spec])
     //!
-    //! [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/3916
+    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv1mediathumbnailservernamemediaid
 
     use std::time::Duration;
 
@@ -24,6 +24,7 @@ pub mod unstable {
         authentication: AccessToken,
         history: {
             unstable => "/_matrix/client/unstable/org.matrix.msc3916/media/thumbnail/:server_name/:media_id",
+            1.11 => "/_matrix/client/v1/media/thumbnail/:server_name/:media_id",
         }
     };
 
@@ -69,18 +70,12 @@ pub mod unstable {
 
         /// Whether the server should return an animated thumbnail.
         ///
-        /// When `true`, the server should return an animated thumbnail if possible and supported.
-        /// Otherwise it must not return an animated thumbnail.
-        ///
-        /// Defaults to `false`.
-        #[cfg(feature = "unstable-msc2705")]
+        /// When `Some(true)`, the server should return an animated thumbnail if possible and
+        /// supported. When `Some(false)`, the server must not return an animated
+        /// thumbnail. When `None`, the server should not return an animated thumbnail.
         #[ruma_api(query)]
-        #[serde(
-            rename = "org.matrix.msc2705.animated",
-            default,
-            skip_serializing_if = "ruma_common::serde::is_default"
-        )]
-        pub animated: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub animated: Option<bool>,
     }
 
     /// Response type for the `get_content_thumbnail` endpoint.
@@ -111,8 +106,7 @@ pub mod unstable {
                 width,
                 height,
                 timeout_ms: crate::media::default_download_timeout(),
-                #[cfg(feature = "unstable-msc2705")]
-                animated: false,
+                animated: None,
             }
         }
 

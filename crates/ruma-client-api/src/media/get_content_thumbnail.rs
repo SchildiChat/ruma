@@ -27,11 +27,16 @@ pub mod v3 {
         history: {
             1.0 => "/_matrix/media/r0/thumbnail/:server_name/:media_id",
             1.1 => "/_matrix/media/v3/thumbnail/:server_name/:media_id",
+            1.11 => deprecated,
         }
     };
 
     /// Request type for the `get_content_thumbnail` endpoint.
     #[request(error = crate::Error)]
+    #[deprecated = "\
+        Since Matrix 1.11, clients should use `authenticated_media::get_content_thumbnail::v1::Request` \
+        instead if the homeserver supports it.\
+    "]
     pub struct Request {
         /// The server name from the mxc:// URI (the authoritory component).
         #[ruma_api(path)]
@@ -90,18 +95,12 @@ pub mod v3 {
 
         /// Whether the server should return an animated thumbnail.
         ///
-        /// When `true`, the server should return an animated thumbnail if possible and supported.
-        /// Otherwise it must not return an animated thumbnail.
-        ///
-        /// Defaults to `false`.
-        #[cfg(feature = "unstable-msc2705")]
+        /// When `Some(true)`, the server should return an animated thumbnail if possible and
+        /// supported. When `Some(false)`, the server must not return an animated
+        /// thumbnail. When `None`, the server should not return an animated thumbnail.
         #[ruma_api(query)]
-        #[serde(
-            rename = "org.matrix.msc2705.animated",
-            default,
-            skip_serializing_if = "ruma_common::serde::is_default"
-        )]
-        pub animated: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub animated: Option<bool>,
     }
 
     /// Response type for the `get_content_thumbnail` endpoint.
@@ -124,6 +123,7 @@ pub mod v3 {
         pub cross_origin_resource_policy: Option<String>,
     }
 
+    #[allow(deprecated)]
     impl Request {
         /// Creates a new `Request` with the given media ID, server name, desired thumbnail width
         /// and desired thumbnail height.
@@ -142,8 +142,7 @@ pub mod v3 {
                 allow_remote: true,
                 timeout_ms: crate::media::default_download_timeout(),
                 allow_redirect: false,
-                #[cfg(feature = "unstable-msc2705")]
-                animated: false,
+                animated: None,
             }
         }
 

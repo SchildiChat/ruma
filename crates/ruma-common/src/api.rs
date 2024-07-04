@@ -122,9 +122,11 @@ macro_rules! metadata {
 ///   they are declared must match the order in which they occur in the request path.
 /// * `#[ruma_api(query)]`: Fields with this attribute will be inserting into the URL's query
 ///   string.
-/// * `#[ruma_api(query_map)]`: Instead of individual query fields, one query_map field, of any
-///   type that implements `IntoIterator<Item = (String, String)>` (e.g. `HashMap<String,
-///   String>`, can be used for cases where an endpoint supports arbitrary query parameters.
+/// * `#[ruma_api(query_all)]`: Instead of individual query fields, one query_all field, of any
+///   type that can be (de)serialized by [serde_html_form], can be used for cases where
+///   multiple endpoints should share a query fields type, the query fields are better
+///   expressed as an `enum` rather than a `struct`, or the endpoint supports arbitrary query
+///   parameters.
 /// * No attribute: Fields without an attribute are part of the body. They can use `#[serde]`
 ///   attributes to customize (de)serialization.
 /// * `#[ruma_api(body)]`: Use this if multiple endpoints should share a request body type, or
@@ -209,11 +211,13 @@ macro_rules! metadata {
 ///     # pub struct Response {}
 /// }
 /// ```
+///
+/// [serde_html_form]: https://crates.io/crates/serde_html_form
 pub use ruma_macros::request;
 /// Generates [`OutgoingResponse`] and [`IncomingResponse`] implementations.
 ///
-/// The `OutgoingRequest` impl is feature-gated behind `cfg(feature = "client")`.
-/// The `IncomingRequest` impl is feature-gated behind `cfg(feature = "server")`.
+/// The `OutgoingResponse` impl is feature-gated behind `cfg(feature = "server")`.
+/// The `IncomingResponse` impl is feature-gated behind `cfg(feature = "client")`.
 ///
 /// The generated code expects a `METADATA` constant of type [`Metadata`] to be in scope.
 ///
@@ -223,7 +227,7 @@ pub use ruma_macros::request;
 ///
 /// ## Attributes
 ///
-/// To declare which part of the request a field belongs to:
+/// To declare which part of the response a field belongs to:
 ///
 /// * `#[ruma_api(header = HEADER_NAME)]`: Fields with this attribute will be treated as HTTP
 ///   headers on the response. The value must implement `Display`. Generally this is a
@@ -497,19 +501,19 @@ pub enum AuthScheme {
     /// Authentication is performed by including an access token in the `Authentication` http
     /// header, or an `access_token` query parameter.
     ///
-    /// It is recommended to use the header over the query parameter.
+    /// Using the query parameter is deprecated since Matrix 1.11.
     AccessToken,
 
     /// Authentication is optional, and it is performed by including an access token in the
     /// `Authentication` http header, or an `access_token` query parameter.
     ///
-    /// It is recommended to use the header over the query parameter.
+    /// Using the query parameter is deprecated since Matrix 1.11.
     AccessTokenOptional,
 
     /// Authentication is only performed for appservices, by including an access token in the
     /// `Authentication` http header, or an `access_token` query parameter.
     ///
-    /// It is recommended to use the header over the query parameter.
+    /// Using the query parameter is deprecated since Matrix 1.11.
     AppserviceToken,
 
     /// Authentication is performed by including X-Matrix signatures in the request headers,

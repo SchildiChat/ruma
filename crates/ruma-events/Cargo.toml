@@ -16,7 +16,7 @@ all-features = true
 [features]
 canonical-json = ["ruma-common/canonical-json"]
 html = ["dep:ruma-html"]
-markdown = ["pulldown-cmark"]
+markdown = ["dep:pulldown-cmark"]
 unstable-exhaustive-types = []
 unstable-msc1767 = []
 unstable-msc2448 = []
@@ -29,7 +29,6 @@ unstable-msc3245 = ["unstable-msc3246"]
 # https://github.com/matrix-org/matrix-spec-proposals/blob/83f6c5b469c1d78f714e335dcaa25354b255ffa5/proposals/3245-voice-messages.md
 unstable-msc3245-v1-compat = []
 unstable-msc3246 = ["unstable-msc3927"]
-unstable-msc3291 = []
 unstable-msc3381 = ["unstable-msc1767"]
 unstable-msc3401 = []
 unstable-msc3488 = ["unstable-msc1767"]
@@ -66,7 +65,7 @@ indexmap = { version = "2.0.0", features = ["serde"] }
 js_int = { workspace = true, features = ["serde"] }
 js_option = "0.1.0"
 percent-encoding = "2.1.0"
-pulldown-cmark = { version = "0.10.3", optional = true, default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0.11.0", optional = true, default-features = false, features = ["html"] }
 regex = { version = "1.5.6", default-features = false, features = ["std", "perf"] }
 ruma-common = { workspace = true }
 ruma-html = { workspace = true, optional = true }

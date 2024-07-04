@@ -1,14 +1,22 @@
 # [unreleased]
 
+Bug fixes:
+
+- Fix deserialization of `AnyGlobalAccountDataEvent` for variants with a type
+  fragment.
+
 Improvements:
 
- - Add support for encrypted stickers as sent by several bridges under the flag `compat-encrypted-stickers`
- - Add unstable support for MSC3489 `m.beacon` & `m.beacon_info` events
-   (unstable types `org.matrix.msc3489.beacon` & `org.matrix.msc3489.beacon_info`)
+- Add support for encrypted stickers as sent by several bridges under the flag `compat-encrypted-stickers`
+- Add unstable support for MSC3489 `m.beacon` & `m.beacon_info` events
+  (unstable types `org.matrix.msc3489.beacon` & `org.matrix.msc3489.beacon_info`)
+- Stabilize support for muting in VoIP calls, according to Matrix 1.11
+- All the root `Any*EventContent` types now have a `EventContentFromType` implementations
+  automatically derived by the `event_enum!` macro.
 
 Breaking changes:
 
- - `StickerEventContent::url` was replaced by `StickerEventContent::source` which is a `StickerMediaSource`
+- `StickerEventContent::url` was replaced by `StickerEventContent::source` which is a `StickerMediaSource`
 
 # 0.28.1
 

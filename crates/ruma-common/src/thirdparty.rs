@@ -2,7 +2,10 @@
 //!
 //! [thirdparty]: https://spec.matrix.org/latest/client-server-api/#third-party-networks
 
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    hash::{Hash, Hasher},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -91,7 +94,8 @@ pub struct ProtocolInstance {
     ///
     /// See [matrix-spec#833](https://github.com/matrix-org/matrix-spec/issues/833).
     #[cfg(feature = "unstable-unspecified")]
-    pub instance_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instance_id: Option<String>,
 }
 
 /// Initial set of fields of `Protocol`.
@@ -109,30 +113,18 @@ pub struct ProtocolInstanceInit {
 
     /// A unique identifier across all instances.
     pub network_id: String,
-
-    /// A unique identifier across all instances.
-    ///
-    /// See [matrix-spec#833](https://github.com/matrix-org/matrix-spec/issues/833).
-    #[cfg(feature = "unstable-unspecified")]
-    pub instance_id: String,
 }
 
 impl From<ProtocolInstanceInit> for ProtocolInstance {
     fn from(init: ProtocolInstanceInit) -> Self {
-        let ProtocolInstanceInit {
-            desc,
-            fields,
-            network_id,
-            #[cfg(feature = "unstable-unspecified")]
-            instance_id,
-        } = init;
+        let ProtocolInstanceInit { desc, fields, network_id } = init;
         Self {
             desc,
             icon: None,
             fields,
             network_id,
             #[cfg(feature = "unstable-unspecified")]
-            instance_id,
+            instance_id: None,
         }
     }
 }
@@ -240,7 +232,6 @@ pub enum Medium {
 /// this type using `ThirdPartyIdentifier::Init` / `.into()`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
-#[cfg_attr(test, derive(PartialEq))]
 pub struct ThirdPartyIdentifier {
     /// The third party identifier address.
     pub address: String,
@@ -253,6 +244,20 @@ pub struct ThirdPartyIdentifier {
 
     /// The time when the homeserver associated the third party identifier with the user.
     pub added_at: MilliSecondsSinceUnixEpoch,
+}
+
+impl Eq for ThirdPartyIdentifier {}
+
+impl Hash for ThirdPartyIdentifier {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        (self.medium.as_str(), &self.address).hash(hasher);
+    }
+}
+
+impl PartialEq for ThirdPartyIdentifier {
+    fn eq(&self, other: &ThirdPartyIdentifier) -> bool {
+        self.address == other.address && self.medium == other.medium
+    }
 }
 
 /// Initial set of fields of `ThirdPartyIdentifier`.

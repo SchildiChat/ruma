@@ -1,9 +1,30 @@
 # [unreleased]
 
+Bug fixes:
+
+- The `instance_id` field was removed from `ProtocolInstanceInit` and is now an
+  `Option<String>` for `ProtocolInstance`. It made the `unstable-unspecified`
+  feature non-additive.
+
+Breaking changes:
+
+- Rename the `query_map` attribute of the `request` macro to `query_all`, and
+  remove the required bound to implement `IntoIterator<Item = (String, String)>`.
+  This allows to use a struct or enum as well as a map to represent the list of
+  query parameters. Note that the (de)serialization of the type used must work
+  with `serde_html_form`.
+
 Improvements:
 
 - Add the `InvalidHeaderValue` variant to the `DeserializationError` struct, for
   cases where we receive a HTTP header with an unexpected value.
+- Implement `Eq`/`Hash`/`PartialEq` for `ThirdPartyIdentifier`, to check whether 
+  a `ThirdPartyIdentifier` has already been added by another user.
+- Add `MatrixVersion::V1_11`
+- Clarify in the docs of `AuthScheme` that sending an access token via a query
+  parameter is deprecated, according to MSC4126 / Matrix 1.11.
+- Constructing a Matrix URI for an event with a room alias is deprecated,
+  according to MSC4132 / Matrix 1.11
 
 # 0.13.0
 

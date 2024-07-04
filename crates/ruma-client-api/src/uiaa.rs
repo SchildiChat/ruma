@@ -53,6 +53,11 @@ pub enum AuthData {
     /// Fallback acknowledgement.
     FallbackAcknowledgement(FallbackAcknowledgement),
 
+    /// Terms of service (`m.login.terms`).
+    ///
+    /// This type is only valid during account registration.
+    Terms(Terms),
+
     #[doc(hidden)]
     _Custom(CustomAuthData),
 }
@@ -90,6 +95,7 @@ impl AuthData {
             "m.login.msisdn" => Self::Msisdn(deserialize_variant(session, data)?),
             "m.login.dummy" => Self::Dummy(deserialize_variant(session, data)?),
             "m.registration_token" => Self::RegistrationToken(deserialize_variant(session, data)?),
+            "m.login.terms" => Self::Terms(deserialize_variant(session, data)?),
             _ => {
                 Self::_Custom(CustomAuthData { auth_type: auth_type.into(), session, extra: data })
             }
@@ -111,6 +117,7 @@ impl AuthData {
             Self::Dummy(_) => Some(AuthType::Dummy),
             Self::RegistrationToken(_) => Some(AuthType::RegistrationToken),
             Self::FallbackAcknowledgement(_) => None,
+            Self::Terms(_) => Some(AuthType::Terms),
             Self::_Custom(c) => Some(AuthType::_Custom(PrivOwnedStr(c.auth_type.as_str().into()))),
         }
     }
@@ -125,6 +132,7 @@ impl AuthData {
             Self::Dummy(x) => x.session.as_deref(),
             Self::RegistrationToken(x) => x.session.as_deref(),
             Self::FallbackAcknowledgement(x) => Some(&x.session),
+            Self::Terms(x) => x.session.as_deref(),
             Self::_Custom(x) => x.session.as_deref(),
         }
     }
@@ -164,8 +172,10 @@ impl AuthData {
             Self::RegistrationToken(x) => {
                 Cow::Owned(serialize(RegistrationToken { token: x.token.clone(), session: None }))
             }
-            // Dummy and fallback acknowledgement have no associated data
-            Self::Dummy(_) | Self::FallbackAcknowledgement(_) => Cow::Owned(JsonObject::default()),
+            // Dummy, fallback acknowledgement, and terms of service have no associated data
+            Self::Dummy(_) | Self::FallbackAcknowledgement(_) | Self::Terms(_) => {
+                Cow::Owned(JsonObject::default())
+            }
             Self::_Custom(c) => Cow::Borrowed(&c.extra),
         }
     }
@@ -182,6 +192,7 @@ impl fmt::Debug for AuthData {
             Self::Dummy(inner) => inner.fmt(f),
             Self::RegistrationToken(inner) => inner.fmt(f),
             Self::FallbackAcknowledgement(inner) => inner.fmt(f),
+            Self::Terms(inner) => inner.fmt(f),
             Self::_Custom(inner) => inner.fmt(f),
         }
     }
@@ -213,6 +224,7 @@ impl<'de> Deserialize<'de> for AuthData {
             Some("m.login.registration_token") => {
                 from_raw_json_value(&json).map(Self::RegistrationToken)
             }
+            Some("m.login.terms") => from_raw_json_value(&json).map(Self::Terms),
             None => from_raw_json_value(&json).map(Self::FallbackAcknowledgement),
             Some(_) => from_raw_json_value(&json).map(Self::_Custom),
         }
@@ -251,6 +263,12 @@ pub enum AuthType {
     /// Registration token-based authentication (`m.login.registration_token`).
     #[ruma_enum(rename = "m.login.registration_token")]
     RegistrationToken,
+
+    /// Terms of service (`m.login.terms`).
+    ///
+    /// This type is only valid during account registration.
+    #[ruma_enum(rename = "m.login.terms")]
+    Terms,
 
     #[doc(hidden)]
     _Custom(PrivOwnedStr),
@@ -425,6 +443,28 @@ impl FallbackAcknowledgement {
     }
 }
 
+/// Data for terms of service flow.
+///
+/// This type is only valid during account registration.
+///
+/// See [the spec] for how to use this.
+///
+/// [the spec]: https://spec.matrix.org/latest/client-server-api/#terms-of-service-at-registration
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[serde(tag = "type", rename = "m.login.terms")]
+pub struct Terms {
+    /// The value of the session key given by the homeserver, if any.
+    pub session: Option<String>,
+}
+
+impl Terms {
+    /// Creates an empty `Terms`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 #[doc(hidden)]
 #[derive(Clone, Deserialize, Serialize)]
 #[non_exhaustive]
@@ -542,29 +582,25 @@ pub struct IncomingCustomThirdPartyId {
 #[derive(Clone, Deserialize, Serialize)]
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 pub struct ThirdpartyIdCredentials {
-    /// Identity server session ID.
+    /// Identity server (or homeserver) session ID.
     pub sid: OwnedSessionId,
 
-    /// Identity server client secret.
+    /// Identity server (or homeserver) client secret.
     pub client_secret: OwnedClientSecret,
 
     /// Identity server URL.
-    pub id_server: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_server: Option<String>,
 
     /// Identity server access token.
-    pub id_access_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_access_token: Option<String>,
 }
 
 impl ThirdpartyIdCredentials {
-    /// Creates a new `ThirdpartyIdCredentials` with the given session ID, client secret, identity
-    /// server address and access token.
-    pub fn new(
-        sid: OwnedSessionId,
-        client_secret: OwnedClientSecret,
-        id_server: String,
-        id_access_token: String,
-    ) -> Self {
-        Self { sid, client_secret, id_server, id_access_token }
+    /// Creates a new `ThirdpartyIdCredentials` with the given session ID and client secret.
+    pub fn new(sid: OwnedSessionId, client_secret: OwnedClientSecret) -> Self {
+        Self { sid, client_secret, id_server: None, id_access_token: None }
     }
 }
 
