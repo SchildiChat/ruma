@@ -991,6 +991,7 @@ impl From<v5::request::ListFilters> for SyncRequestListFilters {
     fn from(value: v5::request::ListFilters) -> Self {
         Self {
             is_invite: value.is_invite,
+            room_types: value.room_types,
             not_room_types: value.not_room_types,
             ..Default::default()
         }

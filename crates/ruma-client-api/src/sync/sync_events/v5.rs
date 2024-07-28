@@ -131,6 +131,15 @@ pub mod request {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub is_invite: Option<bool>,
 
+        /// Only list rooms of given create-types or all.
+        ///
+        /// If specified, only rooms where the `m.room.create` event has a `type` matching one
+        /// of the strings in this array will be returned. If this field is unset, all rooms are
+        /// returned regardless of type. This can be used to get the initial set of spaces for an
+        /// account.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub room_types: Vec<String>,
+
         /// Only list rooms that are not of these create-types, or all.
         ///
         /// Same as "room_types" but inverted. This can be used to filter out spaces from the room
