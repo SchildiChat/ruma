@@ -520,6 +520,15 @@ pub mod response {
         #[serde(flatten, default, skip_serializing_if = "UnreadNotificationsCount::is_empty")]
         pub unread_notifications: UnreadNotificationsCount,
 
+        /// The number of unread events since the latest read receipt.
+        ///
+        /// This uses the unstable prefix in [MSC2654].
+        ///
+        /// [MSC2654]: https://github.com/matrix-org/matrix-spec-proposals/pull/2654
+        #[cfg(feature = "unstable-msc2654")]
+        #[serde(rename = "org.matrix.msc2654.unread_count", skip_serializing_if = "Option::is_none")]
+        pub unread_count: Option<UInt>,
+
         /// The timeline of messages and state changes in the room.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         pub timeline: Vec<Raw<AnySyncTimelineEvent>>,
@@ -764,6 +773,7 @@ impl From<v4::SlidingSyncRoom> for response::Room {
             is_dm: value.is_dm,
             invite_state: value.invite_state,
             unread_notifications: value.unread_notifications,
+            unread_count: value.unread_count,
             timeline: value.timeline,
             required_state: value.required_state,
             prev_batch: value.prev_batch,
