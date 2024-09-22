@@ -312,3 +312,6 @@ ruma-push-gateway-api = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde = { workspace = true }
+
+[lints]
+workspace = true

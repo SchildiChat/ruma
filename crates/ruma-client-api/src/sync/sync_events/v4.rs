@@ -22,7 +22,9 @@ use ruma_events::{
 };
 use serde::{de::Error as _, Deserialize, Serialize};
 
-use super::{v5, DeviceLists, UnreadNotificationsCount};
+#[cfg(feature = "unstable-msc4186")]
+use super::v5;
+use super::{DeviceLists, UnreadNotificationsCount};
 
 const METADATA: Metadata = metadata! {
     method: POST,
@@ -936,6 +938,7 @@ impl Typing {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::Request> for Request {
     fn from(value: v5::Request) -> Self {
         Self {
@@ -960,6 +963,7 @@ impl From<v5::Request> for Request {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::List> for SyncRequestList {
     fn from(value: v5::request::List) -> Self {
         Self {
@@ -982,12 +986,14 @@ impl From<v5::request::List> for SyncRequestList {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::RoomDetails> for RoomDetailsConfig {
     fn from(value: v5::request::RoomDetails) -> Self {
         Self { required_state: value.required_state, timeline_limit: value.timeline_limit }
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::ListFilters> for SyncRequestListFilters {
     fn from(value: v5::request::ListFilters) -> Self {
         Self {
@@ -999,6 +1005,7 @@ impl From<v5::request::ListFilters> for SyncRequestListFilters {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::RoomSubscription> for RoomSubscription {
     fn from(value: v5::request::RoomSubscription) -> Self {
         Self {
@@ -1009,6 +1016,7 @@ impl From<v5::request::RoomSubscription> for RoomSubscription {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::Extensions> for ExtensionsConfig {
     fn from(value: v5::request::Extensions) -> Self {
         Self {
@@ -1023,6 +1031,7 @@ impl From<v5::request::Extensions> for ExtensionsConfig {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::ToDevice> for ToDeviceConfig {
     fn from(value: v5::request::ToDevice) -> Self {
         Self {
@@ -1035,18 +1044,21 @@ impl From<v5::request::ToDevice> for ToDeviceConfig {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::E2EE> for E2EEConfig {
     fn from(value: v5::request::E2EE) -> Self {
         Self { enabled: value.enabled }
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::AccountData> for AccountDataConfig {
     fn from(value: v5::request::AccountData) -> Self {
         Self { enabled: value.enabled, lists: value.lists, rooms: value.rooms }
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::Receipts> for ReceiptsConfig {
     fn from(value: v5::request::Receipts) -> Self {
         Self {
@@ -1057,6 +1069,7 @@ impl From<v5::request::Receipts> for ReceiptsConfig {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::ReceiptsRoom> for RoomReceiptConfig {
     fn from(value: v5::request::ReceiptsRoom) -> Self {
         match value {
@@ -1066,6 +1079,7 @@ impl From<v5::request::ReceiptsRoom> for RoomReceiptConfig {
     }
 }
 
+#[cfg(feature = "unstable-msc4186")]
 impl From<v5::request::Typing> for TypingConfig {
     fn from(value: v5::request::Typing) -> Self {
         Self { enabled: value.enabled, lists: value.lists, rooms: value.rooms }
