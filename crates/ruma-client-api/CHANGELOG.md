@@ -15,6 +15,8 @@ Breaking changes:
 
 Improvements:
 
+- Add support for MSC4186, aka simplified sliding sync, behind
+  `unstable-msc4186`.
 - Add support for MSC4108 OIDC sign in and E2EE set up via QR code
 - Heroes in `sync::sync_events::v4`: `SyncRequestList` and `RoomSubscription`
   both have a new `include_heroes` field. `SlidingSyncRoom` has a new `heroes`
@@ -32,6 +34,10 @@ Improvements:
 - Change types of `SyncRequestListFilters::{room_types,not_room_types}` to
   `Vec<RoomTypeFilter>` instead of a vector of strings
   - This is a breaking change, but only for users of `unstable-msc3575`
+- Add the `get_login_token` field to `Capabilities`, according to a
+  clarification in the spec.
+- Add support for account locking, according to MSC3939.
+- Allow constructing `error::ErrorBody::NotJson` outside of this crate.
 
 Bug fixes:
 

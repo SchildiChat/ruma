@@ -3,7 +3,10 @@ use ruma_common::OwnedMxcUri;
 use serde::{Deserialize, Serialize};
 
 use super::FormattedBody;
-use crate::room::{EncryptedFile, MediaSource, ThumbnailInfo};
+use crate::room::{
+    message::media_caption::{caption, formatted_caption},
+    EncryptedFile, MediaSource, ThumbnailInfo,
+};
 
 /// The payload for a file message.
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -22,7 +25,10 @@ pub struct FileMessageEventContent {
     #[serde(flatten)]
     pub formatted: Option<FormattedBody>,
 
-    /// The original filename of the uploaded file.
+    /// The original filename of the uploaded file as deserialized from the event.
+    ///
+    /// It is recommended to use the `filename` method to get the filename which automatically
+    /// falls back to the `body` field when the `filename` field is not set.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filename: Option<String>,
 
@@ -59,6 +65,29 @@ impl FileMessageEventContent {
     /// as a shorthand for that, because it is very common to set this field.
     pub fn info(self, info: impl Into<Option<Box<FileInfo>>>) -> Self {
         Self { info: info.into(), ..self }
+    }
+
+    /// Computes the filename for the file as defined by the [spec](https://spec.matrix.org/latest/client-server-api/#media-captions).
+    ///
+    /// This differs from the `filename` field as this method falls back to the `body` field when
+    /// the `filename` field is not set.
+    pub fn filename(&self) -> &str {
+        self.filename.as_deref().unwrap_or(&self.body)
+    }
+
+    /// Returns the caption of the media file as defined by the [spec](https://spec.matrix.org/latest/client-server-api/#media-captions).
+    ///
+    /// In short, this is the `body` field if the `filename` field exists and has a different value,
+    /// otherwise the media file does not have a caption.
+    pub fn caption(&self) -> Option<&str> {
+        caption(&self.body, self.filename.as_deref())
+    }
+
+    /// Returns the formatted caption of the media file as defined by the [spec](https://spec.matrix.org/latest/client-server-api/#media-captions).
+    ///
+    /// This is the same as `caption`, but returns the formatted body instead of the plain body.
+    pub fn formatted_caption(&self) -> Option<&FormattedBody> {
+        formatted_caption(&self.body, self.formatted.as_ref(), self.filename.as_deref())
     }
 }
 
