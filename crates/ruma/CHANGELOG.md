@@ -1,5 +1,28 @@
 # [unreleased]
 
+# 0.11.1
+
+Please refer to the changelogs of:
+
+* ruma-common 0.14.1
+* ruma-events 0.29.1
+
+# 0.11.0
+
+- The `compat-key-id` cargo feature was renamed to
+  `compat-server-signing-key-version`.
+
+Please refer to the changelogs of:
+
+* ruma-common 0.14.0
+* ruma-html 0.3.0
+* ruma-events 0.29.0
+* ruma-client-api 0.19.0
+* ruma-federation-api 0.10.0
+* ruma-appservice-api 0.11.0
+* ruma-identity-service-api 0.10.0
+* ruma-server-util 0.4.0
+
 # 0.10.1
 
 Upgrade `ruma-events` to 0.28.1.

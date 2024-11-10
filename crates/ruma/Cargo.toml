@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.10.1"
+version = "0.11.1"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -93,7 +93,7 @@ full = [
 
 # Enable all compatibility hacks. Deprecated.
 compat = [
-    "compat-key-id",
+    "compat-server-signing-key-version",
     "compat-user-id",
     "compat-empty-string-null",
     "compat-null",
@@ -107,8 +107,8 @@ compat = [
 # Allow IDs to exceed 255 bytes.
 compat-arbitrary-length-ids = ["ruma-common/compat-arbitrary-length-ids"]
 
-# Don't validate the version part in `KeyId`.
-compat-key-id = ["ruma-common/compat-key-id"]
+# Don't validate `ServerSigningKeyVersion`.
+compat-server-signing-key-version = ["ruma-common/compat-server-signing-key-version"]
 
 # Allow some user IDs that are invalid even with the specified historical
 # user ID scheme.
@@ -224,6 +224,7 @@ unstable-msc3955 = ["ruma-events?/unstable-msc3955"]
 unstable-msc3956 = ["ruma-events?/unstable-msc3956"]
 unstable-msc3983 = ["ruma-client-api?/unstable-msc3983"]
 unstable-msc4075 = ["ruma-events?/unstable-msc4075"]
+unstable-msc4095 = ["ruma-events?/unstable-msc4095"]
 unstable-msc4108 = ["ruma-client-api?/unstable-msc4108"]
 unstable-msc4121 = ["ruma-client-api?/unstable-msc4121"]
 unstable-msc4125 = ["ruma-federation-api?/unstable-msc4125"]
@@ -276,6 +277,7 @@ __unstable-mscs = [
     "unstable-msc3956",
     "unstable-msc3983",
     "unstable-msc4075",
+    "unstable-msc4095",
     "unstable-msc4108",
     "unstable-msc4121",
     "unstable-msc4125",

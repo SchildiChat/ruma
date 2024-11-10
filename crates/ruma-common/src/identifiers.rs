@@ -5,35 +5,47 @@
 #![allow(unused_qualifications)]
 
 #[doc(inline)]
-pub use ruma_identifiers_validation::error::{
-    Error as IdParseError, MatrixIdError, MatrixToError, MatrixUriError, MxcUriError,
-    VoipVersionIdError,
+pub use ruma_identifiers_validation::{
+    error::{
+        Error as IdParseError, MatrixIdError, MatrixToError, MatrixUriError, MxcUriError,
+        VoipVersionIdError,
+    },
+    KeyName,
 };
 use serde::de::{self, Deserializer, Unexpected};
 
 #[doc(inline)]
 pub use self::{
+    base64_public_key::{Base64PublicKey, OwnedBase64PublicKey},
+    base64_public_key_or_device_id::{Base64PublicKeyOrDeviceId, OwnedBase64PublicKeyOrDeviceId},
     client_secret::{ClientSecret, OwnedClientSecret},
     crypto_algorithms::{
-        DeviceKeyAlgorithm, EventEncryptionAlgorithm, KeyDerivationAlgorithm, SigningKeyAlgorithm,
+        DeviceKeyAlgorithm, EventEncryptionAlgorithm, KeyDerivationAlgorithm, OneTimeKeyAlgorithm,
+        SigningKeyAlgorithm,
     },
     device_id::{DeviceId, OwnedDeviceId},
-    device_key_id::{DeviceKeyId, OwnedDeviceKeyId},
     event_id::{EventId, OwnedEventId},
     key_id::{
-        DeviceSigningKeyId, KeyId, OwnedDeviceSigningKeyId, OwnedKeyId, OwnedServerSigningKeyId,
-        OwnedSigningKeyId, ServerSigningKeyId, SigningKeyId,
+        CrossSigningKeyId, CrossSigningOrDeviceSigningKeyId, DeviceKeyId, DeviceSigningKeyId,
+        KeyAlgorithm, KeyId, OneTimeKeyId, OwnedCrossSigningKeyId,
+        OwnedCrossSigningOrDeviceSigningKeyId, OwnedDeviceKeyId, OwnedDeviceSigningKeyId,
+        OwnedKeyId, OwnedOneTimeKeyId, OwnedServerSigningKeyId, OwnedSigningKeyId,
+        ServerSigningKeyId, SigningKeyId,
     },
-    key_name::{KeyName, OwnedKeyName},
     matrix_uri::{MatrixToUri, MatrixUri},
     mxc_uri::{MxcUri, OwnedMxcUri},
+    one_time_key_name::{OneTimeKeyName, OwnedOneTimeKeyName},
     room_alias_id::{OwnedRoomAliasId, RoomAliasId},
     room_id::{OwnedRoomId, RoomId},
     room_or_alias_id::{OwnedRoomOrAliasId, RoomOrAliasId},
     room_version_id::RoomVersionId,
     server_name::{OwnedServerName, ServerName},
+    server_signing_key_version::{OwnedServerSigningKeyVersion, ServerSigningKeyVersion},
     session_id::{OwnedSessionId, SessionId},
-    signatures::{DeviceSignatures, EntitySignatures, ServerSignatures, Signatures},
+    signatures::{
+        CrossSigningOrDeviceSignatures, DeviceSignatures, EntitySignatures, ServerSignatures,
+        Signatures,
+    },
     transaction_id::{OwnedTransactionId, TransactionId},
     user_id::{OwnedUserId, UserId},
     voip_id::{OwnedVoipId, VoipId},
@@ -43,19 +55,21 @@ pub use self::{
 pub mod matrix_uri;
 pub mod user_id;
 
+mod base64_public_key;
+mod base64_public_key_or_device_id;
 mod client_secret;
 mod crypto_algorithms;
 mod device_id;
-mod device_key_id;
 mod event_id;
 mod key_id;
-mod key_name;
 mod mxc_uri;
+mod one_time_key_name;
 mod room_alias_id;
 mod room_id;
 mod room_or_alias_id;
 mod room_version_id;
 mod server_name;
+mod server_signing_key_version;
 mod session_id;
 mod signatures;
 mod transaction_id;
@@ -106,24 +120,8 @@ macro_rules! owned_device_id {
 #[doc(hidden)]
 pub mod __private_macros {
     pub use ruma_macros::{
-        device_key_id, event_id, mxc_uri, room_alias_id, room_id, room_version_id, server_name,
-        server_signing_key_id, user_id,
-    };
-}
-
-/// Compile-time checked [`DeviceKeyId`] construction.
-#[macro_export]
-macro_rules! device_key_id {
-    ($s:literal) => {
-        $crate::__private_macros::device_key_id!($crate, $s)
-    };
-}
-
-/// Compile-time checked [`OwnedDeviceKeyId`] construction.
-#[macro_export]
-macro_rules! owned_device_key_id {
-    ($s:literal) => {
-        $crate::device_key_id!($s).to_owned()
+        base64_public_key, event_id, mxc_uri, room_alias_id, room_id, room_version_id, server_name,
+        server_signing_key_version, user_id,
     };
 }
 
@@ -183,19 +181,19 @@ macro_rules! room_version_id {
     };
 }
 
-/// Compile-time checked [`ServerSigningKeyId`] construction.
+/// Compile-time checked [`ServerSigningKeyVersion`] construction.
 #[macro_export]
-macro_rules! server_signing_key_id {
+macro_rules! server_signing_key_version {
     ($s:literal) => {
-        $crate::__private_macros::server_signing_key_id!($crate, $s)
+        $crate::__private_macros::server_signing_key_version!($crate, $s)
     };
 }
 
-/// Compile-time checked [`OwnedServerSigningKeyId`] construction.
+/// Compile-time checked [`OwnedServerSigningKeyVersion`] construction.
 #[macro_export]
-macro_rules! owned_server_signing_key_id {
+macro_rules! owned_server_signing_key_version {
     ($s:literal) => {
-        $crate::server_signing_key_id!($s).to_owned()
+        $crate::server_signing_key_version!($s).to_owned()
     };
 }
 
@@ -265,5 +263,21 @@ macro_rules! user_id {
 macro_rules! owned_user_id {
     ($s:literal) => {
         $crate::user_id!($s).to_owned()
+    };
+}
+
+/// Compile-time checked [`Base64PublicKey`] construction.
+#[macro_export]
+macro_rules! base64_public_key {
+    ($s:literal) => {
+        $crate::__private_macros::base64_public_key!($crate, $s)
+    };
+}
+
+/// Compile-time checked [`OwnedBase64PublicKey`] construction.
+#[macro_export]
+macro_rules! owned_base64_public_key {
+    ($s:literal) => {
+        $crate::base64_public_key!($s).to_owned()
     };
 }

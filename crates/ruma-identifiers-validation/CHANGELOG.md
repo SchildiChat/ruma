@@ -1,5 +1,22 @@
 # [unreleased]
 
+# 0.10.0
+
+Breaking changes:
+
+- `key_id::validate` takes a generic parameter that implements the new `KeyName`
+  trait to validate the key name part. This allows to validate key names that
+  are not only server signing key versions.
+- The `compat-key-id` cargo feature was renamed to
+  `compat-server-signing-key-version`.
+- Remove the `device_key_id` module. `DeviceKeyId` is now validated with
+  `key_id::validate`.
+
+Improvements:
+
+- Add `server_signing_key_version::validate`.
+- Add `base64_public_key::validate`.
+
 # 0.9.5
 
 Bug fixes:

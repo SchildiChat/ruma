@@ -1,5 +1,16 @@
 # [unreleased]
 
+# 0.10.0
+
+Breaking changes:
+
+- Remove the unused `KeyObject` struct. It is actually supposed to be the same type
+  as `ruma_common::encryption::SignedKey`.
+- Use `OwnedOneTimeKeyId` and `OneTimeKeyAlgorithm` instead of
+  `OwnedDeviceKeyId` and `DeviceKeyAlgorithm` respectively to identify one-time
+  and fallback keys and their algorithm.
+- Use `ServerSignatures` for the `signatures` or `ServerSigningKeys`.
+
 Bug fixes:
 
 - `ServerSigningKeys` can be deserialized when `old_verify_keys` is missing, due to a
@@ -8,6 +19,8 @@ Bug fixes:
 Improvements:
 
 - Add support for authenticated media endpoints, according to MSC3916 / Matrix 1.11
+- Make `Content-Type` and `Content-Disposition` mandatory when creating media
+  responses, according to MSC2701 / MSC2702 / Matrix 1.12.
 
 # 0.9.0
 

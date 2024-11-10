@@ -4,8 +4,9 @@ use std::collections::BTreeMap;
 
 use js_int::uint;
 use ruma_common::{
-    event_id, owned_event_id, owned_room_id, owned_server_signing_key_id, owned_user_id,
-    server_name, MilliSecondsSinceUnixEpoch,
+    event_id, owned_event_id, owned_room_id, owned_server_name, owned_user_id,
+    server_signing_key_version, MilliSecondsSinceUnixEpoch, ServerSignatures, ServerSigningKeyId,
+    SigningKeyAlgorithm,
 };
 use ruma_events::{
     pdu::{EventHash, Pdu, RoomV1Pdu, RoomV3Pdu},
@@ -18,13 +19,16 @@ use serde_json::{
 
 #[test]
 fn serialize_pdu_as_v1() {
-    let mut signatures = BTreeMap::new();
-    let mut inner_signature = BTreeMap::new();
-    inner_signature.insert(
-        owned_server_signing_key_id!("ed25519:key_version"),
-        "86BytesOfSignatureOfTheRedactedEvent".into(),
+    let mut signatures = ServerSignatures::new();
+    let key_id = ServerSigningKeyId::from_parts(
+        SigningKeyAlgorithm::Ed25519,
+        server_signing_key_version!("key_version"),
     );
-    signatures.insert(server_name!("example.com").to_owned(), inner_signature);
+    signatures.insert_signature(
+        owned_server_name!("example.com"),
+        key_id,
+        "86BytesOfSignatureOfTheRedactedEvent".to_owned(),
+    );
 
     let mut unsigned = BTreeMap::new();
     unsigned.insert("somekey".into(), to_raw_json_value(&json!({ "a": 456 })).unwrap());
@@ -83,13 +87,16 @@ fn serialize_pdu_as_v1() {
 
 #[test]
 fn serialize_pdu_as_v3() {
-    let mut signatures = BTreeMap::new();
-    let mut inner_signature = BTreeMap::new();
-    inner_signature.insert(
-        owned_server_signing_key_id!("ed25519:key_version"),
-        "86BytesOfSignatureOfTheRedactedEvent".into(),
+    let mut signatures = ServerSignatures::new();
+    let key_id = ServerSigningKeyId::from_parts(
+        SigningKeyAlgorithm::Ed25519,
+        server_signing_key_version!("key_version"),
     );
-    signatures.insert(server_name!("example.com").to_owned(), inner_signature);
+    signatures.insert_signature(
+        owned_server_name!("example.com"),
+        key_id,
+        "86BytesOfSignatureOfTheRedactedEvent".to_owned(),
+    );
 
     let mut unsigned = BTreeMap::new();
     unsigned.insert("somekey".into(), to_raw_json_value(&json!({ "a": 456 })).unwrap());

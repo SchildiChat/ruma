@@ -1,5 +1,14 @@
 # [unreleased]
 
+# 0.14.1
+
+Bug fixes:
+
+- The `KeyId::key_name` method now returns the key name. In 0.14.0, `key_name`
+  mistakenly returned the algorithm.
+
+# 0.14.0
+
 Bug fixes:
 
 - The `instance_id` field was removed from `ProtocolInstanceInit` and is now an
@@ -14,7 +23,35 @@ Breaking changes:
   query parameters. Note that the (de)serialization of the type used must work
   with `serde_html_form`.
 - The `header` attribute for the `request` and `response` macros accepts any
-  type that implements `ToString` and `FromStr`. 
+  type that implements `ToString` and `FromStr`.
+- The `compat-key-id` cargo feature was renamed to
+  `compat-server-signing-key-version`.
+- `(Owned)KeyName` was renamed to `(Owned)ServerSigningKeyVersion` and is now
+  validated according to the set of allowed characters defined in the docs,
+  unless the `compat-server-signing-key-version` cargo feature is enabled.
+- The bounds on `KeyId` changed. The algorithm part must implement
+  `KeyAlgorithm` and the key name part must implement `KeyName`.
+- The `(owned_)server_signing_key_id` macros were removed. For compile-time
+  validated construction, use `ServerSigningKeyId::from_parts` with a
+  `SigningKeyAlgorithm` and the `server_signing_key_version` macro.
+- Rename `Signatures::insert` to `Signatures::insert_signature`.
+  `Signatures::insert` is now dereferenced to `BTreeMap::insert`.
+- Move the `DeviceKeyAlgorithm::SignedCurve25519` into the new
+  `OneTimeKeyAlgorithm` type.
+- Add `(Owned)CrossSigningKeyId` and use it instead of `OwnedDeviceKeyId` to
+  identify `CrossSigningKey`'s `keys`.
+- Add `(Owned)CrossSigningOrDeviceSigningKeyId` and use it instead of
+  `OwnedDeviceKeyId` to identify signing keys in `DeviceKeys`'s and
+  `CrossSigningKey`'s `signatures`.
+- Use `OwnedDeviceSigningKeyId` instead of `OwnedDeviceKeyId` to identify
+  signing keys in `SignedKey`'s `signatures`.
+- `(Owned)DeviceKeyId` is now a type alias of `(Owned)KeyId`.
+  - Remove the `(owned_)device_key_id` macro, instead use
+    `DeviceKeyId::from_parts`.
+- Use `CrossSigningOrDeviceSignatures` for the `signatures` of `DeviceKeys`.
+- Remove `SignedKeySignatures` and replace it with `DeviceSignatures`.
+- Remove `CrossSigningKeySignatures` and replace it with
+  `CrossSigningOrDeviceSignatures`.
 
 Improvements:
 
@@ -22,7 +59,7 @@ Improvements:
   cases where we receive a HTTP header with an unexpected value.
 - Implement `Eq`/`Hash`/`PartialEq` for `ThirdPartyIdentifier`, to check whether 
   a `ThirdPartyIdentifier` has already been added by another user.
-- Add `MatrixVersion::V1_11`
+- Add `MatrixVersion::V1_11` and `MatrixVersion::V1_12`.
 - Clarify in the docs of `AuthScheme` that sending an access token via a query
   parameter is deprecated, according to MSC4126 / Matrix 1.11.
 - Constructing a Matrix URI for an event with a room alias is deprecated,
@@ -30,6 +67,15 @@ Improvements:
 - Implement `Eq` and `PartialEq` for `Metadata`
 - Allow constructing `api::error::MatrixErrorBody::NotJson` outside of this
   crate.
+- Improve the API of `Signatures`, by implementing `Deref` and `DerefMut`, as
+  well as `From`, `Extend` and `FromIterator` from a list of
+  `(entity, key_identifier, value)` tuples.
+- Add `(Owned)OneTimeKeyId` and `(Owned)OneTimeKeyName` to identify one-time and
+  fallback keys instead of using `(Owned)DeviceKeyId`.
+- Add `(Owned)Base64PublicKey` and `(Owned)Base64PublicKeyOrDeviceId` to
+  identify cross-signing keys.
+  - Add `(owned_)base_64_public_key` to construct a compile-time validated
+    `(Owned)Base64PublicKey`.
 
 # 0.13.0
 

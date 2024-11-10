@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     serde::{Base64, StringEnum},
-    EventEncryptionAlgorithm, OwnedDeviceId, OwnedDeviceKeyId, OwnedUserId, PrivOwnedStr,
+    CrossSigningOrDeviceSignatures, DeviceSignatures, EventEncryptionAlgorithm,
+    OwnedCrossSigningKeyId, OwnedDeviceId, OwnedDeviceKeyId, OwnedUserId, PrivOwnedStr,
 };
 
 /// Identity keys for a device.
@@ -32,7 +33,7 @@ pub struct DeviceKeys {
     pub keys: BTreeMap<OwnedDeviceKeyId, String>,
 
     /// Signatures for the device key object.
-    pub signatures: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceKeyId, String>>,
+    pub signatures: CrossSigningOrDeviceSignatures,
 
     /// Additional data added to the device key information by intermediate servers, and
     /// not covered by the signatures.
@@ -48,7 +49,7 @@ impl DeviceKeys {
         device_id: OwnedDeviceId,
         algorithms: Vec<EventEncryptionAlgorithm>,
         keys: BTreeMap<OwnedDeviceKeyId, String>,
-        signatures: BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceKeyId, String>>,
+        signatures: CrossSigningOrDeviceSignatures,
     ) -> Self {
         Self { user_id, device_id, algorithms, keys, signatures, unsigned: Default::default() }
     }
@@ -75,9 +76,6 @@ impl UnsignedDeviceInfo {
     }
 }
 
-/// Signatures for a `SignedKey` object.
-pub type SignedKeySignatures = BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceKeyId, String>>;
-
 /// A key for the SignedCurve25519 algorithm
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
@@ -86,7 +84,7 @@ pub struct SignedKey {
     pub key: Base64,
 
     /// Signatures for the key object.
-    pub signatures: SignedKeySignatures,
+    pub signatures: DeviceSignatures,
 
     /// Is this key considered to be a fallback key, defaults to false.
     #[serde(default, skip_serializing_if = "crate::serde::is_default")]
@@ -95,12 +93,12 @@ pub struct SignedKey {
 
 impl SignedKey {
     /// Creates a new `SignedKey` with the given key and signatures.
-    pub fn new(key: Base64, signatures: SignedKeySignatures) -> Self {
+    pub fn new(key: Base64, signatures: DeviceSignatures) -> Self {
         Self { key, signatures, fallback: false }
     }
 
     /// Creates a new fallback `SignedKey` with the given key and signatures.
-    pub fn new_fallback(key: Base64, signatures: SignedKeySignatures) -> Self {
+    pub fn new_fallback(key: Base64, signatures: DeviceSignatures) -> Self {
         Self { key, signatures, fallback: true }
     }
 }
@@ -117,10 +115,9 @@ pub enum OneTimeKey {
     Key(String),
 }
 
-/// Signatures for a `CrossSigningKey` object.
-pub type CrossSigningKeySignatures = BTreeMap<OwnedUserId, BTreeMap<OwnedDeviceKeyId, String>>;
-
-/// A cross signing key.
+/// A [cross-signing] key.
+///
+/// [cross-signing]: https://spec.matrix.org/latest/client-server-api/#cross-signing
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
 pub struct CrossSigningKey {
@@ -133,13 +130,17 @@ pub struct CrossSigningKey {
     /// The public key.
     ///
     /// The object must have exactly one property.
-    pub keys: BTreeMap<OwnedDeviceKeyId, String>,
+    pub keys: BTreeMap<OwnedCrossSigningKeyId, String>,
 
     /// Signatures of the key.
     ///
-    /// Only optional for master key.
+    /// The master key should be signed by the device key and can be signed by other users'
+    /// user-signing key. The user-signing and self-signing keys must be signed by the master
+    /// key.
+    ///
+    /// Only optional for the master key.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub signatures: CrossSigningKeySignatures,
+    pub signatures: CrossSigningOrDeviceSignatures,
 }
 
 impl CrossSigningKey {
@@ -147,8 +148,8 @@ impl CrossSigningKey {
     pub fn new(
         user_id: OwnedUserId,
         usage: Vec<KeyUsage>,
-        keys: BTreeMap<OwnedDeviceKeyId, String>,
-        signatures: CrossSigningKeySignatures,
+        keys: BTreeMap<OwnedCrossSigningKeyId, String>,
+        signatures: CrossSigningOrDeviceSignatures,
     ) -> Self {
         Self { user_id, usage, keys, signatures }
     }

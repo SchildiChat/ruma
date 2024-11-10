@@ -1,8 +1,8 @@
 #![doc(html_favicon_url = "https://ruma.dev/favicon.ico")]
 #![doc(html_logo_url = "https://ruma.dev/images/logo.png")]
 
+pub mod base64_public_key;
 pub mod client_secret;
-pub mod device_key_id;
 pub mod error;
 pub mod event_id;
 pub mod key_id;
@@ -12,6 +12,7 @@ pub mod room_id;
 pub mod room_id_or_alias_id;
 pub mod room_version_id;
 pub mod server_name;
+pub mod server_signing_key_version;
 pub mod user_id;
 pub mod voip_version_id;
 
@@ -47,4 +48,10 @@ fn parse_id(id: &str, first_byte: u8) -> Result<usize, Error> {
 fn validate_delimited_id(id: &str, first_byte: u8) -> Result<(), Error> {
     parse_id(id, first_byte)?;
     Ok(())
+}
+
+/// Helper trait to validate the name of a key.
+pub trait KeyName: AsRef<str> {
+    /// Validate the given string for this name.
+    fn validate(s: &str) -> Result<(), Error>;
 }

@@ -1,7 +1,22 @@
 # [unreleased]
 
+# 0.29.1
+
 Bug fixes:
 
+- Markdown text constructors now detect even more markdown syntax like removed
+  whitespace at the end or beginning of a line to decide if the text should be
+  sent as HTML.
+
+Improvements:
+
+- Add unstable support for MSC4059 for bundling link previews in chat text messages
+
+# 0.29.0
+
+Bug fixes:
+
+- Fix missing `relates_to` field on `StickerEventContent`
 - Fix deserialization of `AnyGlobalAccountDataEvent` for variants with a type
   fragment.
 - Fix serialization of `room::message::Relation` and `room::encrypted::Relation`
@@ -9,6 +24,8 @@ Bug fixes:
 - `Restricted` no longer fails to deserialize when the `allow` field is missing
 - Markdown text constructors now also detect markdown syntax like backslash
   escapes and entity references to decide if the text should be sent as HTML.
+- Markdown text with only inline syntax generates HTML that is not wrapped
+  inside a `<p>` element anymore, as recommended by the spec.
 
 Improvements:
 
@@ -25,10 +42,15 @@ Improvements:
   This guarantees correct formatting of the event key.
 - Add helpers for captions on audio, file, image and video messages.
 - Add helpers for filenames on audio, file, image and video messages.
+- Stabilize support for the `m.marked_unread` room account data according to Matrix 1.12. The
+  unstable `com.famedly.marked_unread` room account data is still available behind the
+  `unstable-msc2867` cargo feature to be able to migrate data from the unstable to the stable
+  prefix.
 
 Breaking changes:
 
 - `StickerEventContent::url` was replaced by `StickerEventContent::source` which is a `StickerMediaSource`
+- Use `ServerSignatures` for the `signatures` of `RoomV1Pdu`, `RoomV3Pdu` and `SignedContent`.
 
 # 0.28.1
 
