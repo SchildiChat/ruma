@@ -12,14 +12,12 @@ pub mod v1 {
         api::{request, response, Metadata},
         metadata,
         push::{PushFormat, Tweak},
-        serde::StringEnum,
+        serde::{JsonObject, StringEnum},
         OwnedEventId, OwnedRoomAliasId, OwnedRoomId, OwnedUserId, SecondsSinceUnixEpoch,
     };
     use ruma_events::TimelineEventType;
     use serde::{Deserialize, Serialize};
     use serde_json::value::RawValue as RawJsonValue;
-    #[cfg(feature = "unstable-unspecified")]
-    use serde_json::value::Value as JsonValue;
 
     use crate::PrivOwnedStr;
 
@@ -69,7 +67,7 @@ pub mod v1 {
 
     /// Type for passing information about a push notification
     #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-    #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     pub struct Notification {
         /// The Matrix event ID of the event being notified about.
         ///
@@ -166,7 +164,7 @@ pub mod v1 {
 
     /// Type for passing information about notification counts.
     #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-    #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     pub struct NotificationCounts {
         /// The number of unread messages a user has across all of the rooms they
         /// are a member of.
@@ -193,7 +191,7 @@ pub mod v1 {
 
     /// Type for passing information about devices.
     #[derive(Clone, Debug, Deserialize, Serialize)]
-    #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     pub struct Device {
         /// The `app_id` given when the pusher was created.
         ///
@@ -240,22 +238,15 @@ pub mod v1 {
     /// It can be constructed from [`ruma_common::push::HttpPusherData`] with `::from()` /
     /// `.into()`.
     #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-    #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     pub struct PusherData {
         /// The format to use when sending notifications to the Push Gateway.
         #[serde(skip_serializing_if = "Option::is_none")]
         pub format: Option<PushFormat>,
 
-        /// iOS (+ macOS?) specific default payload that will be sent to apple push notification
-        /// service.
-        ///
-        /// For more information, see [Sygnal docs][sygnal].
-        ///
-        /// [sygnal]: https://github.com/matrix-org/sygnal/blob/main/docs/applications.md#ios-applications-beware
-        // Not specified, issue: https://github.com/matrix-org/matrix-spec/issues/921
-        #[cfg(feature = "unstable-unspecified")]
-        #[serde(default, skip_serializing_if = "JsonValue::is_null")]
-        pub default_payload: JsonValue,
+        /// Custom data for the pusher.
+        #[serde(flatten, default, skip_serializing_if = "JsonObject::is_empty")]
+        pub data: JsonObject,
     }
 
     impl PusherData {
@@ -264,34 +255,17 @@ pub mod v1 {
             Default::default()
         }
 
-        /// Returns `true` if all fields are `None`.
+        /// Returns `true` if all fields are `None` or empty.
         pub fn is_empty(&self) -> bool {
-            #[cfg(not(feature = "unstable-unspecified"))]
-            {
-                self.format.is_none()
-            }
-
-            #[cfg(feature = "unstable-unspecified")]
-            {
-                self.format.is_none() && self.default_payload.is_null()
-            }
+            self.format.is_none() && self.data.is_empty()
         }
     }
 
     impl From<ruma_common::push::HttpPusherData> for PusherData {
         fn from(data: ruma_common::push::HttpPusherData) -> Self {
-            let ruma_common::push::HttpPusherData {
-                format,
-                #[cfg(feature = "unstable-unspecified")]
-                default_payload,
-                ..
-            } = data;
+            let ruma_common::push::HttpPusherData { format, data, .. } = data;
 
-            Self {
-                format,
-                #[cfg(feature = "unstable-unspecified")]
-                default_payload,
-            }
+            Self { format, data }
         }
     }
 

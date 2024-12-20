@@ -1,5 +1,27 @@
 # [unreleased]
 
+# 0.30.0
+
+Breaking changes:
+
+- Take newly introduced `DirectUserIdentifier(str)` as a key for `DirectEventContent`.
+  This change allows to have an email or MSISDN phone number as a key for example,
+  which can be used when issuing invites through third-party systems.
+  `DirectUserIdentifier` can easily be converted to an `UserId`.
+
+Improvements:
+
+- Add unstable support for MSC4171 for the m.member_hints state event.
+- The `ruma_identifiers_storage` compile-time `cfg` setting can also be
+  configured by setting the `RUMA_IDENTIFIERS_STORAGE` environment variable at
+  compile time. It has the benefit of not requiring to re-compile all the crates
+  of the dependency chain when the value is changed.
+- The `unstable-exhaustive-types` cargo feature was replaced by the
+  `ruma_unstable_exhaustive_types` compile-time `cfg` setting. Like all `cfg`
+  settings, it can be enabled at compile-time with the `RUSTFLAGS` environment
+  variable, or inside `.cargo/config.toml`. It can also be enabled by setting
+  the `RUMA_UNSTABLE_EXHAUSTIVE_TYPES` environment variable.
+
 # 0.29.1
 
 Bug fixes:

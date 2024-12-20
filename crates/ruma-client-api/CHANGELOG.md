@@ -1,5 +1,26 @@
 # [unreleased]
 
+# 0.20.0
+
+Breaking changes:
+
+- `ErrorKind` does not implement `AsRef<str>` and `Display` anymore. To get the
+  same result, use `ErrorKind::errcode()`. The `ErrorCode` that is returned
+  implements those traits.
+
+Improvements:
+
+- Add unstable support for reporting rooms, according to MSC4151.
+- The `unstable-exhaustive-types` cargo feature was replaced by the
+  `ruma_unstable_exhaustive_types` compile-time `cfg` setting. Like all `cfg`
+  settings, it can be enabled at compile-time with the `RUSTFLAGS` environment
+  variable, or inside `.cargo/config.toml`. It can also be enabled by setting
+  the `RUMA_UNSTABLE_EXHAUSTIVE_TYPES` environment variable.
+- Add `ErrorKind::ThreepidMediumNotSupported`, according to MSC4178.
+- Add `ErrorKind::UserSuspended`, according to MSC3823.
+- `EmailPusherData` allows to set custom data for the pusher in the `data` field, due
+  to a clarification in the spec.
+
 # 0.19.0
 
 Breaking changes:

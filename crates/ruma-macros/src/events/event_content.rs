@@ -496,7 +496,7 @@ fn generate_redacted_event_content<'a>(
 
         #[doc = #doc]
         #[derive(Clone, Debug, #serde::Deserialize, #serde::Serialize)]
-        #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+        #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
         #vis struct #redacted_ident {
             #( #kept_redacted_fields, )*
         }
@@ -639,7 +639,7 @@ fn generate_possibly_redacted_event_content<'a>(
         Ok(quote! {
             #[doc = #doc]
             #[derive(Clone, Debug, #serde::Deserialize, #serde::Serialize)]
-            #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+            #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
             #vis struct #possibly_redacted_ident {
                 #( #possibly_redacted_fields, )*
             }
@@ -711,7 +711,7 @@ fn generate_event_content_without_relation<'a>(
 
         #[doc = #type_doc]
         #[derive(Clone, Debug, #serde::Deserialize, #serde::Serialize)]
-        #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+        #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
         #vis struct #without_relation_ident #without_relation_struct
 
         impl #without_relation_ident {

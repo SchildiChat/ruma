@@ -1,6 +1,6 @@
 //! Types for the [`m.identity_server`] event.
 //!
-//! [`m.identity_server`]: https://spec.matrix.org/latest/client-server-api/#mdirect
+//! [`m.identity_server`]: https://spec.matrix.org/latest/client-server-api/#midentity_server
 
 use js_option::JsOption;
 use ruma_macros::EventContent;
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// Persists the user's preferred identity server, or preference to not use an identity server at
 /// all.
 #[derive(Clone, Debug, Deserialize, Serialize, EventContent)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 #[ruma_event(type = "m.identity_server", kind = GlobalAccountData)]
 pub struct IdentityServerEventContent {
     /// The URL of the identity server the user prefers to use, or `Null` if the user does not want

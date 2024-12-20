@@ -16,8 +16,9 @@ use serde_json::value::{to_raw_value as to_raw_json_value, RawValue as RawJsonVa
 /// Ruma offers the `Raw` wrapper to enable passing around JSON text that is only partially
 /// validated. This is useful when a client receives events that do not follow the spec perfectly
 /// or a server needs to generate reference hashes with the original canonical JSON string.
-/// All event structs and enums implement `Serialize` / `Deserialize`, `Raw` should be used
-/// to pass around events in a lossless way.
+/// All structs and enums representing event types implement `Deserialize`, therefore they can be
+/// used with `Raw`. Since `Raw` does not change the JSON string, it should be used to pass around
+/// events in a lossless way.
 ///
 /// ```no_run
 /// # use serde::Deserialize;
@@ -106,7 +107,7 @@ impl<T> Raw<T> {
     {
         struct FieldVisitor<'b>(&'b str);
 
-        impl<'b, 'de> Visitor<'de> for FieldVisitor<'b> {
+        impl Visitor<'_> for FieldVisitor<'_> {
             type Value = bool;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -123,7 +124,7 @@ impl<T> Raw<T> {
 
         struct Field<'b>(&'b str);
 
-        impl<'b, 'de> DeserializeSeed<'de> for Field<'b> {
+        impl<'de> DeserializeSeed<'de> for Field<'_> {
             type Value = bool;
 
             fn deserialize<D>(self, deserializer: D) -> Result<bool, D::Error>
@@ -145,7 +146,7 @@ impl<T> Raw<T> {
             }
         }
 
-        impl<'b, 'de, T> Visitor<'de> for SingleFieldVisitor<'b, T>
+        impl<'de, T> Visitor<'de> for SingleFieldVisitor<'_, T>
         where
             T: Deserialize<'de>,
         {

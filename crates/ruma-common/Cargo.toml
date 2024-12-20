@@ -1,6 +1,6 @@
 [package]
 name = "ruma-common"
-version = "0.14.1"
+version = "0.15.0"
 description = "Common types for other ruma crates."
 homepage = "https://ruma.dev/"
 keywords = ["matrix", "chat", "messaging", "ruma"]
@@ -24,7 +24,6 @@ api = ["dep:http", "dep:konst"]
 canonical-json = []
 js = ["dep:js-sys", "getrandom?/js", "uuid?/js"]
 rand = ["dep:rand", "dep:uuid"]
-unstable-exhaustive-types = []
 unstable-msc2870 = []
 unstable-msc3930 = []
 unstable-msc3931 = []

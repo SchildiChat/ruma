@@ -108,6 +108,12 @@ macro_rules! metadata {
 /// alongside a `Response` type that implements [`OutgoingResponse`] (for
 /// `cfg(feature = "server")`) and / or [`IncomingResponse`] (for `cfg(feature = "client")`).
 ///
+/// By default, the type this macro is used on gets a `#[non_exhaustive]` attribute. This
+/// behavior can be controlled by setting the `ruma_unstable_exhaustive_types` compile-time
+/// `cfg` setting as `--cfg=ruma_unstable_exhaustive_types` using `RUSTFLAGS` or
+/// `.cargo/config.toml` (under `[build]` -> `rustflags = ["..."]`). When that setting is
+/// activated, the attribute is not applied so the type is exhaustive.
+///
 /// ## Attributes
 ///
 /// To declare which part of the request a field belongs to:
@@ -222,6 +228,12 @@ pub use ruma_macros::request;
 /// The `IncomingResponse` impl is feature-gated behind `cfg(feature = "client")`.
 ///
 /// The generated code expects a `METADATA` constant of type [`Metadata`] to be in scope.
+///
+/// By default, the type this macro is used on gets a `#[non_exhaustive]` attribute. This
+/// behavior can be controlled by setting the `ruma_unstable_exhaustive_types` compile-time
+/// `cfg` setting as `--cfg=ruma_unstable_exhaustive_types` using `RUSTFLAGS` or
+/// `.cargo/config.toml` (under `[build]` -> `rustflags = ["..."]`). When that setting is
+/// activated, the attribute is not applied so the type is exhaustive.
 ///
 /// The status code of `OutgoingResponse` can be optionally overridden by adding the `status`
 /// attribute to `response`. The attribute value must be a status code constant from

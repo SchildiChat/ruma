@@ -18,13 +18,11 @@ use std::hash::{Hash, Hasher};
 
 use indexmap::{Equivalent, IndexSet};
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "unstable-unspecified")]
-use serde_json::Value as JsonValue;
 use thiserror::Error;
 use tracing::instrument;
 
 use crate::{
-    serde::{Raw, StringEnum},
+    serde::{JsonObject, Raw, StringEnum},
     OwnedRoomId, OwnedUserId, PrivOwnedStr,
 };
 
@@ -54,7 +52,7 @@ pub use self::{
 /// For example, some rules may only be applied for messages from a particular sender, a particular
 /// room, or by default. The push ruleset contains the entire set of scopes and rules.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct Ruleset {
     /// These rules configure behavior for (unencrypted) messages that match certain patterns.
     #[serde(default, skip_serializing_if = "IndexSet::is_empty")]
@@ -368,7 +366,7 @@ impl Ruleset {
 /// To create an instance of this type, first create a `SimplePushRuleInit` and convert it via
 /// `SimplePushRule::from` / `.into()`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct SimplePushRule<T> {
     /// Actions to determine if and how a notification is delivered for events matching this rule.
     pub actions: Vec<Action>,
@@ -453,7 +451,7 @@ where
 /// To create an instance of this type, first create a `ConditionalPushRuleInit` and convert it via
 /// `ConditionalPushRule::from` / `.into()`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct ConditionalPushRule {
     /// Actions to determine if and how a notification is delivered for events matching this rule.
     pub actions: Vec<Action>,
@@ -586,7 +584,7 @@ impl Equivalent<ConditionalPushRule> for str {
 /// To create an instance of this type, first create a `PatternedPushRuleInit` and convert it via
 /// `PatternedPushRule::from` / `.into()`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct PatternedPushRule {
     /// Actions to determine if and how a notification is delivered for events matching this rule.
     pub actions: Vec<Action>,
@@ -633,9 +631,9 @@ impl PatternedPushRule {
     }
 }
 
-/// Initial set of fields of `PatterenedPushRule`.
+/// Initial set of fields of `PatternedPushRule`.
 ///
-/// This struct will not be updated even if additional fields are added to `PatterenedPushRule` in a
+/// This struct will not be updated even if additional fields are added to `PatternedPushRule` in a
 /// new (non-breaking) release of the Matrix specification.
 #[derive(Debug)]
 #[allow(clippy::exhaustive_structs)]
@@ -688,7 +686,7 @@ impl Equivalent<PatternedPushRule> for str {
 
 /// Information for a pusher using the Push Gateway API.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct HttpPusherData {
     /// The URL to use to send notifications to.
     ///
@@ -699,27 +697,15 @@ pub struct HttpPusherData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub format: Option<PushFormat>,
 
-    /// iOS (+ macOS?) specific default payload that will be sent to apple push notification
-    /// service.
-    ///
-    /// For more information, see [Sygnal docs][sygnal].
-    ///
-    /// [sygnal]: https://github.com/matrix-org/sygnal/blob/main/docs/applications.md#ios-applications-beware
-    // Not specified, issue: https://github.com/matrix-org/matrix-spec/issues/921
-    #[cfg(feature = "unstable-unspecified")]
-    #[serde(default, skip_serializing_if = "JsonValue::is_null")]
-    pub default_payload: JsonValue,
+    /// Custom data for the pusher.
+    #[serde(flatten, default, skip_serializing_if = "JsonObject::is_empty")]
+    pub data: JsonObject,
 }
 
 impl HttpPusherData {
     /// Creates a new `HttpPusherData` with the given URL.
     pub fn new(url: String) -> Self {
-        Self {
-            url,
-            format: None,
-            #[cfg(feature = "unstable-unspecified")]
-            default_payload: JsonValue::default(),
-        }
+        Self { url, format: None, data: JsonObject::default() }
     }
 }
 
@@ -766,7 +752,7 @@ pub enum RuleKind {
 
 /// A push rule to update or create.
 #[derive(Clone, Debug)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub enum NewPushRule {
     /// Rules that override all other kinds.
     Override(NewConditionalPushRule),
@@ -810,7 +796,7 @@ impl NewPushRule {
 
 /// A simple push rule to update or create.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct NewSimplePushRule<T> {
     /// The ID of this rule.
     ///
@@ -838,7 +824,7 @@ impl<T> From<NewSimplePushRule<T>> for SimplePushRule<T> {
 
 /// A patterned push rule to update or create.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct NewPatternedPushRule {
     /// The ID of this rule.
     pub rule_id: String,
@@ -867,7 +853,7 @@ impl From<NewPatternedPushRule> for PatternedPushRule {
 
 /// A conditional push rule to update or create.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct NewConditionalPushRule {
     /// The ID of this rule.
     pub rule_id: String,

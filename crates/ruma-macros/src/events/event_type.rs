@@ -196,7 +196,7 @@ fn generate_enum(
         /// from a string with `::from()` / `.into()`. To check for events that are not available as a
         /// documented variant here, use its string representation, obtained through `.to_string()`.
         #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        #[cfg_attr(not(feature = "unstable-exhaustive-types"), non_exhaustive)]
+        #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
         pub enum #ident {
             #(
                 #[doc = #event_types]

@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.11.1"
+version = "0.12.0"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -161,17 +161,6 @@ ring-compat = ["dep:ruma-signatures", "ruma-signatures?/ring-compat"]
 
 # unstable: by using any of these, you opt out of all semver guarantees Ruma
 #           otherwise provides!
-unstable-exhaustive-types = [
-    "ruma-common/unstable-exhaustive-types",
-    "ruma-appservice-api?/unstable-exhaustive-types",
-    "ruma-client-api?/unstable-exhaustive-types",
-    "ruma-federation-api?/unstable-exhaustive-types",
-    "ruma-identity-service-api?/unstable-exhaustive-types",
-    "ruma-push-gateway-api?/unstable-exhaustive-types",
-    "ruma-signatures?/unstable-exhaustive-types",
-    "ruma-state-res?/unstable-exhaustive-types",
-    "ruma-events?/unstable-exhaustive-types"
-]
 unstable-extensible-events = [
     "unstable-msc3246",
     "unstable-msc3488",
@@ -229,12 +218,13 @@ unstable-msc4108 = ["ruma-client-api?/unstable-msc4108"]
 unstable-msc4121 = ["ruma-client-api?/unstable-msc4121"]
 unstable-msc4125 = ["ruma-federation-api?/unstable-msc4125"]
 unstable-msc4140 = ["ruma-client-api?/unstable-msc4140"]
+unstable-msc4151 = ["ruma-client-api?/unstable-msc4151"]
+unstable-msc4171 = ["ruma-events?/unstable-msc4171"]
 unstable-msc4186 = ["ruma-client-api?/unstable-msc4186"]
 unstable-pdu = ["ruma-events?/unstable-pdu"]
 unstable-unspecified = [
     "ruma-common/unstable-unspecified",
     "ruma-federation-api?/unstable-unspecified",
-    "ruma-push-gateway-api?/unstable-unspecified",
 ]
 
 # Private features, only used in test / benchmarking code
@@ -282,6 +272,8 @@ __unstable-mscs = [
     "unstable-msc4121",
     "unstable-msc4125",
     "unstable-msc4140",
+    "unstable-msc4151",
+    "unstable-msc4171",
     "unstable-msc4186",
 ]
 __ci = [
