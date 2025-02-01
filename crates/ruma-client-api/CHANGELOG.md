@@ -1,5 +1,18 @@
 # [unreleased]
 
+Bug fixes:
+
+- `unstable-msc4186` without `unstable-msc3575` no longer create a compilation
+  failure.
+
+Improvements:
+
+- Add support for new dehydration format, according to the latest draft of
+  MSC3814.
+- Add unstable support for OIDC-aware compatibility, according to MSC3824.
+- Stabilize support for reporting rooms, according to Matrix 1.13.
+  - Removes the `unstable-msc4151` cargo feature.
+
 # 0.20.0
 
 Breaking changes:
@@ -7,6 +20,12 @@ Breaking changes:
 - `ErrorKind` does not implement `AsRef<str>` and `Display` anymore. To get the
   same result, use `ErrorKind::errcode()`. The `ErrorCode` that is returned
   implements those traits.
+
+Bug fixes:
+
+- `knock_state` in `KnockedRoom` and `events` in `KnockState` are no longer
+  required during deserialization and are no longer serialized if they are empty.
+  This was a deviation from the spec, those fields were never required.
 
 Improvements:
 
