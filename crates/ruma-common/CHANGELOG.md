@@ -4,11 +4,16 @@ Bug fixes:
 
 - `MatrixVersion::V1_0` now also matches Identity Service API versions r0.2.0 to
   r0.3.0.
+- Allow configure exhaustive types via `RUMA_UNSTABLE_EXHAUSTIVE_TYPES` environment variable
 
 Improvements:
 
 - `MatrixVersion` implements `PartialOrd` and `Ord`. The variants are ordered by
   release date, with a newer version being greater than an older version.
+- `Signatures` implements `IntoIterator`
+- Implement `PartialEqAsRefStr`, `Eq`, `PartialOrdAsRefStr`, `OrdAsRefStr` for
+  `ruma_common::media::Method`.
+- `DeviceId::new()` generates a string with 10 chars instead of 8.
 
 # 0.15.1
 
