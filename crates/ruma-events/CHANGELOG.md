@@ -1,9 +1,19 @@
 # [unreleased]
 
+# 0.30.2
+
+Bug fixes:
+
+- `RelationType::Replacement` is now properly encoded/decoded as `m.replace` instead of
+  `m.replacement`.
+
 Improvements:
 
 - Add `RECOMMENDED_STRIPPED_STATE_EVENT_TYPES` constant for servers to filter/get recommended
   stripped state events.
+- Add unstable support for gallery `msgtype` as per MSC4274.
+- Invalid Objects inside the `allow` array of `Restricted` are now ignored, meaning that
+  `JoinRules` will not fail to deserialize if there are invalid restricted join conditions
 
 # 0.30.1
 

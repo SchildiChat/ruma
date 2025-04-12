@@ -1,6 +1,6 @@
 [package]
 name = "ruma-events"
-version = "0.30.1"
+version = "0.30.2"
 description = "Serializable types for the events in the Matrix specification."
 homepage = "https://ruma.dev/"
 keywords = ["matrix", "chat", "messaging", "ruma"]
@@ -45,6 +45,7 @@ unstable-msc4075 = ["unstable-msc3401"]
 unstable-msc4095 = []
 unstable-msc4171 = []
 unstable-msc4230 = []
+unstable-msc4274 = []
 unstable-pdu = []
 
 # Allow some mandatory fields to be missing, defaulting them to an empty string

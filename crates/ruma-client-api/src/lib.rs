@@ -31,6 +31,7 @@ pub mod knock;
 pub mod media;
 pub mod membership;
 pub mod message;
+pub mod peeking;
 pub mod presence;
 pub mod profile;
 pub mod push;
@@ -40,6 +41,7 @@ pub mod redact;
 pub mod relations;
 #[cfg(feature = "unstable-msc4108")]
 pub mod rendezvous;
+pub mod reporting;
 pub mod room;
 pub mod search;
 pub mod server;

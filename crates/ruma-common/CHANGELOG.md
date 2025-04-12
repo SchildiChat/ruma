@@ -1,5 +1,7 @@
 # [unreleased]
 
+# 0.15.2
+
 Bug fixes:
 
 - `MatrixVersion::V1_0` now also matches Identity Service API versions r0.2.0 to
@@ -14,6 +16,9 @@ Improvements:
 - Implement `PartialEqAsRefStr`, `Eq`, `PartialOrdAsRefStr`, `OrdAsRefStr` for
   `ruma_common::media::Method`.
 - `DeviceId::new()` generates a string with 10 chars instead of 8.
+- Add `ignore_invalid_vec_items`, to assist deserialization of `Vec`s, where
+  invalid items should be ignored.
+- Add `MatrixVersion::V1_14`.
 
 # 0.15.1
 
