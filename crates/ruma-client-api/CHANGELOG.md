@@ -1,5 +1,23 @@
 # [unreleased]
 
+# 0.20.3
+
+Bug fixes:
+
+- Fix `Capabilities::get()` and `Capabilities::set()`. They were not up-to-date
+  to handle the `m.get_login_token` capability.
+
+Improvements:
+
+- Remove the unstable support for MSC3575 as it was closed. MSC4186 should be
+  used instead.
+- The `authentication` field of `discovery::discover_homeserver::Response` has
+  been removed in favour of `discovery::get_authorization_server_metadata`.
+- The `discovery::discover_homeserver::Response` well-known now includes the
+  `rtc_foci` as defined in MSC4143.
+- Use specialized room ID type (`ExtensionRoomConfig`) for all MSC4186
+  extension requests, not just the Receipts extension.
+
 # 0.20.2
 
 Improvements:

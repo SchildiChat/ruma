@@ -1,5 +1,7 @@
 # [unreleased]
 
+# 0.30.3
+
 Improvements:
 
 - Add support for ThumbHash as an alternative to BlurHash for MSC2448 in 
@@ -7,6 +9,7 @@ Improvements:
 - Add implementation of [MSC 4278](https://github.com/matrix-org/matrix-spec-proposals/pull/4278)
   using `MediaPreviewConfigEventContent` for the stable version and `MediaPreviewConfigEventContent`
   for the unstable one, both are only implemented as `GlobalAccountData` events as of right now.
+- Add unstable support for rich text in room topics, according to MSC3765.
 
 # 0.30.2
 

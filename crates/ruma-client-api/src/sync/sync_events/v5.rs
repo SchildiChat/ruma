@@ -20,8 +20,6 @@ use ruma_common::{
 use ruma_events::{AnyStrippedStateEvent, AnySyncStateEvent, AnySyncTimelineEvent, StateEventType};
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "unstable-msc3575")]
-use super::v4;
 use super::UnreadNotificationsCount;
 
 const METADATA: Metadata = metadata! {
@@ -226,6 +224,41 @@ pub mod request {
         }
     }
 
+    /// Single entry for a room subscription configuration in an extension request.
+    #[derive(Clone, Debug, PartialEq)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+    pub enum ExtensionRoomConfig {
+        /// Apply extension to all global room subscriptions.
+        AllSubscribed,
+
+        /// Additionally apply extension to this specific room.
+        Room(OwnedRoomId),
+    }
+
+    impl Serialize for ExtensionRoomConfig {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            match self {
+                Self::AllSubscribed => serializer.serialize_str("*"),
+                Self::Room(r) => r.serialize(serializer),
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for ExtensionRoomConfig {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+        {
+            match deserialize_cow_str(deserializer)?.as_ref() {
+                "*" => Ok(Self::AllSubscribed),
+                other => Ok(Self::Room(RoomId::parse(other).map_err(D::Error::custom)?.to_owned())),
+            }
+        }
+    }
+
     /// To-device messages extension.
     ///
     /// According to [MSC3885](https://github.com/matrix-org/matrix-spec-proposals/pull/3885).
@@ -243,21 +276,6 @@ pub mod request {
         /// Give messages since this token only.
         #[serde(skip_serializing_if = "Option::is_none")]
         pub since: Option<String>,
-
-        /// List of list names for which to-device events should be enabled.
-        ///
-        /// If not defined, will be enabled for *all* the lists appearing in the
-        /// request. If defined and empty, will be disabled for all the lists.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub lists: Option<Vec<String>>,
-
-        /// List of room names for which to-device events should be enabled.
-        ///
-        /// If not defined, will be enabled for *all* the rooms appearing in the
-        /// room subscriptions. If defined and empty, will be disabled for all
-        /// the rooms.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub rooms: Option<Vec<OwnedRoomId>>,
     }
 
     impl ToDevice {
@@ -313,7 +331,7 @@ pub mod request {
         /// room subscriptions. If defined and empty, will be disabled for all
         /// the rooms.
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub rooms: Option<Vec<OwnedRoomId>>,
+        pub rooms: Option<Vec<ExtensionRoomConfig>>,
     }
 
     impl AccountData {
@@ -346,49 +364,13 @@ pub mod request {
         /// room subscriptions. If defined and empty, will be disabled for all
         /// the rooms.
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub rooms: Option<Vec<ReceiptsRoom>>,
+        pub rooms: Option<Vec<ExtensionRoomConfig>>,
     }
 
     impl Receipts {
         /// Whether all fields are empty or `None`.
         pub fn is_empty(&self) -> bool {
             self.enabled.is_none()
-        }
-    }
-
-    /// Single entry for a room-related read receipt configuration in
-    /// [`Receipts`].
-    #[derive(Clone, Debug, PartialEq)]
-    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
-    pub enum ReceiptsRoom {
-        /// Get read receipts for all the subscribed rooms.
-        AllSubscribed,
-
-        /// Get read receipts for this particular room.
-        Room(OwnedRoomId),
-    }
-
-    impl Serialize for ReceiptsRoom {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            match self {
-                Self::AllSubscribed => serializer.serialize_str("*"),
-                Self::Room(r) => r.serialize(serializer),
-            }
-        }
-    }
-
-    impl<'de> Deserialize<'de> for ReceiptsRoom {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
-        {
-            match deserialize_cow_str(deserializer)?.as_ref() {
-                "*" => Ok(Self::AllSubscribed),
-                other => Ok(Self::Room(RoomId::parse(other).map_err(D::Error::custom)?.to_owned())),
-            }
         }
     }
 
@@ -416,7 +398,7 @@ pub mod request {
         /// room subscriptions. If defined and empty, will be disabled for all
         /// the rooms.
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub rooms: Option<Vec<OwnedRoomId>>,
+        pub rooms: Option<Vec<ExtensionRoomConfig>>,
     }
 
     impl Typing {
@@ -747,134 +729,31 @@ pub mod response {
     }
 }
 
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::Response> for Response {
-    fn from(value: v4::Response) -> Self {
-        Self {
-            pos: value.pos,
-            txn_id: value.txn_id,
-            lists: value.lists.into_iter().map(|(room_id, list)| (room_id, list.into())).collect(),
-            rooms: value.rooms.into_iter().map(|(room_id, room)| (room_id, room.into())).collect(),
-            extensions: value.extensions.into(),
-        }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::SyncList> for response::List {
-    fn from(value: v4::SyncList) -> Self {
-        Self { count: value.count }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::SlidingSyncRoom> for response::Room {
-    fn from(value: v4::SlidingSyncRoom) -> Self {
-        Self {
-            name: value.name,
-            avatar: value.avatar,
-            initial: value.initial,
-            is_dm: value.is_dm,
-            invite_state: value.invite_state,
-            unread_notifications: value.unread_notifications,
-            unread_count: value.unread_count,
-            timeline: value.timeline,
-            required_state: value.required_state,
-            prev_batch: value.prev_batch,
-            limited: value.limited,
-            joined_count: value.joined_count,
-            invited_count: value.invited_count,
-            num_live: value.num_live,
-            bump_stamp: value.timestamp.map(|t| t.0),
-            heroes: value.heroes.map(|heroes| heroes.into_iter().map(Into::into).collect()),
-        }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::SlidingSyncRoomHero> for response::Hero {
-    fn from(value: v4::SlidingSyncRoomHero) -> Self {
-        Self { user_id: value.user_id, name: value.name, avatar: value.avatar }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::Extensions> for response::Extensions {
-    fn from(value: v4::Extensions) -> Self {
-        Self {
-            to_device: value.to_device.map(Into::into),
-            e2ee: value.e2ee.into(),
-            account_data: value.account_data.into(),
-            receipts: value.receipts.into(),
-            typing: value.typing.into(),
-        }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::ToDevice> for response::ToDevice {
-    fn from(value: v4::ToDevice) -> Self {
-        Self { next_batch: value.next_batch, events: value.events }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::E2EE> for response::E2EE {
-    fn from(value: v4::E2EE) -> Self {
-        Self {
-            device_lists: value.device_lists,
-            device_one_time_keys_count: value.device_one_time_keys_count,
-            device_unused_fallback_key_types: value.device_unused_fallback_key_types,
-        }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::AccountData> for response::AccountData {
-    fn from(value: v4::AccountData) -> Self {
-        Self { global: value.global, rooms: value.rooms }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::Receipts> for response::Receipts {
-    fn from(value: v4::Receipts) -> Self {
-        Self { rooms: value.rooms }
-    }
-}
-
-#[cfg(feature = "unstable-msc3575")]
-impl From<v4::Typing> for response::Typing {
-    fn from(value: v4::Typing) -> Self {
-        Self { rooms: value.rooms }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use ruma_common::owned_room_id;
 
-    use super::request::ReceiptsRoom;
+    use super::request::ExtensionRoomConfig;
 
     #[test]
-    fn serialize_request_receipts_room() {
-        let entry = ReceiptsRoom::AllSubscribed;
+    fn serialize_request_extension_room_config() {
+        let entry = ExtensionRoomConfig::AllSubscribed;
         assert_eq!(serde_json::to_string(&entry).unwrap().as_str(), r#""*""#);
 
-        let entry = ReceiptsRoom::Room(owned_room_id!("!foo:bar.baz"));
+        let entry = ExtensionRoomConfig::Room(owned_room_id!("!foo:bar.baz"));
         assert_eq!(serde_json::to_string(&entry).unwrap().as_str(), r#""!foo:bar.baz""#);
     }
 
     #[test]
-    fn deserialize_request_receipts_room() {
+    fn deserialize_request_extension_room_config() {
         assert_eq!(
-            serde_json::from_str::<ReceiptsRoom>(r#""*""#).unwrap(),
-            ReceiptsRoom::AllSubscribed
+            serde_json::from_str::<ExtensionRoomConfig>(r#""*""#).unwrap(),
+            ExtensionRoomConfig::AllSubscribed
         );
 
         assert_eq!(
-            serde_json::from_str::<ReceiptsRoom>(r#""!foo:bar.baz""#).unwrap(),
-            ReceiptsRoom::Room(owned_room_id!("!foo:bar.baz"))
+            serde_json::from_str::<ExtensionRoomConfig>(r#""!foo:bar.baz""#).unwrap(),
+            ExtensionRoomConfig::Room(owned_room_id!("!foo:bar.baz"))
         );
     }
 }
