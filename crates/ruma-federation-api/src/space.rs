@@ -2,8 +2,8 @@
 
 use js_int::UInt;
 use ruma_common::{
-    room::RoomType, serde::Raw, space::SpaceRoomJoinRule, OwnedMxcUri, OwnedRoomAliasId,
-    OwnedRoomId,
+    room::RoomType, serde::Raw, space::SpaceRoomJoinRule, EventEncryptionAlgorithm, OwnedMxcUri,
+    OwnedRoomAliasId, OwnedRoomId, RoomVersionId,
 };
 use ruma_events::space::child::HierarchySpaceChildEvent;
 use serde::{Deserialize, Serialize};
@@ -78,6 +78,14 @@ pub struct SpaceHierarchyParentSummary {
     /// rules.
     #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
     pub allowed_room_ids: Vec<OwnedRoomId>,
+
+    /// If the room is encrypted, the algorithm used for this room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encryption: Option<EventEncryptionAlgorithm>,
+
+    /// The version of the room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_version: Option<RoomVersionId>,
 }
 
 /// Initial set of mandatory fields of `SpaceHierarchyParentSummary`.
@@ -139,6 +147,8 @@ impl From<SpaceHierarchyParentSummaryInit> for SpaceHierarchyParentSummary {
             room_type: None,
             children_state,
             allowed_room_ids,
+            encryption: None,
+            room_version: None,
         }
     }
 }
@@ -202,6 +212,14 @@ pub struct SpaceHierarchyChildSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub room_type: Option<RoomType>,
 
+    /// If the room is encrypted, the algorithm used for this room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encryption: Option<EventEncryptionAlgorithm>,
+
+    /// The version of the room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_version: Option<RoomVersionId>,
+
     /// If the room is a restricted room, these are the room IDs which are specified by the join
     /// rules.
     #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
@@ -260,6 +278,8 @@ impl From<SpaceHierarchyChildSummaryInit> for SpaceHierarchyChildSummary {
             join_rule,
             room_type: None,
             allowed_room_ids,
+            encryption: None,
+            room_version: None,
         }
     }
 }
@@ -279,6 +299,8 @@ impl From<SpaceHierarchyParentSummary> for SpaceHierarchyChildSummary {
             room_type,
             children_state: _,
             allowed_room_ids,
+            encryption,
+            room_version,
         } = parent;
 
         Self {
@@ -293,6 +315,45 @@ impl From<SpaceHierarchyParentSummary> for SpaceHierarchyChildSummary {
             join_rule,
             room_type,
             allowed_room_ids,
+            encryption,
+            room_version,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{from_value as from_json_value, json};
+
+    use super::SpaceHierarchyParentSummary;
+
+    #[test]
+    fn deserialize_space_hierarchy_rooms_chunk() {
+        let json = json!({
+            "room_id": "!room:localhost",
+            "num_joined_members": 5,
+            "world_readable": false,
+            "guest_can_join": false,
+            "join_rule": "restricted",
+            "allowed_room_ids": ["!otherroom:localhost"],
+            "children_state": [
+                {
+                    "content": {
+                        "via": [
+                            "example.org"
+                        ]
+                    },
+                    "origin_server_ts": 1_629_413_349,
+                    "sender": "@alice:example.org",
+                    "state_key": "!a:example.org",
+                    "type": "m.space.child"
+                }
+            ],
+        });
+
+        let room = from_json_value::<SpaceHierarchyParentSummary>(json).unwrap();
+        assert_eq!(room.room_id, "!room:localhost");
+        let space_child = room.children_state[0].deserialize().unwrap();
+        assert_eq!(space_child.state_key, "!a:example.org");
     }
 }

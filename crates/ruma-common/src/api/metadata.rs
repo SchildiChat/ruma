@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
     fmt::{self, Display, Write},
     str::FromStr,
 };
@@ -10,13 +11,16 @@ use http::{
     Method,
 };
 use percent_encoding::utf8_percent_encode;
+use ruma_macros::{OrdAsRefStr, PartialEqAsRefStr, PartialOrdAsRefStr, StringEnum};
 use tracing::warn;
 
 use super::{
     error::{IntoHttpError, UnknownVersionError},
     AuthScheme, SendAccessToken,
 };
-use crate::{percent_encode::PATH_PERCENT_ENCODE_SET, serde::slice_to_buf, RoomVersionId};
+use crate::{
+    percent_encode::PATH_PERCENT_ENCODE_SET, serde::slice_to_buf, PrivOwnedStr, RoomVersionId,
+};
 
 /// Metadata about an API endpoint.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -575,6 +579,11 @@ pub enum MatrixVersion {
     ///
     /// See <https://spec.matrix.org/v1.14/>.
     V1_14,
+
+    /// Version 1.15 of the Matrix specification, released in Q2 2025.
+    ///
+    /// See <https://spec.matrix.org/v1.15/>.
+    V1_15,
 }
 
 impl TryFrom<&str> for MatrixVersion {
@@ -603,6 +612,7 @@ impl TryFrom<&str> for MatrixVersion {
             "v1.12" => V1_12,
             "v1.13" => V1_13,
             "v1.14" => V1_14,
+            "v1.15" => V1_15,
             _ => return Err(UnknownVersionError),
         })
     }
@@ -648,6 +658,7 @@ impl MatrixVersion {
             MatrixVersion::V1_12 => (1, 12),
             MatrixVersion::V1_13 => (1, 13),
             MatrixVersion::V1_14 => (1, 14),
+            MatrixVersion::V1_15 => (1, 15),
         }
     }
 
@@ -669,6 +680,7 @@ impl MatrixVersion {
             (1, 12) => Ok(MatrixVersion::V1_12),
             (1, 13) => Ok(MatrixVersion::V1_13),
             (1, 14) => Ok(MatrixVersion::V1_14),
+            (1, 15) => Ok(MatrixVersion::V1_15),
             _ => Err(UnknownVersionError),
         }
     }
@@ -771,7 +783,9 @@ impl MatrixVersion {
             // <https://spec.matrix.org/v1.13/rooms/#complete-list-of-room-versions>
             | MatrixVersion::V1_13 => RoomVersionId::V10,
             // <https://spec.matrix.org/v1.14/rooms/#complete-list-of-room-versions>
-            | MatrixVersion::V1_14 => RoomVersionId::V11,
+            | MatrixVersion::V1_14
+            // <https://spec.matrix.org/v1.15/rooms/#complete-list-of-room-versions>
+            | MatrixVersion::V1_15 => RoomVersionId::V11,
         }
     }
 }
@@ -783,15 +797,174 @@ impl Display for MatrixVersion {
     }
 }
 
+/// The list of Matrix versions and features supported by a homeserver.
+#[derive(Debug, Clone)]
+#[allow(clippy::exhaustive_structs)]
+pub struct SupportedVersions {
+    /// The Matrix versions that are supported by the homeserver.
+    ///
+    /// This array contains only known versions.
+    pub versions: Box<[MatrixVersion]>,
+
+    /// The features that are supported by the homeserver.
+    ///
+    /// This matches the `unstable_features` field of the `/versions` endpoint, without the boolean
+    /// value.
+    pub features: BTreeSet<FeatureFlag>,
+}
+
+impl SupportedVersions {
+    /// Construct a `SupportedVersions` from the parts of a `/versions` response.
+    ///
+    /// Matrix versions that can't be parsed to a `MatrixVersion`, and features with the boolean
+    /// value set to `false` are discarded.
+    pub fn from_parts(versions: &[String], unstable_features: &BTreeMap<String, bool>) -> Self {
+        Self {
+            versions: versions
+                .iter()
+                // Parse, discard unknown versions
+                .flat_map(|s| s.parse::<MatrixVersion>())
+                // Map to key-value pairs where the key is the major-minor representation
+                // (which can be used as a BTreeMap unlike MatrixVersion itself)
+                .map(|v| (v.into_parts(), v))
+                // Collect to BTreeMap
+                .collect::<BTreeMap<_, _>>()
+                // Return an iterator over just the values (`MatrixVersion`s)
+                .into_values()
+                .collect(),
+            features: unstable_features
+                .iter()
+                .filter(|(_, enabled)| **enabled)
+                .map(|(feature, _)| feature.as_str().into())
+                .collect(),
+        }
+    }
+}
+
+/// The Matrix features supported by Ruma.
+///
+/// Features that are not behind a cargo feature are features that are part of the Matrix
+/// specification and that Ruma still supports, like the unstable version of an endpoint or a stable
+/// feature. Features behind a cargo feature are only supported when this feature is enabled.
+#[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
+#[derive(Clone, StringEnum, PartialEqAsRefStr, Eq, Hash, PartialOrdAsRefStr, OrdAsRefStr)]
+#[non_exhaustive]
+pub enum FeatureFlag {
+    /// `fi.mau.msc2246` ([MSC])
+    ///
+    /// Asynchronous media uploads.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/2246
+    #[ruma_enum(rename = "fi.mau.msc2246")]
+    Msc2246,
+
+    /// `org.matrix.msc2432` ([MSC])
+    ///
+    /// Updated semantics for publishing room aliases.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/2432
+    #[ruma_enum(rename = "org.matrix.msc2432")]
+    Msc2432,
+
+    /// `fi.mau.msc2659` ([MSC])
+    ///
+    /// Application service ping endpoint.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/2659
+    #[ruma_enum(rename = "fi.mau.msc2659")]
+    Msc2659,
+
+    /// `fi.mau.msc2659` ([MSC])
+    ///
+    /// Stable version of the application service ping endpoint.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/2659
+    #[ruma_enum(rename = "fi.mau.msc2659.stable")]
+    Msc2659Stable,
+
+    /// `uk.half-shot.msc2666.query_mutual_rooms` ([MSC])
+    ///
+    /// Get rooms in common with another user.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/2666
+    #[cfg(feature = "unstable-msc2666")]
+    #[ruma_enum(rename = "uk.half-shot.msc2666.query_mutual_rooms")]
+    Msc2666,
+
+    /// `org.matrix.msc3030` ([MSC])
+    ///
+    /// Jump to date API endpoint.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/3030
+    #[ruma_enum(rename = "org.matrix.msc3030")]
+    Msc3030,
+
+    /// `org.matrix.msc3882` ([MSC])
+    ///
+    /// Allow an existing session to sign in a new session.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/3882
+    #[ruma_enum(rename = "org.matrix.msc3882")]
+    Msc3882,
+
+    /// `org.matrix.msc3916` ([MSC])
+    ///
+    /// Authentication for media.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/3916
+    #[ruma_enum(rename = "org.matrix.msc3916")]
+    Msc3916,
+
+    /// `org.matrix.msc3916.stable` ([MSC])
+    ///
+    /// Stable version of authentication for media.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/3916
+    #[ruma_enum(rename = "org.matrix.msc3916.stable")]
+    Msc3916Stable,
+
+    /// `org.matrix.msc4108` ([MSC])
+    ///
+    /// Mechanism to allow OIDC sign in and E2EE set up via QR code.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/4108
+    #[cfg(feature = "unstable-msc4108")]
+    #[ruma_enum(rename = "org.matrix.msc4108")]
+    Msc4108,
+
+    /// `org.matrix.msc4140` ([MSC])
+    ///
+    /// Delayed events.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/4140
+    #[cfg(feature = "unstable-msc4140")]
+    #[ruma_enum(rename = "org.matrix.msc4140")]
+    Msc4140,
+
+    /// `org.matrix.simplified_msc3575` ([MSC])
+    ///
+    /// Simplified Sliding Sync.
+    ///
+    /// [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/4186
+    #[cfg(feature = "unstable-msc4186")]
+    #[ruma_enum(rename = "org.matrix.simplified_msc3575")]
+    Msc4186,
+
+    #[doc(hidden)]
+    _Custom(PrivOwnedStr),
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::{BTreeMap, BTreeSet};
+
     use assert_matches2::assert_matches;
     use http::Method;
 
     use super::{
         AuthScheme,
         MatrixVersion::{self, V1_0, V1_1, V1_2, V1_3},
-        Metadata, VersionHistory,
+        Metadata, SupportedVersions, VersionHistory,
     };
     use crate::api::error::IntoHttpError;
 
@@ -908,5 +1081,44 @@ mod tests {
         const LIT: MatrixVersion = MatrixVersion::from_lit("1.0");
 
         assert_eq!(LIT, V1_0);
+    }
+
+    #[test]
+    fn supported_versions_from_parts() {
+        let empty_features = BTreeMap::new();
+
+        let none = &[];
+        let none_supported = SupportedVersions::from_parts(none, &empty_features);
+        assert_eq!(none_supported.versions.as_ref(), &[]);
+        assert_eq!(none_supported.features, BTreeSet::new());
+
+        let single_known = &["r0.6.0".to_owned()];
+        let single_known_supported = SupportedVersions::from_parts(single_known, &empty_features);
+        assert_eq!(single_known_supported.versions.as_ref(), &[V1_0]);
+        assert_eq!(single_known_supported.features, BTreeSet::new());
+
+        let multiple_known = &["v1.1".to_owned(), "r0.6.0".to_owned(), "r0.6.1".to_owned()];
+        let multiple_known_supported =
+            SupportedVersions::from_parts(multiple_known, &empty_features);
+        assert_eq!(multiple_known_supported.versions.as_ref(), &[V1_0, V1_1]);
+        assert_eq!(multiple_known_supported.features, BTreeSet::new());
+
+        let single_unknown = &["v0.0".to_owned()];
+        let single_unknown_supported =
+            SupportedVersions::from_parts(single_unknown, &empty_features);
+        assert_eq!(single_unknown_supported.versions.as_ref(), &[]);
+        assert_eq!(single_unknown_supported.features, BTreeSet::new());
+
+        let mut features = BTreeMap::new();
+        features.insert("org.bar.enabled_1".to_owned(), true);
+        features.insert("org.bar.disabled".to_owned(), false);
+        features.insert("org.bar.enabled_2".to_owned(), true);
+
+        let features_supported = SupportedVersions::from_parts(single_known, &features);
+        assert_eq!(features_supported.versions.as_ref(), &[V1_0]);
+        assert_eq!(
+            features_supported.features,
+            ["org.bar.enabled_1".into(), "org.bar.enabled_2".into()].into()
+        );
     }
 }

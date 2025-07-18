@@ -1,5 +1,30 @@
 # [unreleased]
 
+# 0.15.4
+
+Bug fix:
+
+- Fix `serde::default_on_error` deserialization helper. It was working with
+  `serde_json::from_value` but not other functions like
+  `serde_json::from_(str/slice)`. It now works with all 3 methods but is limited
+  to deserializing JSON.
+
+# 0.15.3
+
+Improvements:
+
+- Add `RoomSummary` that represents the summary of a room's state.
+  - Implement `From<RoomSummary>` for `PublicRoomsChunk`
+- Add `MatrixVersion::V1_15`.
+- `PublicRoomJoinRule` now includes all possible join rule kinds, due to a
+  clarification in Matrix 1.15.
+- Add `serde::default_on_error()` as a helper to ignore errors during
+  deserialization.
+- Implement conversions between `PublicRoomJoinRule` and `SpaceRoomJoinRule`.
+- Add `FeatureFlag` as an enum whose variants are the flags of features supported by Ruma.
+- Add `SupportedVersions`, a type to parse `/versions` responses to get lists
+  of supported versions and features.
+
 # 0.15.2
 
 Bug fixes:

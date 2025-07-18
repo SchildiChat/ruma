@@ -1,5 +1,25 @@
 # [unreleased]
 
+# 0.30.4
+
+Bug fixes:
+
+- Implement `StaticEventContent` for a few event types generated manually:
+  `RedactedCallMemberEventContent`, `PossiblyRedactedPolicyRuleRoomEventContent`,
+  `PossiblyRedactedPolicyRuleServerEventContent`, `PossiblyRedactedPolicyRuleUserEventContent`,
+  `RedactedRoomAliasesEventContent`, `RedactedRoomMemberEventContent`.
+
+Improvements:
+
+- Add support for the `m.room_key_bundle` to-device event, which was introduced in [MSC4268](https://github.com/matrix-org/matrix-spec-proposals/pull/4268).
+- Add support for the `m.room_key.withheld` to-device event, which was introduced in Matrix 1.1.
+- Fix and stabilize support for rich text in room topics, according to Matrix 1.15.
+- With the `compat-lax-room-create-deser` cargo feature, the `predecessor` field of
+  `RoomCreateEventContent` is ignored during deserialization if it has an invalid format.
+- With the `compat-lax-room-topic-deser` cargo feature, the `topic_block` field of
+  `RoomTopicEventContent` (named `m.topic` in the JSON source) is ignored during deserialization if
+  it has an invalid format.
+
 # 0.30.3
 
 Improvements:

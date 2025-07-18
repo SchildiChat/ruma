@@ -1,6 +1,6 @@
 [package]
 name = "ruma-events"
-version = "0.30.3"
+version = "0.30.4"
 description = "Serializable types for the events in the Matrix specification."
 homepage = "https://ruma.dev/"
 keywords = ["matrix", "chat", "messaging", "ruma"]
@@ -37,7 +37,6 @@ unstable-msc3551 = ["unstable-msc3956"]
 unstable-msc3552 = ["unstable-msc3551"]
 unstable-msc3553 = ["unstable-msc3552"]
 unstable-msc3554 = ["unstable-msc1767"]
-unstable-msc3765 = ["unstable-msc1767"]
 unstable-msc3927 = ["unstable-msc3551"]
 unstable-msc3954 = ["unstable-msc1767"]
 unstable-msc3955 = ["unstable-msc1767"]
@@ -46,6 +45,7 @@ unstable-msc4075 = ["unstable-msc3401"]
 unstable-msc4095 = []
 unstable-msc4171 = []
 unstable-msc4230 = []
+unstable-msc4268 = []
 unstable-msc4274 = []
 unstable-msc4278 = []
 unstable-pdu = []
@@ -64,6 +64,14 @@ compat-tag-info = []
 # Support encrypted stickers, as sent by several bridges.
 # https://github.com/matrix-org/matrix-spec/issues/1667
 compat-encrypted-stickers = []
+
+# The predecessor field of RoomCreateEventContent is ignored if its
+# deserialization fails.
+compat-lax-room-create-deser = []
+
+# The topic_block (`m.topic`) field of RoomTopicEventContent is ignored if its
+# deserialization fails.
+compat-lax-room-topic-deser = []
 
 [dependencies]
 as_variant = { workspace = true }

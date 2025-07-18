@@ -1,9 +1,21 @@
 # [unreleased]
 
+# 0.20.4
+
 Improvements:
 
 - All the types used in `discover_homeserver::Response` now implement PartialEq
   and Eq.
+- Use `ruma_common::RoomSummary` for the `room::get_summary` endpoint.
+- Add the `encryption`, `room_version` and `allowed_room_ids` fields to
+  `SpaceHierarchyRoomsChunk`, according to MSC3266 / Matrix 1.15.
+- Stabilize the support for the room summary endpoint, according to Matrix 1.15.
+- Stabilize support for the OAuth 2.0 authorization server metadata endpoint,
+  according to Matrix 1.15.
+  - The `discovery::get_authentication_issuer` endpoint was removed.
+  - Some fields of `AuthorizationServerMetadata` are now behind the
+    `unstable-msc4108` or `unstable-msc4191` cargo features.
+- Add `get_supported_versions::Response::as_supported_versions()`.
 
 # 0.20.3
 

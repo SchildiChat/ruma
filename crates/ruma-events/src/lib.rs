@@ -168,7 +168,6 @@ pub mod marked_unread;
 pub mod media_preview_config;
 #[cfg(feature = "unstable-msc4171")]
 pub mod member_hints;
-#[cfg(feature = "unstable-msc1767")]
 pub mod message;
 #[cfg(feature = "unstable-pdu")]
 pub mod pdu;
@@ -182,6 +181,8 @@ pub mod receipt;
 pub mod relation;
 pub mod room;
 pub mod room_key;
+#[cfg(feature = "unstable-msc4268")]
+pub mod room_key_bundle;
 pub mod room_key_request;
 pub mod secret;
 pub mod secret_storage;

@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.12.3"
+version = "0.12.5"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -103,6 +103,8 @@ compat = [
     "compat-signature-id",
     "compat-tag-info",
     "compat-optional-txn-pdus",
+    "compat-lax-room-create-deser",
+    "compat-lax-room-topic-deser",
 ]
 
 # Allow IDs to exceed 255 bytes.
@@ -161,6 +163,14 @@ compat-encrypted-stickers = ["ruma-events?/compat-encrypted-stickers"]
 # defaulting to an empty `Vec` in deserialization.
 compat-optional-txn-pdus = ["ruma-federation-api?/compat-optional-txn-pdus"]
 
+# The predecessor field of RoomCreateEventContent is ignored if its
+# deserialization fails.
+compat-lax-room-create-deser = ["ruma-events?/compat-lax-room-create-deser"]
+
+# The topic_block (`m.topic`) field of RoomTopicEventContent is ignored if its
+# deserialization fails.
+compat-lax-room-topic-deser = ["ruma-events?/compat-lax-room-topic-deser"]
+
 # Specific compatibility for past ring public/private key documents.
 ring-compat = ["dep:ruma-signatures", "ruma-signatures?/ring-compat"]
 
@@ -181,11 +191,10 @@ unstable-msc2448 = [
 ]
 unstable-msc2545 = ["ruma-events?/unstable-msc2545"]
 unstable-msc2654 = ["ruma-client-api?/unstable-msc2654"]
-unstable-msc2666 = ["ruma-client-api?/unstable-msc2666"]
+unstable-msc2666 = ["ruma-common/unstable-msc2666", "ruma-client-api?/unstable-msc2666"]
 unstable-msc2747 = ["ruma-events?/unstable-msc2747"]
 unstable-msc2867 = ["ruma-events?/unstable-msc2867"]
 unstable-msc2870 = ["ruma-common/unstable-msc2870"]
-unstable-msc2965 = ["ruma-client-api?/unstable-msc2965"]
 unstable-msc2967 = ["ruma-client-api?/unstable-msc2967"]
 unstable-msc3061 = ["ruma-events?/unstable-msc3061"]
 unstable-msc3202 = ["ruma-appservice-api?/unstable-msc3202"]
@@ -195,7 +204,6 @@ unstable-msc3245 = ["ruma-events?/unstable-msc3245"]
 # https://github.com/matrix-org/matrix-spec-proposals/blob/83f6c5b469c1d78f714e335dcaa25354b255ffa5/proposals/3245-voice-messages.md
 unstable-msc3245-v1-compat = ["ruma-events?/unstable-msc3245-v1-compat"]
 unstable-msc3246 = ["ruma-events?/unstable-msc3246"]
-unstable-msc3266 = ["ruma-client-api?/unstable-msc3266"]
 unstable-msc3381 = ["ruma-events?/unstable-msc3381"]
 unstable-msc3401 = ["ruma-events?/unstable-msc3401"]
 unstable-msc3488 = ["ruma-client-api?/unstable-msc3488", "ruma-events?/unstable-msc3488"]
@@ -206,7 +214,6 @@ unstable-msc3553 = ["ruma-events?/unstable-msc3553"]
 unstable-msc3554 = ["ruma-events?/unstable-msc3554"]
 unstable-msc3618 = ["ruma-federation-api?/unstable-msc3618"]
 unstable-msc3723 = ["ruma-federation-api?/unstable-msc3723"]
-unstable-msc3765 = ["ruma-events?/unstable-msc3765"]
 unstable-msc3814 = ["ruma-client-api?/unstable-msc3814"]
 unstable-msc3824 = ["ruma-client-api?/unstable-msc3824"]
 unstable-msc3843 = ["ruma-client-api?/unstable-msc3843", "ruma-federation-api?/unstable-msc3843"]
@@ -220,21 +227,24 @@ unstable-msc3956 = ["ruma-events?/unstable-msc3956"]
 unstable-msc3983 = ["ruma-client-api?/unstable-msc3983"]
 unstable-msc4075 = ["ruma-events?/unstable-msc4075"]
 unstable-msc4095 = ["ruma-events?/unstable-msc4095"]
-unstable-msc4108 = ["ruma-client-api?/unstable-msc4108"]
+unstable-msc4108 = ["ruma-common/unstable-msc4108", "ruma-client-api?/unstable-msc4108"]
 unstable-msc4121 = ["ruma-client-api?/unstable-msc4121"]
 unstable-msc4125 = ["ruma-federation-api?/unstable-msc4125"]
-unstable-msc4140 = ["ruma-client-api?/unstable-msc4140"]
+unstable-msc4140 = ["ruma-common/unstable-msc4140", "ruma-client-api?/unstable-msc4140"]
 unstable-msc4143 = ["ruma-client-api?/unstable-msc4143"]
 unstable-msc4171 = ["ruma-events?/unstable-msc4171"]
-unstable-msc4186 = ["ruma-client-api?/unstable-msc4186"]
+unstable-msc4186 = ["ruma-common/unstable-msc4186", "ruma-client-api?/unstable-msc4186"]
+unstable-msc4191 = ["ruma-client-api?/unstable-msc4191"]
 unstable-msc4203 = ["ruma-appservice-api?/unstable-msc4203"]
 unstable-msc4230 = ["ruma-events?/unstable-msc4230"]
+unstable-msc4268 = ["ruma-events?/unstable-msc4268"]
 unstable-msc4274 = ["ruma-events?/unstable-msc4274"]
 unstable-msc4278 = ["ruma-events?/unstable-msc4278"]
 unstable-msc4286 = ["ruma-html?/unstable-msc4286"]
 unstable-pdu = ["ruma-events?/unstable-pdu"]
 unstable-unspecified = [
     "ruma-common/unstable-unspecified",
+    "ruma-federation-api?/unstable-unspecified",
 ]
 
 # Private features, only used in test / benchmarking code
@@ -247,14 +257,12 @@ __unstable-mscs = [
     "unstable-msc2747",
     "unstable-msc2867",
     "unstable-msc2870",
-    "unstable-msc2965",
     "unstable-msc2967",
     "unstable-msc3061",
     "unstable-msc3202",
     "unstable-msc3245",
     "unstable-msc3245-v1-compat",
     "unstable-msc3246",
-    "unstable-msc3266",
     "unstable-msc3381",
     "unstable-msc3401",
     "unstable-msc3488",
@@ -265,7 +273,6 @@ __unstable-mscs = [
     "unstable-msc3554",
     "unstable-msc3618",
     "unstable-msc3723",
-    "unstable-msc3765",
     "unstable-msc3814",
     "unstable-msc3824",
     "unstable-msc3843",
@@ -286,8 +293,10 @@ __unstable-mscs = [
     "unstable-msc4143",
     "unstable-msc4171",
     "unstable-msc4186",
+    "unstable-msc4191",
     "unstable-msc4203",
     "unstable-msc4230",
+    "unstable-msc4268",
     "unstable-msc4274",
     "unstable-msc4278",
     "unstable-msc4286",

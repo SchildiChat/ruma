@@ -6,8 +6,8 @@
 
 use js_int::UInt;
 use ruma_common::{
-    room::RoomType, serde::Raw, space::SpaceRoomJoinRule, OwnedMxcUri, OwnedRoomAliasId,
-    OwnedRoomId,
+    room::RoomType, serde::Raw, space::SpaceRoomJoinRule, EventEncryptionAlgorithm, OwnedMxcUri,
+    OwnedRoomAliasId, OwnedRoomId, RoomVersionId,
 };
 use ruma_events::space::child::HierarchySpaceChildEvent;
 use serde::{Deserialize, Serialize};
@@ -66,9 +66,22 @@ pub struct SpaceHierarchyRoomsChunk {
     #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
     pub join_rule: SpaceRoomJoinRule,
 
+    /// If the room is a restricted room, these are the room IDs which are specified by the join
+    /// rules.
+    #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
+    pub allowed_room_ids: Vec<OwnedRoomId>,
+
     /// The type of room from `m.room.create`, if any.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub room_type: Option<RoomType>,
+
+    /// If the room is encrypted, the algorithm used for this room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encryption: Option<EventEncryptionAlgorithm>,
+
+    /// The version of the room.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_version: Option<RoomVersionId>,
 
     /// The stripped `m.space.child` events of the space-room.
     ///
@@ -127,8 +140,48 @@ impl From<SpaceHierarchyRoomsChunkInit> for SpaceHierarchyRoomsChunk {
             guest_can_join,
             avatar_url: None,
             join_rule,
+            allowed_room_ids: Vec::new(),
             room_type: None,
+            encryption: None,
+            room_version: None,
             children_state,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::{from_value as from_json_value, json};
+
+    use super::SpaceHierarchyRoomsChunk;
+
+    #[test]
+    fn deserialize_space_hierarchy_rooms_chunk() {
+        let json = json!({
+            "room_id": "!room:localhost",
+            "num_joined_members": 5,
+            "world_readable": false,
+            "guest_can_join": false,
+            "join_rule": "restricted",
+            "allowed_room_ids": ["!otherroom:localhost"],
+            "children_state": [
+                {
+                    "content": {
+                        "via": [
+                            "example.org"
+                        ]
+                    },
+                    "origin_server_ts": 1_629_413_349,
+                    "sender": "@alice:example.org",
+                    "state_key": "!a:example.org",
+                    "type": "m.space.child"
+                }
+            ],
+        });
+
+        let room = from_json_value::<SpaceHierarchyRoomsChunk>(json).unwrap();
+        assert_eq!(room.room_id, "!room:localhost");
+        let space_child = room.children_state[0].deserialize().unwrap();
+        assert_eq!(space_child.state_key, "!a:example.org");
     }
 }
