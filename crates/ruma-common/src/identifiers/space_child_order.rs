@@ -12,7 +12,7 @@ use ruma_macros::IdDst;
 #[repr(transparent)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, IdDst)]
 #[ruma_id(validate = ruma_identifiers_validation::space_child_order::validate)]
-pub struct SpaceChildOrder(str);
+pub struct SpaceChildOrder(pub str);
 
 #[cfg(test)]
 mod tests {
