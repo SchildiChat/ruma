@@ -2,11 +2,14 @@
 //!
 //! [`m.room.create`]: https://spec.matrix.org/latest/client-server-api/#mroomcreate
 
-use ruma_common::{room::RoomType, OwnedEventId, OwnedRoomId, OwnedUserId, RoomVersionId};
+use ruma_common::{
+    room::RoomType, room_version_rules::RedactionRules, OwnedEventId, OwnedRoomId, OwnedUserId,
+    RoomVersionId,
+};
 use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
-use crate::{EmptyStateKey, RedactContent, RedactedStateEventContent};
+use crate::{EmptyStateKey, RedactContent, RedactedStateEventContent, StateEventType};
 
 /// The content of an `m.room.create` event.
 ///
@@ -57,6 +60,11 @@ pub struct RoomCreateEventContent {
     /// This is currently only used for spaces.
     #[serde(skip_serializing_if = "Option::is_none", rename = "type")]
     pub room_type: Option<RoomType>,
+
+    /// Additional room creators, considered to have "infinite" power level, in room version 12
+    /// onwards.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub additional_creators: Vec<OwnedUserId>,
 }
 
 impl RoomCreateEventContent {
@@ -70,6 +78,7 @@ impl RoomCreateEventContent {
             room_version: default_room_version_id(),
             predecessor: None,
             room_type: None,
+            additional_creators: Vec::new(),
         }
     }
 
@@ -85,6 +94,7 @@ impl RoomCreateEventContent {
             room_version: RoomVersionId::V11,
             predecessor: None,
             room_type: None,
+            additional_creators: Vec::new(),
         }
     }
 }
@@ -92,24 +102,16 @@ impl RoomCreateEventContent {
 impl RedactContent for RoomCreateEventContent {
     type Redacted = RedactedRoomCreateEventContent;
 
-    fn redact(self, version: &RoomVersionId) -> Self::Redacted {
+    fn redact(self, rules: &RedactionRules) -> Self::Redacted {
         #[allow(deprecated)]
-        match version {
-            RoomVersionId::V1
-            | RoomVersionId::V2
-            | RoomVersionId::V3
-            | RoomVersionId::V4
-            | RoomVersionId::V5
-            | RoomVersionId::V6
-            | RoomVersionId::V7
-            | RoomVersionId::V8
-            | RoomVersionId::V9
-            | RoomVersionId::V10 => Self {
+        if rules.keep_room_create_content {
+            self
+        } else {
+            Self {
                 room_version: default_room_version_id(),
                 creator: self.creator,
                 ..Self::new_v11()
-            },
-            _ => self,
+            }
         }
     }
 }
@@ -122,13 +124,18 @@ pub struct PreviousRoom {
     pub room_id: OwnedRoomId,
 
     /// The event ID of the last known event in the old room.
-    pub event_id: OwnedEventId,
+    #[deprecated = "\
+        This field should be sent by servers when possible for backwards compatibility \
+        but clients should not rely on it."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<OwnedEventId>,
 }
 
 impl PreviousRoom {
-    /// Creates a new `PreviousRoom` from the given room and event IDs.
-    pub fn new(room_id: OwnedRoomId, event_id: OwnedEventId) -> Self {
-        Self { room_id, event_id }
+    /// Creates a new `PreviousRoom` from the given room ID.
+    pub fn new(room_id: OwnedRoomId) -> Self {
+        #[allow(deprecated)]
+        Self { room_id, event_id: None }
     }
 }
 
@@ -149,6 +156,10 @@ pub type RedactedRoomCreateEventContent = RoomCreateEventContent;
 
 impl RedactedStateEventContent for RedactedRoomCreateEventContent {
     type StateKey = EmptyStateKey;
+
+    fn event_type(&self) -> StateEventType {
+        StateEventType::RoomCreate
+    }
 }
 
 #[cfg(test)]
@@ -168,6 +179,7 @@ mod tests {
             room_version: RoomVersionId::V4,
             predecessor: None,
             room_type: None,
+            additional_creators: Vec::new(),
         };
 
         let json = json!({
@@ -188,6 +200,7 @@ mod tests {
             room_version: RoomVersionId::V4,
             predecessor: None,
             room_type: Some(RoomType::Space),
+            additional_creators: Vec::new(),
         };
 
         let json = json!({

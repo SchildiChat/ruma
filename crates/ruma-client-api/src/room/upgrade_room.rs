@@ -9,7 +9,7 @@ pub mod v3 {
 
     use ruma_common::{
         api::{request, response, Metadata},
-        metadata, OwnedRoomId, RoomVersionId,
+        metadata, OwnedRoomId, OwnedUserId, RoomVersionId,
     };
 
     const METADATA: Metadata = metadata! {
@@ -17,14 +17,19 @@ pub mod v3 {
         rate_limited: false,
         authentication: AccessToken,
         history: {
-            1.0 => "/_matrix/client/r0/rooms/:room_id/upgrade",
-            1.1 => "/_matrix/client/v3/rooms/:room_id/upgrade",
+            1.0 => "/_matrix/client/r0/rooms/{room_id}/upgrade",
+            1.1 => "/_matrix/client/v3/rooms/{room_id}/upgrade",
         }
     };
 
     /// Request type for the `upgrade_room` endpoint.
     #[request(error = crate::Error)]
     pub struct Request {
+        /// A list of user IDs to consider as additional creators, and hence grant an "infinite"
+        /// immutable power level, from room version 12 onwards.
+        #[serde(default, skip_serializing_if = "<[_]>::is_empty")]
+        pub additional_creators: Vec<OwnedUserId>,
+
         /// ID of the room to be upgraded.
         #[ruma_api(path)]
         pub room_id: OwnedRoomId,
@@ -43,7 +48,7 @@ pub mod v3 {
     impl Request {
         /// Creates a new `Request` with the given room ID and new room version.
         pub fn new(room_id: OwnedRoomId, new_version: RoomVersionId) -> Self {
-            Self { room_id, new_version }
+            Self { room_id, new_version, additional_creators: Vec::new() }
         }
     }
 
