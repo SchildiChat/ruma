@@ -30,6 +30,8 @@ Breaking changes:
 - Allow specifying the event format for `state::get_state_event_for_key`, meaning the response may
   either be `Raw<AnyStateEvent>` or `Raw<AnyStateEventContent>`, depending on the format specified
   in the request.
+- Use `StrippedState` instead of `AnyStrippedStateEvent`, to allow non-stripped events to be
+  represented for `sync_events`.
 
 Improvements:
 
@@ -41,6 +43,8 @@ Improvements:
 - Add `additional_creators` field to `CreationContent` of `create_room` and `Request` of
   `upgrade_room`, allowing clients to specify which other users (if any) should be considered
   additional creators from room version 12 onwards.
+- Add unstable support for `AnyStateEvent` formatted events in `sync_events`, alongside stripped
+  events from MSC4311 behind the `unstable-msc4311` feature.
 
 # 0.20.4
 
