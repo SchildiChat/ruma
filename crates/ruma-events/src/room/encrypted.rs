@@ -10,7 +10,10 @@ use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
 use super::message;
-use crate::relation::{Annotation, CustomRelation, InReplyTo, Reference, RelationType, Thread};
+use crate::{
+    relation::{Annotation, CustomRelation, InReplyTo, Reference, RelationType, Thread},
+    room::message::RelationWithoutReplacement,
+};
 
 mod relation_serde;
 #[cfg(feature = "unstable-msc3414")]
@@ -158,6 +161,16 @@ impl<C> From<message::Relation<C>> for Relation {
     }
 }
 
+impl From<RelationWithoutReplacement> for Relation {
+    fn from(value: RelationWithoutReplacement) -> Self {
+        match value {
+            RelationWithoutReplacement::Thread(t) => Self::Thread(t),
+            RelationWithoutReplacement::_Custom(c) => Self::_Custom(c),
+            RelationWithoutReplacement::Reply { in_reply_to } => Self::Reply { in_reply_to },
+        }
+    }
+}
+
 /// The event this relation belongs to [replaces another event].
 ///
 /// In contrast to [`relation::Replacement`](crate::relation::Replacement), this
@@ -230,12 +243,14 @@ pub struct MegolmV1AesSha2Content {
     pub ciphertext: String,
 
     /// The Curve25519 key of the sender.
-    #[deprecated = "this field still needs to be sent but should not be used when received"]
-    pub sender_key: String,
+    #[deprecated = "Since Matrix 1.3, this field should still be sent but should not be used when received"]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sender_key: Option<String>,
 
     /// The ID of the sending device.
-    #[deprecated = "this field still needs to be sent but should not be used when received"]
-    pub device_id: OwnedDeviceId,
+    #[deprecated = "Since Matrix 1.3, this field should still be sent but should not be used when received"]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_id: Option<OwnedDeviceId>,
 
     /// The ID of the session used to encrypt the message.
     pub session_id: String,
@@ -266,7 +281,7 @@ impl From<MegolmV1AesSha2ContentInit> for MegolmV1AesSha2Content {
     fn from(init: MegolmV1AesSha2ContentInit) -> Self {
         let MegolmV1AesSha2ContentInit { ciphertext, sender_key, device_id, session_id } = init;
         #[allow(deprecated)]
-        Self { ciphertext, sender_key, device_id, session_id }
+        Self { ciphertext, sender_key: Some(sender_key), device_id: Some(device_id), session_id }
     }
 }
 
@@ -274,7 +289,7 @@ impl From<MegolmV1AesSha2ContentInit> for MegolmV1AesSha2Content {
 mod tests {
     use assert_matches2::assert_matches;
     use js_int::uint;
-    use ruma_common::{owned_event_id, serde::Raw};
+    use ruma_common::{device_id, owned_event_id, serde::Raw};
     use serde_json::{from_value as from_json_value, json, to_value as to_json_value};
 
     use super::{
@@ -335,8 +350,8 @@ mod tests {
 
         assert_matches!(content.scheme, EncryptedEventScheme::MegolmV1AesSha2(scheme));
         assert_eq!(scheme.ciphertext, "ciphertext");
-        assert_eq!(scheme.sender_key, "sender_key");
-        assert_eq!(scheme.device_id, "device_id");
+        assert_eq!(scheme.sender_key.as_deref(), Some("sender_key"));
+        assert_eq!(scheme.device_id.as_deref(), Some(device_id!("device_id")));
         assert_eq!(scheme.session_id, "session_id");
 
         assert_matches!(content.relates_to, Some(Relation::Reply { in_reply_to }));

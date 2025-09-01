@@ -35,6 +35,8 @@ unstable-msc3932 = ["unstable-msc3931"]
 unstable-msc4108 = []
 unstable-msc4140 = []
 unstable-msc4186 = []
+# Thread subscriptions.
+unstable-msc4306 = []
 
 # Allow IDs to exceed 255 bytes.
 compat-arbitrary-length-ids = ["ruma-identifiers-validation/compat-arbitrary-length-ids"]
@@ -87,7 +89,9 @@ js-sys = { version = "0.3", optional = true }
 [dev-dependencies]
 assert_matches2 = { workspace = true }
 assign = { workspace = true }
+macro_rules_attribute = "0.2.2"
 maplit = { workspace = true }
+smol-macros = "0.1.1"
 trybuild = "1.0.71"
 
 [lints]

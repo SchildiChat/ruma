@@ -2,6 +2,9 @@
 
 Breaking changes:
 
+- `PushCondition::applies`, `ConditionalPushRule::applies`, `AnyPushRuleRef::applies`,
+  `AnyPushRule::applies`, `Ruleset::applies`, `Ruleset::get_actions`, `Ruleset::get_match` all
+  became async, to allow for lazy evaluation of push rules.
 - `UserId` parsing and deserialization are now compatible with all non-compliant
   user IDs in the wild by default, due to a clarification in the spec.
   - The `compat-user-id` cargo feature was removed.
@@ -59,6 +62,15 @@ Breaking changes:
     same type.
 - `RoomId::new()` was renamed to `RoomId::new_v1()`, as several formats are now
   supported for this type.
+- `StateResolutionVersion::V2` now takes `StateResolutionV2Rules` as a unit field, to specify
+  tweaks to be used when resolving state with version 2 of the state resolution algorithm.
+  - This field can be accessed with `StateResolutionVersion::v2_rules`, returning `None` if
+    `state_res` is not `StateResolutionVersion::V2`.
+  - `StateResolutionV2Rules` has the following fields:
+    - `begin_iterative_auth_checks_with_empty_state_map`, to determine whether to begin the first
+      phase of iterative auth checks with an empty state map.
+    - `consider_conflicted_state_subgraph`, to determine whether to include the conflicted state
+      subgraph in the full conflicted state.
 
 Bug fix:
 
@@ -117,6 +129,13 @@ Improvements:
   the reference hash used in that format.
 - Add unstable support for in-app-only notifications as per MSC3768 under a new `unstable-msc3768`
   feature.
+- Add `room_create_event_id_as_room_id` to `AuthorizationRules` to indicate whether the reference
+  hash of the `m.room.create` event is used to construct the room ID. It has other implications,
+  like the `m.room.create` event not having a room ID, and the `m.room.create` event not listed in
+  the `auth_events` of a PDU.
+- Add `require_room_create_room_id` and `allow_room_create_in_auth_events` to `EventFormatRules` to
+  indicate whether the room ID is required for `m.room.create` events and whether the
+  event ID of the `m.room.create` is allowed in the `auth_events`, respectively.
 
 # 0.15.4
 

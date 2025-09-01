@@ -10,8 +10,9 @@ use std::{
 
 use js_int::{int, uint};
 use ruma_common::{
-    event_id, room_id, room_version_rules::AuthorizationRules, user_id, EventId,
-    MilliSecondsSinceUnixEpoch, OwnedEventId, RoomId, ServerSignatures, UserId,
+    event_id, room_id,
+    room_version_rules::{AuthorizationRules, StateResolutionV2Rules},
+    user_id, EventId, MilliSecondsSinceUnixEpoch, OwnedEventId, RoomId, ServerSignatures, UserId,
 };
 use ruma_events::{
     room::{
@@ -85,7 +86,7 @@ pub(crate) fn do_check(
     // Resolve the current state and add it to the state_at_event map then continue
     // on in "time"
     for node in crate::reverse_topological_power_sort(&graph, |_id| {
-        Ok((int!(0), MilliSecondsSinceUnixEpoch(uint!(0))))
+        Ok((int!(0).into(), MilliSecondsSinceUnixEpoch(uint!(0))))
     })
     .unwrap()
     {
@@ -120,10 +121,14 @@ pub(crate) fn do_check(
                 })
                 .collect();
 
-            let resolved =
-                crate::resolve(&AuthorizationRules::V6, state_sets, auth_chain_sets, |id| {
-                    event_map.get(id).cloned()
-                });
+            let resolved = crate::resolve(
+                &AuthorizationRules::V6,
+                &StateResolutionV2Rules::V2_0,
+                state_sets,
+                auth_chain_sets,
+                |id| event_map.get(id).cloned(),
+                |_| unreachable!(),
+            );
             match resolved {
                 Ok(state) => state,
                 Err(e) => panic!("resolution for {node} failed: {e}"),
@@ -363,6 +368,10 @@ pub(crate) fn room_id() -> &'static RoomId {
     room_id!("!test:foo")
 }
 
+pub(crate) fn v12_room_id() -> &'static RoomId {
+    room_id!("!CREATE")
+}
+
 pub(crate) fn member_content_ban() -> Box<RawJsonValue> {
     to_raw_json_value(&RoomMemberEventContent::new(MembershipState::Ban)).unwrap()
 }
@@ -384,7 +393,7 @@ pub(crate) fn to_init_pdu_event(
     let state_key = state_key.map(ToOwned::to_owned);
     Arc::new(PduEvent {
         event_id: id.try_into().unwrap(),
-        room_id: room_id().to_owned(),
+        room_id: Some(room_id().to_owned()),
         sender: sender.to_owned(),
         origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
         state_key,
@@ -421,7 +430,52 @@ where
     let state_key = state_key.map(ToOwned::to_owned);
     Arc::new(PduEvent {
         event_id: id.try_into().unwrap(),
-        room_id: room_id().to_owned(),
+        room_id: Some(room_id().to_owned()),
+        sender: sender.to_owned(),
+        origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
+        state_key,
+        kind: ev_type,
+        content,
+        redacts: None,
+        unsigned: BTreeMap::new(),
+        auth_events,
+        prev_events,
+        depth: uint!(0),
+        hashes: EventHash { sha256: "".to_owned() },
+        signatures: ServerSignatures::default(),
+        rejected: false,
+    })
+}
+
+/// Same as `to_pdu_event()`, but uses the default m.room.create event ID to generate the room ID.
+pub(crate) fn to_v12_pdu_event<S>(
+    id: &str,
+    sender: &UserId,
+    ev_type: TimelineEventType,
+    state_key: Option<&str>,
+    content: Box<RawJsonValue>,
+    auth_events: &[S],
+    prev_events: &[S],
+) -> Arc<PduEvent>
+where
+    S: AsRef<str>,
+{
+    fn event_id(id: &str) -> OwnedEventId {
+        if id.contains('$') {
+            id.try_into().unwrap()
+        } else {
+            format!("${id}").try_into().unwrap()
+        }
+    }
+
+    let ts = SERVER_TIMESTAMP.fetch_add(1, SeqCst);
+    let auth_events = auth_events.iter().map(AsRef::as_ref).map(event_id).collect::<Vec<_>>();
+    let prev_events = prev_events.iter().map(AsRef::as_ref).map(event_id).collect::<Vec<_>>();
+
+    let state_key = state_key.map(ToOwned::to_owned);
+    Arc::new(PduEvent {
+        event_id: event_id(id),
+        room_id: Some(v12_room_id().to_owned()),
         sender: sender.to_owned(),
         origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
         state_key,
@@ -456,7 +510,7 @@ where
 
     Arc::new(PduEvent {
         event_id: id.try_into().unwrap(),
-        room_id: room_id().to_owned(),
+        room_id: Some(room_id().to_owned()),
         sender: sender.to_owned(),
         origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
         state_key: None,
@@ -473,7 +527,34 @@ where
     })
 }
 
-// all graphs start with these input events
+pub(crate) fn room_create_v12_pdu_event(
+    id: &str,
+    sender: &UserId,
+    content: Box<RawJsonValue>,
+) -> Arc<PduEvent> {
+    let ts = SERVER_TIMESTAMP.fetch_add(1, SeqCst);
+    let id = if id.contains('$') { id.to_owned() } else { format!("${id}") };
+
+    Arc::new(PduEvent {
+        event_id: id.try_into().unwrap(),
+        room_id: None,
+        sender: sender.to_owned(),
+        origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
+        state_key: Some(String::new()),
+        kind: TimelineEventType::RoomCreate,
+        content,
+        redacts: None,
+        unsigned: BTreeMap::new(),
+        auth_events: vec![],
+        prev_events: vec![],
+        depth: uint!(0),
+        hashes: EventHash { sha256: "".to_owned() },
+        signatures: ServerSignatures::default(),
+        rejected: false,
+    })
+}
+
+/// Batch of initial events to use for incoming events in the v1-v11 room versions.
 #[allow(non_snake_case)]
 pub(crate) fn INITIAL_EVENTS() -> HashMap<OwnedEventId, Arc<PduEvent>> {
     vec![
@@ -555,6 +636,84 @@ pub(crate) fn INITIAL_EVENTS() -> HashMap<OwnedEventId, Arc<PduEvent>> {
     .collect()
 }
 
+/// Batch of initial events to use for incoming events from room version 12 onwards.
+#[allow(non_snake_case)]
+pub(crate) fn INITIAL_V12_EVENTS() -> HashMap<OwnedEventId, Arc<PduEvent>> {
+    vec![
+        room_create_v12_pdu_event(
+            "CREATE",
+            alice(),
+            to_raw_json_value(&json!({ "room_version": "12" })).unwrap(),
+        ),
+        to_v12_pdu_event(
+            "IMA",
+            alice(),
+            TimelineEventType::RoomMember,
+            Some(alice().as_str()),
+            member_content_join(),
+            &["CREATE"],
+            &["CREATE"],
+        ),
+        to_v12_pdu_event(
+            "IPOWER",
+            alice(),
+            TimelineEventType::RoomPowerLevels,
+            Some(""),
+            to_raw_json_value(&json!({})).unwrap(),
+            &["CREATE", "IMA"],
+            &["IMA"],
+        ),
+        to_v12_pdu_event(
+            "IJR",
+            alice(),
+            TimelineEventType::RoomJoinRules,
+            Some(""),
+            to_raw_json_value(&RoomJoinRulesEventContent::new(JoinRule::Public)).unwrap(),
+            &["CREATE", "IMA", "IPOWER"],
+            &["IPOWER"],
+        ),
+        to_v12_pdu_event(
+            "IMB",
+            bob(),
+            TimelineEventType::RoomMember,
+            Some(bob().as_str()),
+            member_content_join(),
+            &["CREATE", "IJR", "IPOWER"],
+            &["IJR"],
+        ),
+        to_v12_pdu_event(
+            "IMC",
+            charlie(),
+            TimelineEventType::RoomMember,
+            Some(charlie().as_str()),
+            member_content_join(),
+            &["CREATE", "IJR", "IPOWER"],
+            &["IMB"],
+        ),
+        to_v12_pdu_event::<&EventId>(
+            "START",
+            charlie(),
+            TimelineEventType::RoomMessage,
+            Some("dummy"),
+            to_raw_json_value(&json!({})).unwrap(),
+            &[],
+            &[],
+        ),
+        to_v12_pdu_event::<&EventId>(
+            "END",
+            charlie(),
+            TimelineEventType::RoomMessage,
+            Some("dummy"),
+            to_raw_json_value(&json!({})).unwrap(),
+            &[],
+            &[],
+        ),
+    ]
+    .into_iter()
+    .map(|ev| (ev.event_id().to_owned(), ev))
+    .collect()
+}
+
 // all graphs start with these input events
 #[allow(non_snake_case)]
 pub(crate) fn INITIAL_EVENTS_CREATE_ROOM() -> HashMap<OwnedEventId, Arc<PduEvent>> {
@@ -601,8 +760,8 @@ pub(crate) mod event {
             &self.event_id
         }
 
-        fn room_id(&self) -> &RoomId {
-            &self.room_id
+        fn room_id(&self) -> Option<&RoomId> {
+            self.room_id.as_deref()
         }
 
         fn sender(&self) -> &UserId {
@@ -649,7 +808,7 @@ pub(crate) mod event {
         pub(crate) event_id: OwnedEventId,
 
         /// The room this event belongs to.
-        pub(crate) room_id: OwnedRoomId,
+        pub(crate) room_id: Option<OwnedRoomId>,
 
         /// The user id of the user who sent this event.
         pub(crate) sender: OwnedUserId,

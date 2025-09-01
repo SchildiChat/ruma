@@ -90,6 +90,15 @@ pub enum ErrorKind {
     /// A Captcha is required to complete the request.
     CaptchaNeeded,
 
+    /// `M_CONFLICTING_UNSUBSCRIPTION`
+    ///
+    /// Part of [MSC4306]: an automatic thread subscription has been skipped by the server, because
+    /// the user unsubsubscribed after the indicated subscribed-to event.
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    ConflictingUnsubscription,
+
     /// `M_CONNECTION_FAILED`
     ///
     /// The connection to the application service failed.
@@ -184,6 +193,15 @@ pub enum ErrorKind {
     ///
     /// No resource was found for this request.
     NotFound,
+
+    /// `M_NOT_IN_THREAD`
+    ///
+    /// Part of [MSC4306]: an automatic thread subscription was set to an event ID that isn't part
+    /// of the subscribed-to thread.
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    NotInThread,
 
     /// `M_NOT_JSON`
     ///
@@ -416,6 +434,8 @@ impl ErrorKind {
             ErrorKind::CannotOverwriteMedia => ErrorCode::CannotOverwriteMedia,
             ErrorKind::CaptchaInvalid => ErrorCode::CaptchaInvalid,
             ErrorKind::CaptchaNeeded => ErrorCode::CaptchaNeeded,
+            #[cfg(feature = "unstable-msc4306")]
+            ErrorKind::ConflictingUnsubscription => ErrorCode::ConflictingUnsubscription,
             ErrorKind::ConnectionFailed => ErrorCode::ConnectionFailed,
             ErrorKind::ConnectionTimeout => ErrorCode::ConnectionTimeout,
             ErrorKind::DuplicateAnnotation => ErrorCode::DuplicateAnnotation,
@@ -430,6 +450,8 @@ impl ErrorKind {
             ErrorKind::MissingParam => ErrorCode::MissingParam,
             ErrorKind::MissingToken => ErrorCode::MissingToken,
             ErrorKind::NotFound => ErrorCode::NotFound,
+            #[cfg(feature = "unstable-msc4306")]
+            ErrorKind::NotInThread => ErrorCode::NotInThread,
             ErrorKind::NotJson => ErrorCode::NotJson,
             ErrorKind::NotYetUploaded => ErrorCode::NotYetUploaded,
             ErrorKind::ResourceLimitExceeded { .. } => ErrorCode::ResourceLimitExceeded,
@@ -525,6 +547,16 @@ pub enum ErrorCode {
     /// A Captcha is required to complete the request.
     CaptchaNeeded,
 
+    /// `M_CONFLICTING_UNSUBSCRIPTION`
+    ///
+    /// Part of [MSC4306]: an automatic thread subscription has been skipped by the server, because
+    /// the user unsubsubscribed after the indicated subscribed-to event.
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    #[ruma_enum(rename = "IO.ELEMENT.MSC4306.M_CONFLICTING_UNSUBSCRIPTION")]
+    ConflictingUnsubscription,
+
     /// `M_CONNECTION_FAILED`
     ///
     /// The connection to the application service failed.
@@ -608,6 +640,16 @@ pub enum ErrorCode {
     ///
     /// No resource was found for this request.
     NotFound,
+
+    /// `M_NOT_IN_THREAD`
+    ///
+    /// Part of [MSC4306]: an automatic thread subscription was set to an event ID that isn't part
+    /// of the subscribed-to thread.
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    #[ruma_enum(rename = "IO.ELEMENT.MSC4306.M_NOT_IN_THREAD")]
+    NotInThread,
 
     /// `M_NOT_JSON`
     ///

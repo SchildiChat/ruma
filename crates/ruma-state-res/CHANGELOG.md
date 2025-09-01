@@ -32,6 +32,15 @@ Breaking:
 - `lexicographical_topological_sort()` was renamed to
   `reverse_topological_power_sort()`, to match the name of the algorithm defined
   in the Matrix spec.
+- Return `UserPowerLevel` in place of `Int` for `reverse_topological_power_sort`.
+- Rename `RoomCreateEvent::creator` to `RoomCreateEvent::creators`, and have it return a set of
+  user IDs instead of only ever returning one.
+- `Event::room_id()` must now return an `Option<&RoomId>`, since `m.room.create`
+  events don't have a `room_id` field in room version 12.
+- `resolve` now additionally takes the following parameters:
+  - `state_res_rules`: used to specify tweaks to apply to the state resolution algorithm.
+  - `fetch_conflicted_state_subgraph`: a function which calculates which event IDs form the
+    conflicted state subgraph of the given conflicted events.
 
 Bug fixes:
 

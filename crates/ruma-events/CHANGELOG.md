@@ -66,9 +66,13 @@ Breaking changes:
 - The `event_id` field of `PreviousRoom` is now optional and deprecated. It has been removed in new
   room versions so clients should not rely on it. They can obtain it by requesting the
   `m.room.tombstone` event in the state of the predecessor.
+- The `sender_key` field of `RequestedKeyInfo` is now optional. It was deprecated in Matrix 1.3.
+
 
 Improvements:
 
+- Don't print out the secret key contained in JsonWebKey and JsonWebKeyInit in
+  their `Debug` implementations.
 - Remove the `pdu` module and the corresponding `unstable-pdu` cargo feature. As far as we know, it
   was not used anywhere outside of the tests of ruma-state-res.
 - The `EventContent` and `event_enum!` macros support declaring the same type for both global and
@@ -93,6 +97,20 @@ Improvements:
 - Implement types for encrypted state events, according to MSC3414.
 - Add `additional_creators` field to `RoomCreateEventContent`, used to optionally specify
   additional creators of a room.
+- The state key type `CallMemberStateKey` for `m.call.member` state events changed to allow any postfix
+  for state keys. The `device_id()` method is not available anymore. Use the event content instead.
+- Add unstable support for events with the same format as `SyncStateEvent` in `StrippedStateEvent`,
+  according to MSC4319.
+
+# 0.30.5
+
+Bug fixes:
+
+- If the `sender_key` and `device_id` fields of `MegolmV1AesSha2Content` are missing during
+  deserialization, they default to an empty string. They are optional since Matrix 1.3.
+- If the `sender_key` field of `RequestedKeyInfo` is missing during deserialization, it defaults to
+  an empty string. It is optional since Matrix 1.3.
+- Fix the deserialization of `RedactedRoomJoinRulesEventContent`.
 
 # 0.30.4
 

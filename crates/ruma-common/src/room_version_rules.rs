@@ -5,6 +5,8 @@
 #[allow(clippy::disallowed_types)]
 use std::collections::HashSet;
 
+use as_variant::as_variant;
+
 use crate::OwnedUserId;
 
 /// The rules applied to a [room version].
@@ -67,7 +69,8 @@ impl RoomVersionRules {
     /// Rules for [room version 2].
     ///
     /// [room version 2]: https://spec.matrix.org/latest/rooms/v2/
-    pub const V2: Self = Self { state_res: StateResolutionVersion::V2, ..Self::V1 };
+    pub const V2: Self =
+        Self { state_res: StateResolutionVersion::V2(StateResolutionV2Rules::V2_0), ..Self::V1 };
 
     /// Rules for [room version 3].
     ///
@@ -138,6 +141,8 @@ impl RoomVersionRules {
     pub const V12: Self = Self {
         room_id_format: RoomIdFormatVersion::V2,
         authorization: AuthorizationRules::V12,
+        event_format: EventFormatRules::V12,
+        state_res: StateResolutionVersion::V2(StateResolutionV2Rules::V2_1),
         ..Self::V11
     };
 
@@ -213,7 +218,51 @@ pub enum StateResolutionVersion {
     /// Second version of the state resolution algorithm ([spec]), introduced in room version 2.
     ///
     /// [spec]: https://spec.matrix.org/latest/rooms/v2/#state-resolution
-    V2,
+    V2(StateResolutionV2Rules),
+}
+
+impl StateResolutionVersion {
+    /// Gets the `StateResolutionV2Rules` for the room version, if it uses the second version of
+    /// the state resolution algorithm.
+    pub fn v2_rules(&self) -> Option<&StateResolutionV2Rules> {
+        as_variant!(self, StateResolutionVersion::V2)
+    }
+}
+
+/// The tweaks in the [state resolution v2 algorithm] for a room version.
+///
+/// This type can be constructed from one of its constants (like [`StateResolutionV2Rules::V2_0`]),
+/// or by constructing a [`RoomVersionRules`] first and using the `state_res` field (if the room
+/// version uses version 2 of the state resolution algorithm).
+///
+/// [state resolution v2 algorithm]: https://spec.matrix.org/latest/rooms/v2/#state-resolution
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StateResolutionV2Rules {
+    /// Whether to begin the first phase of iterative auth checks with an empty state map, as
+    /// opposed to one containing the unconflicted state, enabled since room version 12.
+    pub begin_iterative_auth_checks_with_empty_state_map: bool,
+
+    /// Whether to include the conflicted state subgraph in the full conflicted state, enabled
+    /// since room version 12.
+    pub consider_conflicted_state_subgraph: bool,
+}
+
+impl StateResolutionV2Rules {
+    /// The first version of the second iteration of the state resolution algorithm, introduced in
+    /// room version 2.
+    pub const V2_0: Self = Self {
+        begin_iterative_auth_checks_with_empty_state_map: false,
+        consider_conflicted_state_subgraph: false,
+    };
+
+    /// The second version of the second iteration of the state resolution algorithm, introduced in
+    /// room version 12.
+    pub const V2_1: Self = Self {
+        begin_iterative_auth_checks_with_empty_state_map: true,
+        consider_conflicted_state_subgraph: true,
+        ..Self::V2_0
+    };
 }
 
 /// The tweaks in the [authorization rules] for a room version.
@@ -290,6 +339,10 @@ pub struct AuthorizationRules {
     /// Whether additional room creators can be set with the `content.additional_creators` field of
     /// an `m.room.create` event, introduced in room version 12.
     pub additional_room_creators: bool,
+
+    /// Whether to use the event ID of the `m.room.create` event of the room as the room ID,
+    /// introduced in room version 12.
+    pub room_create_event_id_as_room_id: bool,
 }
 
 impl AuthorizationRules {
@@ -308,6 +361,7 @@ impl AuthorizationRules {
         use_room_create_sender: false,
         explicitly_privilege_room_creators: false,
         additional_room_creators: false,
+        room_create_event_id_as_room_id: false,
     };
 
     /// Authorization rules with tweaks introduced in room version 3 ([spec]).
@@ -350,6 +404,7 @@ impl AuthorizationRules {
     pub const V12: Self = Self {
         explicitly_privilege_room_creators: true,
         additional_room_creators: true,
+        room_create_event_id_as_room_id: true,
         ..Self::V11
     };
 }
@@ -521,14 +576,33 @@ impl SignaturesRules {
 pub struct EventFormatRules {
     /// Whether the `event_id` field is required, disabled since room version 3.
     pub require_event_id: bool,
+
+    /// Whether the `room_id` field is required on the `m.room.create` event, disabled since room
+    /// version 12.
+    pub require_room_create_room_id: bool,
+
+    /// Whether the `m.room.create` event is allowed to be in the `auth_events`, disabled since
+    /// room version 12.
+    pub allow_room_create_in_auth_events: bool,
 }
 
 impl EventFormatRules {
     /// Event format rules as introduced in room version 1.
-    pub const V1: Self = Self { require_event_id: true };
+    pub const V1: Self = Self {
+        require_event_id: true,
+        require_room_create_room_id: true,
+        allow_room_create_in_auth_events: true,
+    };
 
     /// Event format rules with tweaks introduced in room version 3.
-    pub const V3: Self = Self { require_event_id: false };
+    pub const V3: Self = Self { require_event_id: false, ..Self::V1 };
+
+    /// Event format rules with tweaks introduced in room version 12.
+    pub const V12: Self = Self {
+        require_room_create_room_id: false,
+        allow_room_create_in_auth_events: false,
+        ..Self::V3
+    };
 }
 
 /// The tweaks for determining the power level of a user.

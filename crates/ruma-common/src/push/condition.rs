@@ -1,4 +1,6 @@
 use std::{collections::BTreeMap, ops::RangeBounds, str::FromStr};
+#[cfg(feature = "unstable-msc4306")]
+use std::{future::Future, pin::Pin, sync::Arc};
 
 use js_int::{Int, UInt};
 use regex::bytes::Regex;
@@ -8,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::value::Value as JsonValue;
 use wildmatch::WildMatch;
 
+#[cfg(feature = "unstable-msc4306")]
+use crate::EventId;
 use crate::{
     power_levels::{NotificationPowerLevels, NotificationPowerLevelsKey},
     room_version_rules::RoomPowerLevelsRules,
@@ -137,6 +141,17 @@ pub enum PushCondition {
         value: ScalarJsonValue,
     },
 
+    /// Matches a thread event based on the user's thread subscription status, as defined by
+    /// [MSC4306].
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    ThreadSubscription {
+        /// Whether the user must be subscribed (`true`) or unsubscribed (`false`) to the thread
+        /// for the condition to match.
+        subscribed: bool,
+    },
+
     #[doc(hidden)]
     _Custom(_CustomPushCondition),
 }
@@ -166,7 +181,7 @@ impl PushCondition {
     /// * `event` - The flattened JSON representation of a room message event.
     /// * `context` - The context of the room at the time of the event. If the power levels context
     ///   is missing from it, conditions that depend on it will never apply.
-    pub fn applies(&self, event: &FlattenedJson, context: &PushConditionRoomCtx) -> bool {
+    pub async fn applies(&self, event: &FlattenedJson, context: &PushConditionRoomCtx) -> bool {
         if event.get_str("sender").is_some_and(|sender| sender == context.user_id) {
             return false;
         }
@@ -197,6 +212,30 @@ impl PushCondition {
                 .get(key)
                 .and_then(FlattenedJsonValue::as_array)
                 .is_some_and(|a| a.contains(value)),
+            #[cfg(feature = "unstable-msc4306")]
+            Self::ThreadSubscription { subscribed: must_be_subscribed } => {
+                let Some(has_thread_subscription_fn) = &context.has_thread_subscription_fn else {
+                    // If we don't have a function to check thread subscriptions, we can't
+                    // determine if the condition applies.
+                    return false;
+                };
+
+                // The event must have a relation of type `m.thread`.
+                if event.get_str("content.m\\.relates_to.rel_type") != Some("m.thread") {
+                    return false;
+                }
+
+                // Retrieve the thread root event ID.
+                let Some(Ok(thread_root)) =
+                    event.get_str("content.m\\.relates_to.event_id").map(<&EventId>::try_from)
+                else {
+                    return false;
+                };
+
+                let is_subscribed = has_thread_subscription_fn(thread_root).await;
+
+                *must_be_subscribed == is_subscribed
+            }
             Self::_Custom(_) => false,
         }
     }
@@ -216,7 +255,7 @@ pub struct _CustomPushCondition {
 }
 
 /// The context of the room associated to an event to be able to test all push conditions.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct PushConditionRoomCtx {
     /// The ID of the room.
@@ -239,6 +278,45 @@ pub struct PushConditionRoomCtx {
     /// The list of features this room's version or the room itself supports.
     #[cfg(feature = "unstable-msc3931")]
     pub supported_features: Vec<RoomVersionFeature>,
+
+    /// A closure that returns a future indicating if the given thread (represented by its thread
+    /// root event id) is subscribed to by the current user, where subscriptions are defined as per
+    /// [MSC4306].
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    has_thread_subscription_fn: Option<Arc<HasThreadSubscriptionFn>>,
+}
+
+#[cfg(all(feature = "unstable-msc4306", not(target_family = "wasm")))]
+type HasThreadSubscriptionFuture<'a> = Pin<Box<dyn Future<Output = bool> + Send + 'a>>;
+
+#[cfg(all(feature = "unstable-msc4306", target_family = "wasm"))]
+type HasThreadSubscriptionFuture<'a> = Pin<Box<dyn Future<Output = bool> + 'a>>;
+
+#[cfg(all(feature = "unstable-msc4306", not(target_family = "wasm")))]
+type HasThreadSubscriptionFn =
+    dyn for<'a> Fn(&'a EventId) -> HasThreadSubscriptionFuture<'a> + Send + Sync;
+
+#[cfg(all(feature = "unstable-msc4306", target_family = "wasm"))]
+type HasThreadSubscriptionFn = dyn for<'a> Fn(&'a EventId) -> HasThreadSubscriptionFuture<'a>;
+
+impl std::fmt::Debug for PushConditionRoomCtx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("PushConditionRoomCtx");
+
+        debug_struct
+            .field("room_id", &self.room_id)
+            .field("member_count", &self.member_count)
+            .field("user_id", &self.user_id)
+            .field("user_display_name", &self.user_display_name)
+            .field("power_levels", &self.power_levels);
+
+        #[cfg(feature = "unstable-msc3931")]
+        debug_struct.field("supported_features", &self.supported_features);
+
+        debug_struct.finish_non_exhaustive()
+    }
 }
 
 impl PushConditionRoomCtx {
@@ -257,7 +335,28 @@ impl PushConditionRoomCtx {
             power_levels: None,
             #[cfg(feature = "unstable-msc3931")]
             supported_features: Vec::new(),
+            #[cfg(feature = "unstable-msc4306")]
+            has_thread_subscription_fn: None,
         }
+    }
+
+    /// Set a function to check if the user is subscribed to a thread, so as to define the push
+    /// rules defined in [MSC4306].
+    ///
+    /// [MSC4306]: https://github.com/matrix-org/matrix-spec-proposals/pull/4306
+    #[cfg(feature = "unstable-msc4306")]
+    pub fn with_has_thread_subscription_fn(
+        self,
+        #[cfg(not(target_family = "wasm"))]
+        has_thread_subscription_fn: impl for<'a> Fn(&'a EventId) -> HasThreadSubscriptionFuture<'a>
+            + Send
+            + Sync
+            + 'static,
+        #[cfg(target_family = "wasm")]
+        has_thread_subscription_fn: impl for<'a> Fn(&'a EventId) -> HasThreadSubscriptionFuture<'a>
+            + 'static,
+    ) -> Self {
+        Self { has_thread_subscription_fn: Some(Arc::new(has_thread_subscription_fn)), ..self }
     }
 
     /// Add the given power levels context to this `PushConditionRoomCtx`.
@@ -516,9 +615,9 @@ mod tests {
 
     use assert_matches2::assert_matches;
     use js_int::{int, uint, Int};
-    use serde_json::{
-        from_value as from_json_value, json, to_value as to_json_value, Value as JsonValue,
-    };
+    use macro_rules_attribute::apply;
+    use serde_json::{from_value as from_json_value, json, to_value as to_json_value};
+    use smol_macros::test;
 
     use super::{
         FlattenedJson, PushCondition, PushConditionPowerLevelsCtx, PushConditionRoomCtx,
@@ -528,7 +627,6 @@ mod tests {
         owned_room_id, owned_user_id,
         power_levels::{NotificationPowerLevels, NotificationPowerLevelsKey},
         room_version_rules::{AuthorizationRules, RoomPowerLevelsRules},
-        serde::Raw,
         OwnedUserId,
     };
 
@@ -732,49 +830,38 @@ mod tests {
             rules: RoomPowerLevelsRules::new(&AuthorizationRules::V1, None),
         };
 
-        PushConditionRoomCtx {
-            room_id: owned_room_id!("!room:server.name"),
-            member_count: uint!(3),
-            user_id: owned_user_id!("@gorilla:server.name"),
-            user_display_name: "Groovy Gorilla".into(),
-            power_levels: Some(power_levels),
-            #[cfg(feature = "unstable-msc3931")]
-            supported_features: Default::default(),
-        }
+        let mut ctx = PushConditionRoomCtx::new(
+            owned_room_id!("!room:server.name"),
+            uint!(3),
+            owned_user_id!("@gorilla:server.name"),
+            "Groovy Gorilla".into(),
+        );
+        ctx.power_levels = Some(power_levels);
+        ctx
     }
 
     fn first_flattened_event() -> FlattenedJson {
-        let raw = serde_json::from_str::<Raw<JsonValue>>(
-            r#"{
-                "sender": "@worthy_whale:server.name",
-                "content": {
-                    "msgtype": "m.text",
-                    "body": "@room Give a warm welcome to Groovy Gorilla"
-                }
-            }"#,
-        )
-        .unwrap();
-
-        FlattenedJson::from_raw(&raw)
+        FlattenedJson::from_value(json!({
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "msgtype": "m.text",
+                "body": "@room Give a warm welcome to Groovy Gorilla",
+            },
+        }))
     }
 
     fn second_flattened_event() -> FlattenedJson {
-        let raw = serde_json::from_str::<Raw<JsonValue>>(
-            r#"{
-                "sender": "@party_bot:server.name",
-                "content": {
-                    "msgtype": "m.notice",
-                    "body": "Everybody come to party!"
-                }
-            }"#,
-        )
-        .unwrap();
-
-        FlattenedJson::from_raw(&raw)
+        FlattenedJson::from_value(json!({
+            "sender": "@party_bot:server.name",
+            "content": {
+                "msgtype": "m.notice",
+                "body": "Everybody come to party!",
+            },
+        }))
     }
 
-    #[test]
-    fn event_match_applies() {
+    #[apply(test!)]
+    async fn event_match_applies() {
         let context = push_context();
         let first_event = first_flattened_event();
         let second_event = second_flattened_event();
@@ -788,24 +875,24 @@ mod tests {
             pattern: "!incorrect:server.name".into(),
         };
 
-        assert!(correct_room.applies(&first_event, &context));
-        assert!(!incorrect_room.applies(&first_event, &context));
+        assert!(correct_room.applies(&first_event, &context).await);
+        assert!(!incorrect_room.applies(&first_event, &context).await);
 
         let keyword =
             PushCondition::EventMatch { key: "content.body".into(), pattern: "come".into() };
 
-        assert!(!keyword.applies(&first_event, &context));
-        assert!(keyword.applies(&second_event, &context));
+        assert!(!keyword.applies(&first_event, &context).await);
+        assert!(keyword.applies(&second_event, &context).await);
 
         let msgtype =
             PushCondition::EventMatch { key: "content.msgtype".into(), pattern: "m.notice".into() };
 
-        assert!(!msgtype.applies(&first_event, &context));
-        assert!(msgtype.applies(&second_event, &context));
+        assert!(!msgtype.applies(&first_event, &context).await);
+        assert!(msgtype.applies(&second_event, &context).await);
     }
 
-    #[test]
-    fn room_member_count_is_applies() {
+    #[apply(test!)]
+    async fn room_member_count_is_applies() {
         let context = push_context();
         let event = first_flattened_event();
 
@@ -816,25 +903,25 @@ mod tests {
         let member_count_lt =
             PushCondition::RoomMemberCount { is: RoomMemberCountIs::from(..uint!(3)) };
 
-        assert!(member_count_eq.applies(&event, &context));
-        assert!(member_count_gt.applies(&event, &context));
-        assert!(!member_count_lt.applies(&event, &context));
+        assert!(member_count_eq.applies(&event, &context).await);
+        assert!(member_count_gt.applies(&event, &context).await);
+        assert!(!member_count_lt.applies(&event, &context).await);
     }
 
-    #[test]
-    fn contains_display_name_applies() {
+    #[apply(test!)]
+    async fn contains_display_name_applies() {
         let context = push_context();
         let first_event = first_flattened_event();
         let second_event = second_flattened_event();
 
         let contains_display_name = PushCondition::ContainsDisplayName;
 
-        assert!(contains_display_name.applies(&first_event, &context));
-        assert!(!contains_display_name.applies(&second_event, &context));
+        assert!(contains_display_name.applies(&first_event, &context).await);
+        assert!(!contains_display_name.applies(&second_event, &context).await);
     }
 
-    #[test]
-    fn sender_notification_permission_applies() {
+    #[apply(test!)]
+    async fn sender_notification_permission_applies() {
         let context = push_context();
         let first_event = first_flattened_event();
         let second_event = second_flattened_event();
@@ -842,174 +929,166 @@ mod tests {
         let sender_notification_permission =
             PushCondition::SenderNotificationPermission { key: "room".into() };
 
-        assert!(!sender_notification_permission.applies(&first_event, &context));
-        assert!(sender_notification_permission.applies(&second_event, &context));
+        assert!(!sender_notification_permission.applies(&first_event, &context).await);
+        assert!(sender_notification_permission.applies(&second_event, &context).await);
     }
 
     #[cfg(feature = "unstable-msc3932")]
-    #[test]
-    fn room_version_supports_applies() {
+    #[apply(test!)]
+    async fn room_version_supports_applies() {
+        use assign::assign;
+
         let context_not_matching = push_context();
+        let context_matching = assign!(
+            PushConditionRoomCtx::new(
+                owned_room_id!("!room:server.name"),
+                uint!(3),
+                owned_user_id!("@gorilla:server.name"),
+                "Groovy Gorilla".into(),
+            ), {
+                power_levels: context_not_matching.power_levels.clone(),
+                supported_features: vec![super::RoomVersionFeature::ExtensibleEvents],
+            }
+        );
 
-        let context_matching = PushConditionRoomCtx {
-            room_id: owned_room_id!("!room:server.name"),
-            member_count: uint!(3),
-            user_id: owned_user_id!("@gorilla:server.name"),
-            user_display_name: "Groovy Gorilla".into(),
-            power_levels: context_not_matching.power_levels.clone(),
-            supported_features: vec![super::RoomVersionFeature::ExtensibleEvents],
-        };
-
-        let simple_event_raw = serde_json::from_str::<Raw<JsonValue>>(
-            r#"{
-                "sender": "@worthy_whale:server.name",
-                "content": {
-                    "msgtype": "org.matrix.msc3932.extensible_events",
-                    "body": "@room Give a warm welcome to Groovy Gorilla"
-                }
-            }"#,
-        )
-        .unwrap();
-        let simple_event = FlattenedJson::from_raw(&simple_event_raw);
+        let simple_event = FlattenedJson::from_value(json!({
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "msgtype": "org.matrix.msc3932.extensible_events",
+                "body": "@room Give a warm welcome to Groovy Gorilla",
+            },
+        }));
 
         let room_version_condition = PushCondition::RoomVersionSupports {
             feature: super::RoomVersionFeature::ExtensibleEvents,
         };
 
-        assert!(room_version_condition.applies(&simple_event, &context_matching));
-        assert!(!room_version_condition.applies(&simple_event, &context_not_matching));
+        assert!(room_version_condition.applies(&simple_event, &context_matching).await);
+        assert!(!room_version_condition.applies(&simple_event, &context_not_matching).await);
     }
 
-    #[test]
-    fn event_property_is_applies() {
+    #[apply(test!)]
+    async fn event_property_is_applies() {
         use crate::push::condition::ScalarJsonValue;
 
         let context = push_context();
-        let event_raw = serde_json::from_str::<Raw<JsonValue>>(
-            r#"{
-                "sender": "@worthy_whale:server.name",
-                "content": {
-                    "msgtype": "m.text",
-                    "body": "Boom!",
-                    "org.fake.boolean": false,
-                    "org.fake.number": 13,
-                    "org.fake.null": null
-                }
-            }"#,
-        )
-        .unwrap();
-        let event = FlattenedJson::from_raw(&event_raw);
+        let event = FlattenedJson::from_value(json!({
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "msgtype": "m.text",
+                "body": "Boom!",
+                "org.fake.boolean": false,
+                "org.fake.number": 13,
+                "org.fake.null": null,
+            },
+        }));
 
         let string_match = PushCondition::EventPropertyIs {
             key: "content.body".to_owned(),
             value: "Boom!".into(),
         };
-        assert!(string_match.applies(&event, &context));
+        assert!(string_match.applies(&event, &context).await);
 
         let string_no_match =
             PushCondition::EventPropertyIs { key: "content.body".to_owned(), value: "Boom".into() };
-        assert!(!string_no_match.applies(&event, &context));
+        assert!(!string_no_match.applies(&event, &context).await);
 
         let wrong_type =
             PushCondition::EventPropertyIs { key: "content.body".to_owned(), value: false.into() };
-        assert!(!wrong_type.applies(&event, &context));
+        assert!(!wrong_type.applies(&event, &context).await);
 
         let bool_match = PushCondition::EventPropertyIs {
             key: r"content.org\.fake\.boolean".to_owned(),
             value: false.into(),
         };
-        assert!(bool_match.applies(&event, &context));
+        assert!(bool_match.applies(&event, &context).await);
 
         let bool_no_match = PushCondition::EventPropertyIs {
             key: r"content.org\.fake\.boolean".to_owned(),
             value: true.into(),
         };
-        assert!(!bool_no_match.applies(&event, &context));
+        assert!(!bool_no_match.applies(&event, &context).await);
 
         let int_match = PushCondition::EventPropertyIs {
             key: r"content.org\.fake\.number".to_owned(),
             value: int!(13).into(),
         };
-        assert!(int_match.applies(&event, &context));
+        assert!(int_match.applies(&event, &context).await);
 
         let int_no_match = PushCondition::EventPropertyIs {
             key: r"content.org\.fake\.number".to_owned(),
             value: int!(130).into(),
         };
-        assert!(!int_no_match.applies(&event, &context));
+        assert!(!int_no_match.applies(&event, &context).await);
 
         let null_match = PushCondition::EventPropertyIs {
             key: r"content.org\.fake\.null".to_owned(),
             value: ScalarJsonValue::Null,
         };
-        assert!(null_match.applies(&event, &context));
+        assert!(null_match.applies(&event, &context).await);
     }
 
-    #[test]
-    fn event_property_contains_applies() {
+    #[apply(test!)]
+    async fn event_property_contains_applies() {
         use crate::push::condition::ScalarJsonValue;
 
         let context = push_context();
-        let event_raw = serde_json::from_str::<Raw<JsonValue>>(
-            r#"{
-                "sender": "@worthy_whale:server.name",
-                "content": {
-                    "org.fake.array": ["Boom!", false, 13, null]
-                }
-            }"#,
-        )
-        .unwrap();
-        let event = FlattenedJson::from_raw(&event_raw);
+        let event = FlattenedJson::from_value(json!({
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "org.fake.array": ["Boom!", false, 13, null],
+            },
+        }));
 
         let wrong_key =
             PushCondition::EventPropertyContains { key: "send".to_owned(), value: false.into() };
-        assert!(!wrong_key.applies(&event, &context));
+        assert!(!wrong_key.applies(&event, &context).await);
 
         let string_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: "Boom!".into(),
         };
-        assert!(string_match.applies(&event, &context));
+        assert!(string_match.applies(&event, &context).await);
 
         let string_no_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: "Boom".into(),
         };
-        assert!(!string_no_match.applies(&event, &context));
+        assert!(!string_no_match.applies(&event, &context).await);
 
         let bool_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: false.into(),
         };
-        assert!(bool_match.applies(&event, &context));
+        assert!(bool_match.applies(&event, &context).await);
 
         let bool_no_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: true.into(),
         };
-        assert!(!bool_no_match.applies(&event, &context));
+        assert!(!bool_no_match.applies(&event, &context).await);
 
         let int_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: int!(13).into(),
         };
-        assert!(int_match.applies(&event, &context));
+        assert!(int_match.applies(&event, &context).await);
 
         let int_no_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: int!(130).into(),
         };
-        assert!(!int_no_match.applies(&event, &context));
+        assert!(!int_no_match.applies(&event, &context).await);
 
         let null_match = PushCondition::EventPropertyContains {
             key: r"content.org\.fake\.array".to_owned(),
             value: ScalarJsonValue::Null,
         };
-        assert!(null_match.applies(&event, &context));
+        assert!(null_match.applies(&event, &context).await);
     }
 
-    #[test]
-    fn room_creators_always_have_notification_permission() {
+    #[apply(test!)]
+    async fn room_creators_always_have_notification_permission() {
         let mut context = push_context();
         context.power_levels = Some(PushConditionPowerLevelsCtx {
             users: BTreeMap::new(),
@@ -1023,6 +1102,75 @@ mod tests {
         let sender_notification_permission =
             PushCondition::SenderNotificationPermission { key: NotificationPowerLevelsKey::Room };
 
-        assert!(sender_notification_permission.applies(&first_event, &context));
+        assert!(sender_notification_permission.applies(&first_event, &context).await);
+    }
+
+    #[cfg(feature = "unstable-msc4306")]
+    #[apply(test!)]
+    async fn thread_subscriptions_match() {
+        use crate::{event_id, EventId};
+
+        let context = push_context().with_has_thread_subscription_fn(|event_id: &EventId| {
+            Box::pin(async move {
+                // Simulate thread subscriptions for testing.
+                event_id == event_id!("$subscribed_thread")
+            })
+        });
+
+        let subscribed_thread_event = FlattenedJson::from_value(json!({
+            "event_id": "$thread_response",
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "msgtype": "m.text",
+                "body": "response in thread $subscribed_thread",
+                "m.relates_to": {
+                    "rel_type": "m.thread",
+                    "event_id": "$subscribed_thread",
+                    "is_falling_back": true,
+                    "m.in_reply_to": {
+                        "event_id": "$prev_event",
+                    },
+                },
+            },
+        }));
+
+        let unsubscribed_thread_event = FlattenedJson::from_value(json!({
+            "event_id": "$thread_response2",
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "msgtype": "m.text",
+                "body": "response in thread $unsubscribed_thread",
+                "m.relates_to": {
+                    "rel_type": "m.thread",
+                    "event_id": "$unsubscribed_thread",
+                    "is_falling_back": true,
+                    "m.in_reply_to": {
+                        "event_id": "$prev_event2",
+                    },
+                },
+            },
+        }));
+
+        let non_thread_related_event = FlattenedJson::from_value(json!({
+            "event_id": "$thread_response2",
+            "sender": "@worthy_whale:server.name",
+            "content": {
+                "m.relates_to": {
+                    "rel_type": "m.reaction",
+                    "event_id": "$subscribed_thread",
+                    "key": "👍",
+                },
+            },
+        }));
+
+        let subscribed_thread_condition = PushCondition::ThreadSubscription { subscribed: true };
+        assert!(subscribed_thread_condition.applies(&subscribed_thread_event, &context).await);
+        assert!(!subscribed_thread_condition.applies(&unsubscribed_thread_event, &context).await);
+        assert!(!subscribed_thread_condition.applies(&non_thread_related_event, &context).await);
+
+        let unsubscribed_thread_condition = PushCondition::ThreadSubscription { subscribed: false };
+        assert!(unsubscribed_thread_condition.applies(&unsubscribed_thread_event, &context).await);
+        assert!(!unsubscribed_thread_condition.applies(&subscribed_thread_event, &context).await);
+        assert!(!unsubscribed_thread_condition.applies(&non_thread_related_event, &context).await);
     }
 }

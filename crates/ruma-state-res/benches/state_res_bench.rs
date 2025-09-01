@@ -22,8 +22,9 @@ use event::{EventHash, PduEvent};
 use js_int::{int, uint};
 use maplit::{btreemap, hashmap, hashset};
 use ruma_common::{
-    room_id, room_version_rules::AuthorizationRules, user_id, EventId, MilliSecondsSinceUnixEpoch,
-    OwnedEventId, RoomId, UserId,
+    room_id,
+    room_version_rules::{AuthorizationRules, StateResolutionV2Rules},
+    user_id, EventId, MilliSecondsSinceUnixEpoch, OwnedEventId, RoomId, UserId,
 };
 use ruma_events::{
     room::{
@@ -51,7 +52,7 @@ fn reverse_topological_power_sort(c: &mut Criterion) {
         };
         b.iter(|| {
             let _ = state_res::reverse_topological_power_sort(&graph, |_id| {
-                Ok((int!(0), MilliSecondsSinceUnixEpoch(uint!(0))))
+                Ok((int!(0).into(), MilliSecondsSinceUnixEpoch(uint!(0))))
             });
         });
     });
@@ -69,6 +70,7 @@ fn resolution_shallow_auth_chain(c: &mut Criterion) {
             let state_sets = [&state_at_bob, &state_at_charlie];
             let _ = match state_res::resolve(
                 &AuthorizationRules::V6,
+                &StateResolutionV2Rules::V2_0,
                 state_sets,
                 state_sets
                     .iter()
@@ -77,6 +79,7 @@ fn resolution_shallow_auth_chain(c: &mut Criterion) {
                     })
                     .collect(),
                 |id| ev_map.get(id).map(Arc::clone),
+                |_| unreachable!(),
             ) {
                 Ok(state) => state,
                 Err(e) => panic!("{e}"),
@@ -127,6 +130,7 @@ fn resolve_deeper_event_set(c: &mut Criterion) {
             let state_sets = [&state_set_a, &state_set_b];
             state_res::resolve(
                 &AuthorizationRules::V6,
+                &StateResolutionV2Rules::V2_0,
                 state_sets,
                 state_sets
                     .iter()
@@ -135,6 +139,7 @@ fn resolve_deeper_event_set(c: &mut Criterion) {
                     })
                     .collect(),
                 |id| inner.get(id).map(Arc::clone),
+                |_| unreachable!(),
             )
             .unwrap_or_else(|_| panic!("resolution failed during benchmarking"));
         });
@@ -365,7 +370,7 @@ where
     let state_key = state_key.map(ToOwned::to_owned);
     Arc::new(PduEvent {
         event_id: id.try_into().unwrap(),
-        room_id: room_id().to_owned(),
+        room_id: Some(room_id().to_owned()),
         sender: sender.to_owned(),
         origin_server_ts: MilliSecondsSinceUnixEpoch(ts.try_into().unwrap()),
         state_key,
@@ -542,8 +547,8 @@ pub(crate) mod event {
             &self.event_id
         }
 
-        fn room_id(&self) -> &RoomId {
-            &self.room_id
+        fn room_id(&self) -> Option<&RoomId> {
+            self.room_id.as_deref()
         }
 
         fn sender(&self) -> &UserId {
@@ -590,7 +595,7 @@ pub(crate) mod event {
         pub(crate) event_id: OwnedEventId,
 
         /// The room this event belongs to.
-        pub(crate) room_id: OwnedRoomId,
+        pub(crate) room_id: Option<OwnedRoomId>,
 
         /// The user id of the user who sent this event.
         pub(crate) sender: OwnedUserId,

@@ -6,11 +6,14 @@ use std::{
     sync::OnceLock,
 };
 
-use js_int::Int;
 use ruma_common::{
-    room_version_rules::AuthorizationRules, EventId, MilliSecondsSinceUnixEpoch, OwnedUserId,
+    room_version_rules::{AuthorizationRules, StateResolutionV2Rules},
+    EventId, MilliSecondsSinceUnixEpoch, OwnedUserId,
 };
-use ruma_events::{room::member::MembershipState, StateEventType, TimelineEventType};
+use ruma_events::{
+    room::{member::MembershipState, power_levels::UserPowerLevel},
+    StateEventType, TimelineEventType,
+};
 use tracing::{debug, info, instrument, trace, warn};
 
 #[cfg(test)]
@@ -22,6 +25,7 @@ use crate::{
         power_levels::RoomPowerLevelsEventOptionExt, RoomCreateEvent, RoomMemberEvent,
         RoomPowerLevelsEvent, RoomPowerLevelsIntField,
     },
+    utils::RoomIdExt,
     Error, Event, Result,
 };
 
@@ -38,7 +42,9 @@ pub type StateMap<T> = HashMap<(StateEventType, String), T>;
 ///
 /// ## Arguments
 ///
-/// * `rules` - The rules to apply for the version of the current room.
+/// * `auth_rules` - The authorization rules to apply for the version of the current room.
+///
+/// * `state_res_rules` - The state resolution rules to apply for the version of the current room.
 ///
 /// * `state_maps` - The incoming states to resolve. Each `StateMap` represents a possible fork in
 ///   the state of a room.
@@ -47,6 +53,10 @@ pub type StateMap<T> = HashMap<(StateEventType, String), T>;
 ///   `state_maps`.
 ///
 /// * `fetch_event` - Function to fetch an event in the room given its event ID.
+///
+/// * `fetch_conflicted_state_subgraph` - Function to fetch the conflicted state subgraph for the
+///   given conflicted state set, for state resolution rules that use it. If it is called and
+///   returns `None`, this function will return an error.
 ///
 /// ## Invariants
 ///
@@ -57,12 +67,14 @@ pub type StateMap<T> = HashMap<(StateEventType, String), T>;
 /// The resolved room state.
 ///
 /// [state resolution]: https://spec.matrix.org/latest/rooms/v2/#state-resolution
-#[instrument(skip(rules, state_maps, auth_chains, fetch_event))]
+#[instrument(skip_all)]
 pub fn resolve<'a, E, MapsIter>(
-    rules: &AuthorizationRules,
+    auth_rules: &AuthorizationRules,
+    state_res_rules: &StateResolutionV2Rules,
     state_maps: impl IntoIterator<IntoIter = MapsIter>,
     auth_chains: Vec<HashSet<E::Id>>,
     fetch_event: impl Fn(&EventId) -> Option<E>,
+    fetch_conflicted_state_subgraph: impl Fn(&StateMap<Vec<E::Id>>) -> Option<HashSet<E::Id>>,
 ) -> Result<StateMap<E::Id>>
 where
     E: Event + Clone,
@@ -86,9 +98,24 @@ where
     info!(count = conflicted_state_set.len(), "conflicted events");
     trace!(map = ?conflicted_state_set, "conflicted events");
 
-    // The full conflicted set is the union of the conflicted state set and the auth difference.
+    // Since v12, fetch the conflicted state subgraph.
+    let conflicted_state_subgraph = if state_res_rules.consider_conflicted_state_subgraph {
+        let conflicted_state_subgraph = fetch_conflicted_state_subgraph(&conflicted_state_set)
+            .ok_or(Error::FetchConflictedStateSubgraphFailed)?;
+
+        info!(count = conflicted_state_subgraph.len(), "events in conflicted state subgraph");
+        trace!(set = ?conflicted_state_subgraph, "conflicted state subgraph");
+
+        conflicted_state_subgraph
+    } else {
+        HashSet::new()
+    };
+
+    // The full conflicted set is the union of the conflicted state set and the auth difference,
+    // and since v12, the conflicted state subgraph.
     let full_conflicted_set: HashSet<_> = auth_difference(auth_chains)
         .chain(conflicted_state_set.into_values().flatten())
+        .chain(conflicted_state_subgraph)
         // Don't honor events we cannot "verify"
         .filter(|id| fetch_event(id.borrow()).is_some())
         .collect();
@@ -106,19 +133,23 @@ where
         .collect::<Vec<_>>();
 
     let sorted_power_events =
-        sort_power_events(conflicted_power_events, &full_conflicted_set, rules, &fetch_event)?;
+        sort_power_events(conflicted_power_events, &full_conflicted_set, auth_rules, &fetch_event)?;
 
     debug!(count = sorted_power_events.len(), "power events");
     trace!(list = ?sorted_power_events, "sorted power events");
 
     // 2. Apply the iterative auth checks algorithm, starting from the unconflicted state map, to
     //    the list of events from the previous step to get a partially resolved state.
-    let partially_resolved_state = iterative_auth_checks(
-        rules,
-        &sorted_power_events,
-        unconflicted_state_map.clone(),
-        &fetch_event,
-    )?;
+
+    // Since v12, begin the first phase of iterative auth checks with an empty state map.
+    let initial_state_map = if state_res_rules.begin_iterative_auth_checks_with_empty_state_map {
+        HashMap::new()
+    } else {
+        unconflicted_state_map.clone()
+    };
+
+    let partially_resolved_state =
+        iterative_auth_checks(auth_rules, &sorted_power_events, initial_state_map, &fetch_event)?;
 
     debug!(count = partially_resolved_state.len(), "resolved power events");
     trace!(map = ?partially_resolved_state, "resolved power events");
@@ -148,7 +179,7 @@ where
     // 4. Apply the iterative auth checks algorithm on the partial resolved state and the list of
     //    events from the previous step.
     let mut resolved_state = iterative_auth_checks(
-        rules,
+        auth_rules,
         &sorted_remaining_events,
         partially_resolved_state,
         &fetch_event,
@@ -288,16 +319,16 @@ fn sort_power_events<E: Event>(
     let mut event_to_power_level = HashMap::new();
     // We need to know the creator in case of missing power levels. Given that it's the same for all
     // the events in the room, we will just load it for the first event and reuse it.
-    let creator_lock = OnceLock::new();
+    let creators_lock = OnceLock::new();
 
     // Get the power level of the sender of each event in the graph.
     for event_id in graph.keys() {
         let sender_power_level =
-            power_level_for_sender(event_id.borrow(), rules, &creator_lock, &fetch_event)
+            power_level_for_sender(event_id.borrow(), rules, &creators_lock, &fetch_event)
                 .map_err(Error::AuthEvent)?;
         debug!(
             event_id = event_id.borrow().as_str(),
-            power_level = i64::from(sender_power_level),
+            power_level = ?sender_power_level,
             "found the power level of an event's sender",
         );
 
@@ -355,12 +386,12 @@ pub fn reverse_topological_power_sort<Id, F>(
     event_details_fn: F,
 ) -> Result<Vec<Id>>
 where
-    F: Fn(&EventId) -> Result<(Int, MilliSecondsSinceUnixEpoch)>,
+    F: Fn(&EventId) -> Result<(UserPowerLevel, MilliSecondsSinceUnixEpoch)>,
     Id: Clone + Eq + Ord + Hash + Borrow<EventId>,
 {
     #[derive(PartialEq, Eq)]
     struct TieBreaker<'a, Id> {
-        power_level: Int,
+        power_level: UserPowerLevel,
         origin_server_ts: MilliSecondsSinceUnixEpoch,
         event_id: &'a Id,
     }
@@ -479,25 +510,38 @@ where
 fn power_level_for_sender<E: Event>(
     event_id: &EventId,
     rules: &AuthorizationRules,
-    creator_lock: &OnceLock<OwnedUserId>,
+    creators_lock: &OnceLock<HashSet<OwnedUserId>>,
     fetch_event: impl Fn(&EventId) -> Option<E>,
-) -> std::result::Result<Int, String> {
+) -> std::result::Result<UserPowerLevel, String> {
     let event = fetch_event(event_id);
     let mut room_create_event = None;
     let mut room_power_levels_event = None;
+
+    if let Some(event) = &event {
+        if rules.room_create_event_id_as_room_id && creators_lock.get().is_none() {
+            // The m.room.create event is not in the auth events, we can get its ID via the room ID.
+            room_create_event = event
+                .room_id()
+                .and_then(|room_id| room_id.room_create_event_id().ok())
+                .and_then(|room_create_event_id| fetch_event(&room_create_event_id));
+        }
+    }
 
     for auth_event_id in event.as_ref().map(|pdu| pdu.auth_events()).into_iter().flatten() {
         if let Some(auth_event) = fetch_event(auth_event_id.borrow()) {
             if is_type_and_key(&auth_event, &TimelineEventType::RoomPowerLevels, "") {
                 room_power_levels_event = Some(RoomPowerLevelsEvent::new(auth_event));
-            } else if creator_lock.get().is_none()
+            } else if !rules.room_create_event_id_as_room_id
+                && creators_lock.get().is_none()
                 && is_type_and_key(&auth_event, &TimelineEventType::RoomCreate, "")
             {
-                room_create_event = Some(RoomCreateEvent::new(auth_event));
+                room_create_event = Some(auth_event);
             }
 
             if room_power_levels_event.is_some()
-                && (creator_lock.get().is_some() || room_create_event.is_some())
+                && (rules.room_create_event_id_as_room_id
+                    || creators_lock.get().is_some()
+                    || room_create_event.is_some())
             {
                 break;
             }
@@ -505,19 +549,22 @@ fn power_level_for_sender<E: Event>(
     }
 
     // TODO: Use OnceLock::try_or_get_init when it is stabilized.
-    let creator = if let Some(creator) = creator_lock.get() {
-        Some(creator)
+    let creators = if let Some(creators) = creators_lock.get() {
+        Some(creators)
     } else if let Some(room_create_event) = room_create_event {
-        let creator = room_create_event.creator(rules)?;
-        Some(creator_lock.get_or_init(|| creator.into_owned()))
+        let room_create_event = RoomCreateEvent::new(room_create_event);
+        let creators = room_create_event.creators(rules)?;
+        Some(creators_lock.get_or_init(|| creators))
     } else {
         None
     };
 
-    if let Some((event, creator)) = event.zip(creator) {
-        room_power_levels_event.user_power_level(event.sender(), creator, rules)
+    if let Some((event, creators)) = event.zip(creators) {
+        room_power_levels_event.user_power_level(event.sender(), creators, rules)
     } else {
-        room_power_levels_event.get_as_int_or_default(RoomPowerLevelsIntField::UsersDefault, rules)
+        room_power_levels_event
+            .get_as_int_or_default(RoomPowerLevelsIntField::UsersDefault, rules)
+            .map(Into::into)
     }
 }
 
@@ -575,6 +622,22 @@ fn iterative_auth_checks<E: Event + Clone>(
                 }
             } else {
                 warn!(event_id = %auth_event_id.borrow(), "missing auth event");
+            }
+        }
+
+        // If the `m.room.create` event is not in the auth events, we need to add it, because it's
+        // always part of the state and required in the auth rules.
+        if rules.room_create_event_id_as_room_id
+            && *event.event_type() != TimelineEventType::RoomCreate
+        {
+            if let Some(room_create_event) = event
+                .room_id()
+                .and_then(|room_id| room_id.room_create_event_id().ok())
+                .and_then(|room_create_event_id| fetch_event(&room_create_event_id))
+            {
+                auth_events.insert((StateEventType::RoomCreate, String::new()), room_create_event);
+            } else {
+                warn!("missing m.room.create event");
             }
         }
 

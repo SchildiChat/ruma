@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.12.5"
+version = "0.12.6"
 edition = "2021"
 rust-version = { workspace = true }
 
@@ -191,20 +191,23 @@ unstable-msc4095 = ["ruma-events?/unstable-msc4095"]
 unstable-msc4108 = ["ruma-common/unstable-msc4108", "ruma-client-api?/unstable-msc4108"]
 unstable-msc4121 = ["ruma-client-api?/unstable-msc4121"]
 unstable-msc4125 = ["ruma-federation-api?/unstable-msc4125"]
+unstable-msc4133 = ["ruma-client-api?/unstable-msc4133"]
 unstable-msc4140 = ["ruma-common/unstable-msc4140", "ruma-client-api?/unstable-msc4140"]
 unstable-msc4143 = ["ruma-client-api?/unstable-msc4143"]
 unstable-msc4171 = ["ruma-events?/unstable-msc4171"]
 unstable-msc4186 = ["ruma-common/unstable-msc4186", "ruma-client-api?/unstable-msc4186"]
 unstable-msc4191 = ["ruma-client-api?/unstable-msc4191"]
 unstable-msc4203 = ["ruma-appservice-api?/unstable-msc4203"]
+unstable-msc4222 = ["ruma-client-api?/unstable-msc4222"]
 unstable-msc4230 = ["ruma-events?/unstable-msc4230"]
 unstable-msc4268 = ["ruma-events?/unstable-msc4268"]
 unstable-msc4274 = ["ruma-events?/unstable-msc4274"]
 unstable-msc4278 = ["ruma-events?/unstable-msc4278"]
 unstable-msc4286 = ["ruma-html?/unstable-msc4286"]
 # Thread subscription support.
-unstable-msc4306 = ["ruma-client-api?/unstable-msc4306"]
-unstable-msc4311 = ["ruma-client-api?/unstable-msc4311", "ruma-federation-api?/unstable-msc4311"]
+unstable-msc4306 = ["ruma-common/unstable-msc4306", "ruma-client-api?/unstable-msc4306"]
+unstable-msc4311 = ["ruma-federation-api?/unstable-msc4311"]
+unstable-msc4319 = ["ruma-events?/unstable-msc4319"]
 
 # Private features, only used in test / benchmarking code
 __unstable-mscs = [
@@ -251,12 +254,14 @@ __unstable-mscs = [
     "unstable-msc4108",
     "unstable-msc4121",
     "unstable-msc4125",
+    "unstable-msc4133",
     "unstable-msc4140",
     "unstable-msc4143",
     "unstable-msc4171",
     "unstable-msc4186",
     "unstable-msc4191",
     "unstable-msc4203",
+    "unstable-msc4222",
     "unstable-msc4230",
     "unstable-msc4268",
     "unstable-msc4274",
@@ -264,6 +269,7 @@ __unstable-mscs = [
     "unstable-msc4286",
     "unstable-msc4306",
     "unstable-msc4311",
+    "unstable-msc4319",
 ]
 __ci = ["full", "compat-upload-signatures", "__unstable-mscs"]
 __compat = [
