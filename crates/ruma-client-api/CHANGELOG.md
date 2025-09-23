@@ -1,5 +1,7 @@
 # [unreleased]
 
+# 0.21.0
+
 Breaking changes:
 
 - Use `AuthType` for the `auth_type` of `get_uiaa_fallback_page`'s Request.
@@ -37,10 +39,14 @@ Breaking changes:
   fields. The fields can be accessed with `.get()`, `.iter()` or `.into_iter()`.
   `Response::new()` takes no arguments and creates an empty response. Fields can
   be added using `.set()`, or the `FromIterator` and `Extend` implementations.
+- Replace `MembershipEventFilter` with `MembershipState` in `get_member_events`, since both enums
+  should always be identical.
 
 Improvements:
 
-- Added support for the experiment MSC4036 thread subscription endpoints.
+- Added support for the sliding sync extension for thread subscriptions, as well as the
+  accompanying endpoint, both from experimental MSC4308.
+- Added support for the experiment MSC4306 thread subscription endpoints.
 - For the `membership::join_room_by_id_or_alias` and `knock::knock_room`
   endpoints, the `server_name` query parameter is only serialized if the server
   doesn't advertise at least one version that supports the `via` query

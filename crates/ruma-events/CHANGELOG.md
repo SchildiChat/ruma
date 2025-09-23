@@ -1,5 +1,12 @@
 # [unreleased]
 
+Improvements:
+
+- Add `m.rtc.notification` event support and deprecate the (non MSC conformant)
+  `m.call.notify` event.
+
+# 0.31.0
+
 Breaking changes:
 
 - Zeroize the secret key contained in JsonWebKey if the struct gets dropped.
@@ -69,8 +76,15 @@ Breaking changes:
 - The `sender_key` field of `RequestedKeyInfo` is now optional. It was deprecated in Matrix 1.3.
 - Add `m.rtc.decline` support ([unstable_MSC4310](https://github.com/matrix-org/matrix-spec-proposals/pull/4310)).
 
+Bug fixes:
+
+- When calling `membership_change()` for a `MembershipState` change from `Knock` to `Join`,
+  `MembershipChange::Joined` is returned instead of `Error`, since this change is legal in some
+  cases.
+
 Improvements:
 
+- Add `RoomLanguageEventContent` and derived state events to specify language of a room.
 - Don't print out the secret key contained in JsonWebKey and JsonWebKeyInit in
   their `Debug` implementations.
 - Remove the `pdu` module and the corresponding `unstable-pdu` cargo feature. As far as we know, it

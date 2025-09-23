@@ -139,7 +139,11 @@ event_enum! {
         "org.matrix.msc3245.voice.v2" => super::voice,
         #[cfg(feature = "unstable-msc4075")]
         #[ruma_enum(alias = "m.call.notify")]
+        #[allow(deprecated)]
         "org.matrix.msc4075.call.notify" => super::call::notify,
+        #[cfg(feature = "unstable-msc4075")]
+        #[ruma_enum(alias = "m.rtc.notification")]
+        "org.matrix.msc4075.rtc.notification" => super::rtc::notification,
         #[cfg(feature = "unstable-msc4310")]
         #[ruma_enum(alias = "m.rtc.decline")]
         "org.matrix.msc4310.rtc.decline" => super::rtc::decline,
@@ -160,6 +164,9 @@ event_enum! {
         "m.room.guest_access" => super::room::guest_access,
         "m.room.history_visibility" => super::room::history_visibility,
         "m.room.join_rules" => super::room::join_rules,
+        #[cfg(feature = "unstable-msc4334")]
+        #[ruma_enum(alias = "m.room.language")]
+        "org.matrix.msc4334.room.language" => super::room::language,
         "m.room.member" => super::room::member,
         "m.room.name" => super::room::name,
         "m.room.pinned_events" => super::room::pinned_events,
@@ -437,6 +444,8 @@ impl AnyMessageLikeEventContent {
             }
             #[cfg(feature = "unstable-msc4075")]
             Self::CallNotify(_) => None,
+            #[cfg(feature = "unstable-msc4075")]
+            Self::RtcNotification(ev) => ev.relates_to.clone().map(encrypted::Relation::Reference),
             #[cfg(feature = "unstable-msc4310")]
             Self::RtcDecline(ev) => Some(encrypted::Relation::Reference(ev.relates_to.clone())),
             Self::CallSdpStreamMetadataChanged(_)
