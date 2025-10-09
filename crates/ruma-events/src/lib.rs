@@ -145,6 +145,8 @@ pub mod beacon;
 pub mod beacon_info;
 pub mod call;
 pub mod direct;
+#[cfg(feature = "unstable-msc4359")]
+pub mod do_not_disturb;
 pub mod dummy;
 #[cfg(feature = "unstable-msc3954")]
 pub mod emote;
@@ -187,6 +189,8 @@ pub mod rtc;
 pub mod secret;
 pub mod secret_storage;
 pub mod space;
+#[cfg(feature = "unstable-msc3230")]
+pub mod space_order;
 pub mod sticker;
 pub mod tag;
 pub mod typing;

@@ -66,8 +66,6 @@ impl RoomVersionFeature {
             | RoomVersionId::V11
             | RoomVersionId::V12
             | RoomVersionId::_Custom(_) => vec![],
-            #[cfg(feature = "unstable-hydra")]
-            RoomVersionId::HydraV11 => vec![],
             #[cfg(feature = "unstable-msc2870")]
             RoomVersionId::MSC2870 => vec![],
         }
@@ -759,7 +757,7 @@ mod tests {
         assert!(!"m".matches_word("[[:alpha:]]?"));
         assert!("[[:alpha:]]!".matches_word("[[:alpha:]]?"));
 
-        // From the spec: <https://spec.matrix.org/v1.15/client-server-api/#conditions-1>
+        // From the spec: <https://spec.matrix.org/v1.16/client-server-api/#conditions-1>
         assert!("An example event.".matches_word("ex*ple"));
         assert!("exple".matches_word("ex*ple"));
         assert!("An exciting triple-whammy".matches_word("ex*ple"));
@@ -808,7 +806,7 @@ mod tests {
         assert!("".matches_pattern("*", false));
         assert!(!"foo".matches_pattern("", false));
 
-        // From the spec: <https://spec.matrix.org/v1.15/client-server-api/#conditions-1>
+        // From the spec: <https://spec.matrix.org/v1.16/client-server-api/#conditions-1>
         assert!("Lunch plans".matches_pattern("lunc?*", false));
         assert!("LUNCH".matches_pattern("lunc?*", false));
         assert!(!" lunch".matches_pattern("lunc?*", false));

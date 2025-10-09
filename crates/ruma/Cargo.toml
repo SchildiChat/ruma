@@ -141,7 +141,6 @@ unstable-extensible-events = [
     "unstable-msc3954",
     "unstable-msc3955",
 ]
-unstable-hydra = ["ruma-common/unstable-hydra"]
 unstable-msc1767 = ["ruma-events?/unstable-msc1767"]
 unstable-msc2448 = [
     "ruma-client-api?/unstable-msc2448",
@@ -211,10 +210,11 @@ unstable-msc4311 = ["ruma-federation-api?/unstable-msc4311"]
 unstable-msc4319 = ["ruma-events?/unstable-msc4319"]
 unstable-msc4310 = ["ruma-events?/unstable-msc4310"]
 unstable-msc4334 = ["ruma-events?/unstable-msc4334", "dep:language-tags"]
+unstable-msc4359 = ["ruma-events?/unstable-msc4359"]
+unstable-msc3230 = ["ruma-events?/unstable-msc3230"]
 
 # Private features, only used in test / benchmarking code
 __unstable-mscs = [
-    "unstable-hydra",
     "unstable-msc1767",
     "unstable-msc2448",
     "unstable-msc2545",
@@ -276,6 +276,8 @@ __unstable-mscs = [
     "unstable-msc4310",
     "unstable-msc4319",
     "unstable-msc4334",
+    "unstable-msc4359",
+    "unstable-msc3230",
 ]
 __ci = ["full", "compat-upload-signatures", "__unstable-mscs"]
 __compat = [
@@ -297,7 +299,7 @@ __compat = [
 [dependencies]
 assign = { workspace = true }
 js_int = { workspace = true }
-js_option = "0.1.1"
+js_option = { workspace = true }
 language-tags = { workspace = true, optional = true }
 web-time = { workspace = true }
 

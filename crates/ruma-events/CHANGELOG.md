@@ -1,9 +1,28 @@
 # [unreleased]
 
+Breaking changes:
+
+- Upgrade `js_option` to v0.2.0
+- The following structs are now marked as non-exhaustive:
+  `GlobalAccountDataEvent`, `RoomAccountDataEvent`, `(Sync)EphemeralRoomEvent`,
+  `Original(Sync)MessageLikeEvent`, `Redacted(Sync)MessageLikeEvent`,
+  `Original(Sync)StateEvent`, `Redacted(Sync)StateEvent`, `StrippedStateEvent`,
+  `Original(Sync)RoomRedactionEvent`, `Redacted(Sync)RoomRedactionEvent`,
+  `InitialStateEvent`, `ToDeviceEvent`,  `DecryptedMegolmV1Event`, `OlmV1Keys`.
+   Some of them can only be constructed through deserialization.
+   - `InitialStateEvent::new()` takes a `state_key`. For events with an empty
+     state key, `InitialStateEvent::with_empty_state_key()` can be used instead.
+- Remove the deprecated `RoomMessageEventContent::set_mentions()`.
+
 Improvements:
 
+- Add support for the room account data `m.space_order` event which powers top 
+  level space ordering as per [MSC3230](https://github.com/matrix-org/matrix-spec-proposals/pull/3230).
 - Add `m.rtc.notification` event support and deprecate the (non MSC conformant)
   `m.call.notify` event.
+- Add `dm.filament.do_not_disturb` account data event as per MSC4359.
+- `RoomMemberUnsigned` has a `knock_room_state` field. This is the equivalent to
+  `invite_room_state` but after a knock rather than an invite.
 
 # 0.31.0
 

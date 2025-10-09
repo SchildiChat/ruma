@@ -31,6 +31,9 @@ event_enum! {
     /// Any global account data event.
     enum GlobalAccountData {
         "m.direct" => super::direct,
+        #[cfg(feature = "unstable-msc4359")]
+        #[ruma_enum(ident = DoNotDisturb, alias = "m.do_not_disturb")]
+        "dm.filament.do_not_disturb" => super::do_not_disturb,
         "m.identity_server" => super::identity_server,
         "m.ignored_user_list" => super::ignored_user_list,
         "m.push_rules" => super::push_rules,
@@ -62,6 +65,9 @@ event_enum! {
         #[cfg(feature = "unstable-msc4278")]
         #[ruma_enum(ident = UnstableMediaPreviewConfig)]
         "io.element.msc4278.media_preview_config" => super::media_preview_config,
+        #[cfg(feature = "unstable-msc3230")]
+        #[ruma_enum(alias = "m.space_order")]
+        "org.matrix.msc3230.space_order" => super::space_order,
     }
 
     /// Any ephemeral room event.

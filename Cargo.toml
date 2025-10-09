@@ -13,10 +13,11 @@ assert_matches2 = "0.1.0"
 assign = "1.1.1"
 base64 = "0.22.0"
 bytes = "1.0.1"
-criterion = "0.5.0"
+criterion = "0.7.0"
 http = "1.1.0"
 insta = { version = "1.41.1", features = ["json"] }
 js_int = "0.2.2"
+js_option = "0.2.0"
 language-tags = { version = "0.3.2", features = ["serde"] }
 maplit = "1.0.2"
 rand = "0.8.5"
@@ -37,6 +38,7 @@ serde_html_form = "0.2.0"
 serde_json = "1.0.87"
 similar = "2.6.0"
 thiserror = "2.0.0"
+toml = { version = "0.9.6", default-features = false, features = ["parse", "serde"] }
 tracing = { version = "0.1.37", default-features = false, features = ["std"] }
 url = { version = "2.5.0" }
 web-time = "1.1.0"
