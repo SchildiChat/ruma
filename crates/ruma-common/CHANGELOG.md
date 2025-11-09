@@ -1,11 +1,30 @@
 # [unreleased]
 
+Breaking changes:
+
+- Merge the `PartialOrdAsRefStr` derive macro into `OrdAsRefStr`, so both traits
+  are always implemented using the same logic.
+- Rename the `PartialEqAsRefStr` derive macro to `EqAsRefStr` and make it
+  implement both `PartialEq` and `Eq`.
+- The `StringEnum` derive macro also implements `Ord`, `PartialOrd`, `Eq` and
+  `PartialEq` using the `AsRef<str>` implementation of the enum.
+- The predefined push rules for legacy mentions
+  `PatternedPushRule::contains_user_name()`,
+  `ConditionalPushRule::contains_display_name()` and
+  `ConditionalPushRule::roomnotif()` were removed, according to MSC4210.
+  Their rule IDs are still available in `PredefinedContentRuleId` and
+  `PredefinedOverrideRuleId`, and they are still supported in
+  `PatternedPushRule::applies_to()` and `ConditionalPushRule::applies()`, for
+  backwards-compatibility for clients.
+
 Improvements:
 
 - Add `MatrixVersion::V1_16`
 - Remove support for the `org.matrix.hydra.11` room version and the
   corresponding `unstable-hydra` cargo feature. It should only have been used
   for development, and room version 12 should be used instead.
+- `Metadata::make_endpoint_url()` is also available as `VersionHistory::make_endpoint_url()`.
+- `PushCondition::ContainsDisplayName` is deprecated, according to MSC4210.
 
 # 0.16.0
 

@@ -4,6 +4,19 @@ Breaking changes:
 
 - Upgrade `js_option` to v0.2.0
 
+Improvements:
+
+- Stabilize support for the `use_state_after` query parameter and `State::After`
+  response property to `sync_events::v3`, according to Matrix 1.16.
+- Stabilize support for extended profiles according to Matrix 1.16.
+  - `SetDisplayNameCapability` and `SetAvatarCapability` are deprecated in
+    favour of `ProfileFieldsCapability`.
+  - The `get_display_name` and `get_avatar_url` endpoints are deprecated in
+    favour of `get_profile_field`.
+  - The `set_display_name` and `set_avatar_url` endpoints are deprecated in
+    favour of `set_profile_field`.
+- Add supports for the `m.tz` profile field according to Matrix 1.16.
+
 # 0.21.0
 
 Breaking changes:
@@ -45,6 +58,8 @@ Breaking changes:
   be added using `.set()`, or the `FromIterator` and `Extend` implementations.
 - Replace `MembershipEventFilter` with `MembershipState` in `get_member_events`, since both enums
   should always be identical.
+- Add `set_presence` field to `sync_events::v5::Request` as per MSC4186; specified identically
+  to the field appearing in prior sync versions.
 
 Improvements:
 

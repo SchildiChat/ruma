@@ -52,7 +52,6 @@ impl Serialize for CustomProfileFieldValue {
 /// this will deserialize the first key-value pair encountered.
 pub(super) struct ProfileFieldValueVisitor(pub(super) Option<ProfileFieldName>);
 
-#[cfg(feature = "unstable-msc4133")]
 impl<'de> de::Visitor<'de> for ProfileFieldValueVisitor {
     type Value = Option<ProfileFieldValue>;
 
@@ -90,6 +89,7 @@ impl<'de> de::Visitor<'de> for ProfileFieldValueVisitor {
         Ok(Some(match field {
             ProfileFieldName::AvatarUrl => ProfileFieldValue::AvatarUrl(map.next_value()?),
             ProfileFieldName::DisplayName => ProfileFieldValue::DisplayName(map.next_value()?),
+            ProfileFieldName::TimeZone => ProfileFieldValue::TimeZone(map.next_value()?),
             ProfileFieldName::_Custom(field) => {
                 ProfileFieldValue::_Custom(CustomProfileFieldValue {
                     field: field.0.into(),
