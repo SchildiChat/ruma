@@ -15,24 +15,27 @@ pub mod v3 {
 
     use std::marker::PhantomData;
 
-    use ruma_common::{api::Metadata, metadata, OwnedUserId};
+    use ruma_common::{
+        api::{auth_scheme::NoAuthentication, path_builder::VersionHistory, Metadata},
+        metadata, OwnedUserId,
+    };
 
     use crate::profile::{
         profile_field_serde::StaticProfileFieldVisitor, ProfileFieldName, ProfileFieldValue,
         StaticProfileField,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         // History valid for fields that existed in Matrix 1.0, i.e. `displayname` and `avatar_url`.
         history: {
             unstable("uk.tcpip.msc4133") => "/_matrix/client/unstable/uk.tcpip.msc4133/profile/{user_id}/{field}",
             1.0 => "/_matrix/client/r0/profile/{user_id}/{field}",
             1.1 => "/_matrix/client/v3/profile/{user_id}/{field}",
         }
-    };
+    }
 
     /// Request type for the `get_profile_field` endpoint.
     #[derive(Clone, Debug)]
@@ -62,23 +65,16 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            use http::header::{self, HeaderValue};
+            use ruma_common::api::{auth_scheme::AuthScheme, path_builder::PathBuilder};
 
             let url = if self.field.existed_before_extended_profiles() {
-                METADATA.make_endpoint_url(
-                    considering,
-                    base_url,
-                    &[&self.user_id, &self.field],
-                    "",
-                )?
+                Self::make_endpoint_url(considering, base_url, &[&self.user_id, &self.field], "")?
             } else {
                 crate::profile::EXTENDED_PROFILE_FIELD_HISTORY.make_endpoint_url(
                     considering,
@@ -88,19 +84,12 @@ pub mod v3 {
                 )?
             };
 
-            let mut http_request_builder = http::Request::builder()
-                .method(METADATA.method)
-                .uri(url)
-                .header(header::CONTENT_TYPE, "application/json");
+            let mut http_request =
+                http::Request::builder().method(Self::METHOD).uri(url).body(T::default())?;
 
-            if let Some(access_token) = access_token.get_not_required_for_endpoint() {
-                http_request_builder = http_request_builder.header(
-                    header::AUTHORIZATION,
-                    HeaderValue::from_str(&format!("Bearer {access_token}"))?,
-                );
-            }
+            Self::Authentication::add_authentication(&mut http_request, access_token)?;
 
-            Ok(http_request_builder.body(T::default())?)
+            Ok(http_request)
         }
     }
 
@@ -108,8 +97,6 @@ pub mod v3 {
     impl ruma_common::api::IncomingRequest for Request {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
-
-        const METADATA: Metadata = METADATA;
 
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
@@ -119,12 +106,7 @@ pub mod v3 {
             B: AsRef<[u8]>,
             S: AsRef<str>,
         {
-            if request.method() != METADATA.method {
-                return Err(ruma_common::api::error::FromHttpRequestError::MethodMismatch {
-                    expected: METADATA.method,
-                    received: request.method().clone(),
-                });
-            }
+            Self::check_request_method(request.method())?;
 
             let (user_id, field) =
                 serde::Deserialize::deserialize(serde::de::value::SeqDeserializer::<
@@ -162,18 +144,24 @@ pub mod v3 {
         }
     }
 
+    impl<F: StaticProfileField> Metadata for RequestStatic<F> {
+        const METHOD: http::Method = Request::METHOD;
+        const RATE_LIMITED: bool = Request::RATE_LIMITED;
+        type Authentication = <Request as Metadata>::Authentication;
+        type PathBuilder = <Request as Metadata>::PathBuilder;
+        const PATH_BUILDER: VersionHistory = Request::PATH_BUILDER;
+    }
+
     #[cfg(feature = "client")]
     impl<F: StaticProfileField> ruma_common::api::OutgoingRequest for RequestStatic<F> {
         type EndpointError = crate::Error;
         type IncomingResponse = ResponseStatic<F>;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
             Request::new(self.user_id, F::NAME.into()).try_into_http_request(
                 base_url,
@@ -241,7 +229,7 @@ pub mod v3 {
 
             Ok(http::Response::builder()
                 .status(http::StatusCode::OK)
-                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .body(body)?)
         }
     }
@@ -301,7 +289,9 @@ mod tests {
     #[test]
     #[cfg(feature = "client")]
     fn serialize_request() {
-        use ruma_common::api::{OutgoingRequest, SendAccessToken, SupportedVersions};
+        use std::borrow::Cow;
+
+        use ruma_common::api::{auth_scheme::SendAccessToken, OutgoingRequest, SupportedVersions};
 
         // Profile field that existed in Matrix 1.0.
         let avatar_url_request =
@@ -313,7 +303,10 @@ mod tests {
             .try_into_http_request::<Vec<u8>>(
                 "http://localhost/",
                 SendAccessToken::None,
-                &SupportedVersions::from_parts(&["v1.11".to_owned()], &Default::default()),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.11".to_owned()],
+                    &Default::default(),
+                )),
             )
             .unwrap();
         assert_eq!(
@@ -326,7 +319,10 @@ mod tests {
             .try_into_http_request::<Vec<u8>>(
                 "http://localhost/",
                 SendAccessToken::None,
-                &SupportedVersions::from_parts(&["v1.16".to_owned()], &Default::default()),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.16".to_owned()],
+                    &Default::default(),
+                )),
             )
             .unwrap();
         assert_eq!(
@@ -344,7 +340,10 @@ mod tests {
             .try_into_http_request::<Vec<u8>>(
                 "http://localhost/",
                 SendAccessToken::None,
-                &SupportedVersions::from_parts(&["v1.11".to_owned()], &Default::default()),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.11".to_owned()],
+                    &Default::default(),
+                )),
             )
             .unwrap();
         assert_eq!(
@@ -357,7 +356,10 @@ mod tests {
             .try_into_http_request::<Vec<u8>>(
                 "http://localhost/",
                 SendAccessToken::None,
-                &SupportedVersions::from_parts(&["v1.16".to_owned()], &Default::default()),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.16".to_owned()],
+                    &Default::default(),
+                )),
             )
             .unwrap();
         assert_eq!(

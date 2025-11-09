@@ -1,21 +1,24 @@
+use std::borrow::Cow;
+
 use ruma_common::api::{
-    MatrixVersion, OutgoingRequest as _, OutgoingResponse as _, SendAccessToken, SupportedVersions,
+    auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest as _, OutgoingResponse as _,
+    SupportedVersions,
 };
 
 mod get {
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             unstable => "/_matrix/my/endpoint",
         }
-    };
+    }
 
     /// Request type for the `no_fields` endpoint.
     #[request]
@@ -28,18 +31,18 @@ mod get {
 
 mod post {
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             unstable => "/_matrix/my/endpoint",
         }
-    };
+    }
 
     /// Request type for the `no_fields` endpoint.
     #[request]
@@ -60,7 +63,7 @@ fn empty_post_request_http_repr() {
         .try_into_http_request::<Vec<u8>>(
             "https://homeserver.tld",
             SendAccessToken::None,
-            &supported,
+            Cow::Owned(supported),
         )
         .unwrap();
 
@@ -77,7 +80,7 @@ fn empty_get_request_http_repr() {
         .try_into_http_request::<Vec<u8>>(
             "https://homeserver.tld",
             SendAccessToken::None,
-            &supported,
+            Cow::Owned(supported),
         )
         .unwrap();
 

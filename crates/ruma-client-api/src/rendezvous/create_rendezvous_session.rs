@@ -14,21 +14,21 @@ pub mod unstable {
     #[cfg(feature = "client")]
     use ruma_common::api::error::FromHttpResponseError;
     use ruma_common::{
-        api::{error::HeaderDeserializationError, Metadata},
+        api::{auth_scheme::NoAuthentication, error::HeaderDeserializationError, Metadata},
         metadata,
     };
     use serde::{Deserialize, Serialize};
     use url::Url;
     use web_time::SystemTime;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             unstable("org.matrix.msc4108") => "/_matrix/client/unstable/org.matrix.msc4108/rendezvous",
         }
-    };
+    }
 
     /// Request type for the `POST` `rendezvous` endpoint.
     #[derive(Debug, Default, Clone)]
@@ -42,20 +42,19 @@ pub mod unstable {
     impl ruma_common::api::OutgoingRequest for Request {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
-        const METADATA: Metadata = METADATA;
 
         fn try_into_http_request<T: Default + bytes::BufMut>(
             self,
             base_url: &str,
-            _: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            _: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            let url = METADATA.make_endpoint_url(considering, base_url, &[], "")?;
+            let url = Self::make_endpoint_url(considering, base_url, &[], "")?;
             let body = self.content.as_bytes();
             let content_length = body.len();
 
             Ok(http::Request::builder()
-                .method(METADATA.method)
+                .method(Self::METHOD)
                 .uri(url)
                 .header(CONTENT_TYPE, "text/plain")
                 .header(CONTENT_LENGTH, content_length)
@@ -67,7 +66,6 @@ pub mod unstable {
     impl ruma_common::api::IncomingRequest for Request {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
-        const METADATA: Metadata = METADATA;
 
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
@@ -80,6 +78,8 @@ pub mod unstable {
             const EXPECTED_CONTENT_TYPE: &str = "text/plain";
 
             use ruma_common::api::error::DeserializationError;
+
+            Self::check_request_method(request.method())?;
 
             let content_type = request
                 .headers()
@@ -172,8 +172,7 @@ pub mod unstable {
             let expires = get_date(EXPIRES)?;
             let last_modified = get_date(LAST_MODIFIED)?;
 
-            let body = response.into_body();
-            let body: ResponseBody = serde_json::from_slice(body.as_ref())?;
+            let body: ResponseBody = serde_json::from_slice(response.body().as_ref())?;
 
             Ok(Self { url: body.url, etag, expires, last_modified })
         }
@@ -186,16 +185,15 @@ pub mod unstable {
         ) -> Result<http::Response<T>, ruma_common::api::error::IntoHttpError> {
             use http::header::{CACHE_CONTROL, PRAGMA};
 
-            let body = ResponseBody { url: self.url.clone() };
-            let body = serde_json::to_vec(&body)?;
-            let body = ruma_common::serde::slice_to_buf(&body);
+            let body = ResponseBody { url: self.url };
+            let body = ruma_common::serde::json_to_buf(&body)?;
 
             let expires = crate::http_headers::system_time_to_http_date(&self.expires)?;
             let last_modified = crate::http_headers::system_time_to_http_date(&self.last_modified)?;
 
             Ok(http::Response::builder()
                 .status(http::StatusCode::OK)
-                .header(CONTENT_TYPE, "application/json")
+                .header(CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .header(PRAGMA, "no-cache")
                 .header(CACHE_CONTROL, "no-store")
                 .header(ETAG, self.etag)

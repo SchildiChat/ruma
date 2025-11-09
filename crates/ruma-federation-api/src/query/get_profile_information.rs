@@ -8,22 +8,20 @@ pub mod v1 {
     //! [spec]: https://spec.matrix.org/latest/server-server-api/#get_matrixfederationv1queryprofile
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{request, response},
         metadata,
         serde::StringEnum,
         OwnedMxcUri, OwnedUserId,
     };
 
-    use crate::PrivOwnedStr;
+    use crate::{authentication::ServerSignatures, PrivOwnedStr};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
         authentication: ServerSignatures,
-        history: {
-            1.0 => "/_matrix/federation/v1/query/profile",
-        }
-    };
+        path: "/_matrix/federation/v1/query/profile",
+    }
 
     /// Request type for the `get_profile_information` endpoint.
     #[request]

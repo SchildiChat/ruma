@@ -10,7 +10,7 @@ pub mod v3 {
     use std::{fmt, time::Duration};
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AppserviceTokenOptional, request, response},
         metadata,
         serde::JsonObject,
         OwnedDeviceId, OwnedServerName, OwnedUserId,
@@ -23,7 +23,7 @@ pub mod v3 {
 
     use crate::uiaa::UserIdentifier;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
         authentication: AppserviceTokenOptional,
@@ -31,7 +31,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/login",
             1.1 => "/_matrix/client/v3/login",
         }
-    };
+    }
 
     /// Request type for the `login` endpoint.
     #[request(error = crate::Error)]
@@ -435,8 +435,10 @@ pub mod v3 {
         #[test]
         #[cfg(feature = "client")]
         fn serialize_login_request_body() {
+            use std::borrow::Cow;
+
             use ruma_common::api::{
-                MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions,
+                auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest, SupportedVersions,
             };
             use serde_json::Value as JsonValue;
 
@@ -454,7 +456,11 @@ pub mod v3 {
                 initial_device_display_name: Some("test".to_owned()),
                 refresh_token: false,
             }
-            .try_into_http_request("https://homeserver.tld", SendAccessToken::None, &supported)
+            .try_into_http_request(
+                "https://homeserver.tld",
+                SendAccessToken::None,
+                Cow::Borrowed(&supported),
+            )
             .unwrap();
 
             let req_body_value: JsonValue = serde_json::from_slice(req.body()).unwrap();
@@ -482,7 +488,11 @@ pub mod v3 {
                 initial_device_display_name: Some("test".to_owned()),
                 refresh_token: false,
             }
-            .try_into_http_request("https://homeserver.tld", SendAccessToken::None, &supported)
+            .try_into_http_request(
+                "https://homeserver.tld",
+                SendAccessToken::None,
+                Cow::Borrowed(&supported),
+            )
             .unwrap();
 
             let req_body_value: JsonValue = serde_json::from_slice(req.body()).unwrap();

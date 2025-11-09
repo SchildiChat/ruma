@@ -8,7 +8,7 @@ pub mod unstable {
     //! [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/4140
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         serde::Raw,
         OwnedRoomId,
@@ -18,7 +18,7 @@ pub mod unstable {
 
     use crate::delayed_events::DelayParameters;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: false,
         authentication: AccessToken,
@@ -26,7 +26,7 @@ pub mod unstable {
             // We use the unstable prefix for the delay query parameter but the stable v3 endpoint.
             unstable => "/_matrix/client/v3/rooms/{room_id}/state/{event_type}/{state_key}",
         }
-    };
+    }
 
     /// Request type for the [`delayed_state_event`](crate::delayed_events::delayed_state_event)
     /// endpoint.
@@ -113,8 +113,12 @@ pub mod unstable {
 
     #[cfg(all(test, feature = "client"))]
     mod tests {
+        use std::borrow::Cow;
+
         use ruma_common::{
-            api::{MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions},
+            api::{
+                auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest, SupportedVersions,
+            },
             owned_room_id,
             serde::Raw,
         };
@@ -142,7 +146,7 @@ pub mod unstable {
             .try_into_http_request(
                 "https://homeserver.tld",
                 SendAccessToken::IfRequired("auth_tok"),
-                &supported,
+                Cow::Owned(supported),
             )
             .unwrap()
             .into_parts()

@@ -9,7 +9,7 @@ pub mod v1 {
 
     use js_int::{uint, UInt};
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
         push::{PushFormat, Tweak},
         serde::{JsonObject, StringEnum},
@@ -21,14 +21,12 @@ pub mod v1 {
 
     use crate::PrivOwnedStr;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: false,
-        authentication: None,
-        history: {
-            1.0 => "/_matrix/push/v1/notify",
-        }
-    };
+        authentication: NoAuthentication,
+        path: "/_matrix/push/v1/notify",
+    }
 
     /// Request type for the `send_event_notification` endpoint.
     #[request]

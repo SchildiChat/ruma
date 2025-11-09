@@ -3,6 +3,21 @@
 Breaking changes:
 
 - Upgrade `js_option` to v0.2.0
+- The following endpoints use a `SinglePath` rather than a `VersionHistory` as
+  `Metadata::PathBuilder`. Making a request doesn't require to provide a dummy
+  `SupportedVersions` anymore.
+  - `discover_homeserver`
+  - `discover_support`
+  - `get_supported_versions`
+  - `login_fallback`
+- Make the `ErrorBody::Standard` variant a newtype around `StandardErrorBody`.
+- `StandardErrorBody` is non-exhaustive. Allowing to add fields in the future
+  without it being a breaking change.
+
+Fixes:
+
+- Set the `Authorization` header with the provided access token in
+  `set_profile_field::v3::Request::try_into_http_request()`.
 
 Improvements:
 

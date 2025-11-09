@@ -7,7 +7,7 @@ use std::{collections::BTreeMap, time::Duration};
 use as_variant::as_variant;
 use js_int::UInt;
 use ruma_common::{
-    api::{request, response, Metadata},
+    api::{auth_scheme::AccessToken, request, response},
     metadata,
     presence::PresenceState,
     serde::Raw,
@@ -25,7 +25,7 @@ mod response_serde;
 use super::{DeviceLists, UnreadNotificationsCount};
 use crate::filter::FilterDefinition;
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: GET,
     rate_limited: false,
     authentication: AccessToken,
@@ -33,7 +33,7 @@ const METADATA: Metadata = metadata! {
         1.0 => "/_matrix/client/r0/sync",
         1.1 => "/_matrix/client/v3/sync",
     }
-};
+}
 
 /// Request type for the `sync` endpoint.
 #[request(error = crate::Error)]
@@ -708,13 +708,13 @@ mod tests {
 
 #[cfg(all(test, feature = "client"))]
 mod client_tests {
-    use std::time::Duration;
+    use std::{borrow::Cow, time::Duration};
 
     use assert_matches2::assert_matches;
     use ruma_common::{
         api::{
-            IncomingResponse as _, MatrixVersion, OutgoingRequest as _, SendAccessToken,
-            SupportedVersions,
+            auth_scheme::SendAccessToken, IncomingResponse as _, MatrixVersion,
+            OutgoingRequest as _, SupportedVersions,
         },
         event_id, room_id, user_id, RoomVersionId,
     };
@@ -759,7 +759,7 @@ mod client_tests {
         .try_into_http_request(
             "https://homeserver.tld",
             SendAccessToken::IfRequired("auth_tok"),
-            &supported,
+            Cow::Owned(supported),
         )
         .unwrap();
 

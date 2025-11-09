@@ -9,7 +9,7 @@ pub mod v3 {
 
     use js_int::{uint, UInt};
     use ruma_common::{
-        api::{request, response, Direction, Metadata},
+        api::{auth_scheme::AccessToken, request, response, Direction},
         metadata,
         serde::Raw,
         OwnedRoomId,
@@ -18,7 +18,7 @@ pub mod v3 {
 
     use crate::filter::RoomEventFilter;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
         authentication: AccessToken,
@@ -26,7 +26,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/rooms/{room_id}/messages",
             1.1 => "/_matrix/client/v3/rooms/{room_id}/messages",
         }
-    };
+    }
 
     /// Request type for the `get_message_events` endpoint.
     #[request(error = crate::Error)]
@@ -172,9 +172,14 @@ pub mod v3 {
 
     #[cfg(all(test, feature = "client"))]
     mod tests {
+        use std::borrow::Cow;
+
         use js_int::uint;
         use ruma_common::{
-            api::{Direction, MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions},
+            api::{
+                auth_scheme::SendAccessToken, Direction, MatrixVersion, OutgoingRequest,
+                SupportedVersions,
+            },
             owned_room_id,
         };
 
@@ -213,7 +218,7 @@ pub mod v3 {
                 .try_into_http_request(
                     "https://homeserver.tld",
                     SendAccessToken::IfRequired("auth_tok"),
-                    &supported,
+                    Cow::Owned(supported),
                 )
                 .unwrap();
             assert_eq!(
@@ -246,7 +251,7 @@ pub mod v3 {
                 .try_into_http_request::<Vec<u8>>(
                     "https://homeserver.tld",
                     SendAccessToken::IfRequired("auth_tok"),
-                    &supported,
+                    Cow::Owned(supported),
                 )
                 .unwrap();
             assert_eq!("from=token&to=token2&dir=b&limit=0", request.uri().query().unwrap(),);

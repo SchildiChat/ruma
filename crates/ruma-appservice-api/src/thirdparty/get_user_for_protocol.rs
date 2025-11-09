@@ -11,19 +11,17 @@ pub mod v1 {
     use std::collections::BTreeMap;
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         thirdparty::User,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
         authentication: AccessToken,
-        history: {
-            1.0 => "/_matrix/app/v1/thirdparty/user/{protocol}",
-        }
-    };
+        path: "/_matrix/app/v1/thirdparty/user/{protocol}",
+    }
 
     /// Request type for the `get_user_for_protocol` endpoint.
     #[request]

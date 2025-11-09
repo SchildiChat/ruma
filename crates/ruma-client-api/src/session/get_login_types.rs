@@ -11,7 +11,7 @@ pub mod v3 {
     use std::borrow::Cow;
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
         serde::{JsonObject, StringEnum},
         OwnedMxcUri,
@@ -21,15 +21,15 @@ pub mod v3 {
 
     use crate::PrivOwnedStr;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: true,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             1.0 => "/_matrix/client/r0/login",
             1.1 => "/_matrix/client/v3/login",
         }
-    };
+    }
 
     /// Request type for the `get_login_types` endpoint.
     #[request(error = crate::Error)]

@@ -5,7 +5,7 @@
 //! Get server admin contact and support page of a homeserver's domain.
 
 use ruma_common::{
-    api::{request, response, Metadata},
+    api::{auth_scheme::NoAuthentication, request, response},
     metadata,
     serde::StringEnum,
     OwnedUserId,
@@ -14,14 +14,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::PrivOwnedStr;
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: GET,
     rate_limited: false,
-    authentication: None,
-    history: {
-        1.10 => "/.well-known/matrix/support",
-    }
-};
+    authentication: NoAuthentication,
+    path: "/.well-known/matrix/support",
+}
 
 /// Request type for the `discover_support` endpoint.
 #[request(error = crate::Error)]

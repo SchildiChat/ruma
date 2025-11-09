@@ -16,7 +16,7 @@ pub mod v1 {
     #[cfg(feature = "unstable-msc3202")]
     use ruma_common::OwnedUserId;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         serde::{from_raw_json_value, JsonObject, Raw},
         OwnedTransactionId,
@@ -31,14 +31,12 @@ pub mod v1 {
     use serde::{Deserialize, Deserializer, Serialize};
     use serde_json::value::{RawValue as RawJsonValue, Value as JsonValue};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: false,
         authentication: AccessToken,
-        history: {
-            1.0 => "/_matrix/app/v1/transactions/{txn_id}",
-        }
-    };
+        path: "/_matrix/app/v1/transactions/{txn_id}",
+    }
 
     /// Request type for the `push_events` endpoint.
     #[request]
@@ -266,9 +264,7 @@ pub mod v1 {
         #[cfg(feature = "client")]
         #[test]
         fn request_contains_events_field() {
-            use ruma_common::api::{
-                MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions,
-            };
+            use ruma_common::api::{auth_scheme::SendAccessToken, OutgoingRequest};
 
             let dummy_event_json = json!({
                 "type": "m.room.message",
@@ -283,16 +279,12 @@ pub mod v1 {
             });
             let dummy_event = from_json_value(dummy_event_json.clone()).unwrap();
             let events = vec![dummy_event];
-            let supported = SupportedVersions {
-                versions: [MatrixVersion::V1_1].into(),
-                features: Default::default(),
-            };
 
             let req = super::Request::new("any_txn_id".into(), events)
                 .try_into_http_request::<Vec<u8>>(
                     "https://homeserver.tld",
                     SendAccessToken::IfRequired("auth_tok"),
-                    &supported,
+                    (),
                 )
                 .unwrap();
             let json_body: serde_json::Value = serde_json::from_slice(req.body()).unwrap();

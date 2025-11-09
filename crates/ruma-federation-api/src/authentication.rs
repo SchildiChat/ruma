@@ -6,12 +6,74 @@ use headers::authorization::Credentials;
 use http::HeaderValue;
 use http_auth::ChallengeParser;
 use ruma_common::{
+    api::auth_scheme::AuthScheme,
     http_headers::quote_ascii_string_if_required,
     serde::{Base64, Base64DecodeError},
-    IdParseError, OwnedServerName, OwnedServerSigningKeyId,
+    CanonicalJsonObject, IdParseError, OwnedServerName, OwnedServerSigningKeyId, ServerName,
 };
+use ruma_signatures::{Ed25519KeyPair, KeyPair, PublicKeyMap};
 use thiserror::Error;
 use tracing::debug;
+
+/// Authentication is performed by adding an `X-Matrix` header including a signature in the request
+/// headers, as defined in the [Matrix Server-Server API][spec].
+///
+/// [spec]: https://spec.matrix.org/latest/server-server-api/#request-authentication
+#[derive(Debug, Clone, Copy, Default)]
+#[allow(clippy::exhaustive_structs)]
+pub struct ServerSignatures;
+
+impl AuthScheme for ServerSignatures {
+    type Input<'a> = ServerSignaturesInput<'a>;
+    type AddAuthenticationError = XMatrixFromRequestError;
+    type Output = XMatrix;
+    type ExtractAuthenticationError = XMatrixExtractError;
+
+    fn add_authentication<T: AsRef<[u8]>>(
+        request: &mut http::Request<T>,
+        input: ServerSignaturesInput<'_>,
+    ) -> Result<(), Self::AddAuthenticationError> {
+        let authorization = HeaderValue::from(&XMatrix::try_from_http_request(request, input)?);
+        request.headers_mut().insert(http::header::AUTHORIZATION, authorization);
+
+        Ok(())
+    }
+
+    fn extract_authentication<T: AsRef<[u8]>>(
+        request: &http::Request<T>,
+    ) -> Result<Self::Output, Self::ExtractAuthenticationError> {
+        let value = request
+            .headers()
+            .get(http::header::AUTHORIZATION)
+            .ok_or(XMatrixExtractError::MissingAuthorizationHeader)?;
+        Ok(value.try_into()?)
+    }
+}
+
+/// The input necessary to generate the [`ServerSignatures`] authentication scheme.
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct ServerSignaturesInput<'a> {
+    /// The server making the request.
+    pub origin: OwnedServerName,
+
+    /// The server receiving the request.
+    pub destination: OwnedServerName,
+
+    /// The key pair to use to sign the request.
+    pub key_pair: &'a Ed25519KeyPair,
+}
+
+impl<'a> ServerSignaturesInput<'a> {
+    /// Construct a new `ServerSignaturesInput` with the given origin and key pair.
+    pub fn new(
+        origin: OwnedServerName,
+        destination: OwnedServerName,
+        key_pair: &'a Ed25519KeyPair,
+    ) -> Self {
+        Self { origin, destination, key_pair }
+    }
+}
 
 /// Typed representation of an `Authorization` header of scheme `X-Matrix`, as defined in the
 /// [Matrix Server-Server API][spec].
@@ -108,6 +170,80 @@ impl XMatrix {
             sig: sig.ok_or_else(|| XMatrixParseError::MissingParameter("sig".to_owned()))?,
         })
     }
+
+    /// Construct the canonical JSON object representation of the request to sign for the `XMatrix`
+    /// scheme.
+    pub fn request_object<T: AsRef<[u8]>>(
+        request: &http::Request<T>,
+        origin: &ServerName,
+        destination: &ServerName,
+    ) -> Result<CanonicalJsonObject, serde_json::Error> {
+        let body = request.body().as_ref();
+        let uri = request.uri().path_and_query().expect("http::Request should have a path");
+
+        let mut request_object = CanonicalJsonObject::from([
+            ("destination".to_owned(), destination.as_str().into()),
+            ("method".to_owned(), request.method().as_str().into()),
+            ("origin".to_owned(), origin.as_str().into()),
+            ("uri".to_owned(), uri.as_str().into()),
+        ]);
+
+        if !body.is_empty() {
+            let content = serde_json::from_slice(body)?;
+            request_object.insert("content".to_owned(), content);
+        }
+
+        Ok(request_object)
+    }
+
+    /// Try to construct this header from the given HTTP request and input.
+    pub fn try_from_http_request<T: AsRef<[u8]>>(
+        request: &http::Request<T>,
+        input: ServerSignaturesInput<'_>,
+    ) -> Result<Self, XMatrixFromRequestError> {
+        let ServerSignaturesInput { origin, destination, key_pair } = input;
+
+        let request_object = Self::request_object(request, &origin, &destination)?;
+
+        // The spec says to use the algorithm to sign JSON, so we could use
+        // ruma_signatures::sign_json, however since we would need to extract the signature from the
+        // JSON afterwards let's be a bit more efficient about it.
+        let serialized_request_object = serde_json::to_vec(&request_object)?;
+        let (key_id, signature) = key_pair.sign(&serialized_request_object).into_parts();
+
+        let key = OwnedServerSigningKeyId::try_from(key_id.as_str())
+            .map_err(XMatrixFromRequestError::SigningKeyId)?;
+        let sig = Base64::new(signature);
+
+        Ok(Self { origin, destination: Some(destination), key, sig })
+    }
+
+    /// Verify that the signature in the `sig` field is valid for the given incoming HTTP request,
+    /// with the given public keys map from the origin.
+    pub fn verify_request<T: AsRef<[u8]>>(
+        &self,
+        request: &http::Request<T>,
+        destination: &ServerName,
+        public_key_map: &PublicKeyMap,
+    ) -> Result<(), XMatrixVerificationError> {
+        if self
+            .destination
+            .as_deref()
+            .is_some_and(|xmatrix_destination| xmatrix_destination != destination)
+        {
+            return Err(XMatrixVerificationError::DestinationMismatch);
+        }
+
+        let mut request_object = Self::request_object(request, &self.origin, destination)
+            .map_err(|error| ruma_signatures::Error::Json(error.into()))?;
+        let entity_signature =
+            CanonicalJsonObject::from([(self.key.to_string(), self.sig.encode().into())]);
+        let signatures =
+            CanonicalJsonObject::from([(self.origin.to_string(), entity_signature.into())]);
+        request_object.insert("signatures".to_owned(), signatures.into());
+
+        Ok(ruma_signatures::verify_json(public_key_map, &request_object)?)
+    }
 }
 
 impl fmt::Debug for XMatrix {
@@ -174,6 +310,19 @@ impl Credentials for XMatrix {
     }
 }
 
+/// An error when trying to construct an [`XMatrix`] from a [`http::Request`].
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum XMatrixFromRequestError {
+    /// Failed to construct the request object to sign.
+    #[error("failed to construct request object to sign: {0}")]
+    IntoJson(#[from] serde_json::Error),
+
+    /// The signing key ID is invalid.
+    #[error("invalid signing key ID: {0}")]
+    SigningKeyId(IdParseError),
+}
+
 /// An error when trying to parse an X-Matrix Authorization header.
 #[derive(Debug, Error)]
 #[non_exhaustive]
@@ -211,6 +360,32 @@ impl<'a> From<http_auth::parser::Error<'a>> for XMatrixParseError {
     fn from(value: http_auth::parser::Error<'a>) -> Self {
         Self::ParseStr(value.to_string())
     }
+}
+
+/// An error when trying to extract an [`XMatrix`] from an HTTP request.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum XMatrixExtractError {
+    /// No Authorization HTTP header was found, but the endpoint requires a server signature.
+    #[error("no Authorization HTTP header found, but this endpoint requires a server signature")]
+    MissingAuthorizationHeader,
+
+    /// Failed to convert the header value to an [`XMatrix`].
+    #[error("failed to parse header value: {0}")]
+    Parse(#[from] XMatrixParseError),
+}
+
+/// An error when trying to verify the signature in an [`XMatrix`] for an HTTP request.
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum XMatrixVerificationError {
+    /// The `destination` in [`XMatrix`] doesn't match the one to verify.
+    #[error("destination in XMatrix doesn't match the one to verify")]
+    DestinationMismatch,
+
+    /// The signature verification failed.
+    #[error("signature verification failed: {0}")]
+    Signature(#[from] ruma_signatures::Error),
 }
 
 #[cfg(test)]

@@ -16,6 +16,44 @@ Breaking changes:
   `PredefinedOverrideRuleId`, and they are still supported in
   `PatternedPushRule::applies_to()` and `ConditionalPushRule::applies()`, for
   backwards-compatibility for clients.
+- Macros no longer support importing the `ruma` and `ruma-events` crate from the
+  `matrix-sdk-appservice` crate. This crate was dropped 2 years ago.
+- `Metadata` was changed from a `struct` to a `trait`. It is a supertrait of
+  `OutgoingRequest` and `IncomingRequest`, and its fields are now associated
+  types or constants.
+  - The `authentication` field of the `Metadata` struct is now an associated
+    type named `Authentication`. The `AuthScheme` enum was changed from an
+    `enum` to a `trait`. Its variants are now structs implementing the
+    `AuthScheme` trait. The `None` variant was renamed to `NoAuthentication` and
+    the `ServerSignatures` variant was moved to ruma-federation-api.
+    The `access_token` argument of `OutgoingRequest::try_into_http_request()` is
+    renamed to `authentication_input` and is generic over the `Input` associated
+    type of the `AuthScheme` trait.
+  - The `history` field of the `Metadata` struct is now an associated constant
+    named `PATH_BUILDER`. The type of this constant is defined by the
+    `PathBuilder` associated type, which must implement the `PathBuilder` trait.
+    The `considering` argument of `OutgoingRequest::try_into_http_request()` is
+    renamed to `path_builder_input` and is generic over the `Input` associated
+    type of the `PathBuilder` trait. The `Input` of `VersionHistory` was changed
+    from `&'_ SupportedVersions` to `Cow<'_, SupportedVersions>`.
+  - The other fields of the `Metadata` struct are now associated constants with
+    the same name converted to uppercase.
+  - The `metadata!` macro generates the `Metadata` trait implementation for a
+    type named `Request` by default. This type can be changed with an `@for`
+    setting.
+- The `http_headers` module is now behind the `api` cargo feature.
+- `OutgoingRequestAppserviceExt::try_into_http_request_with_user_id()` is
+  renamed to `try_into_http_request_with_identity()` and takes an
+  `AppserviceUserIdentity` instead of a `UserId`. This allows to specify a
+  device ID, according to MSC4326.
+- `IntoHttpError::NeedsAuthentication` is a newtype variant renamed to
+  `Authentication` that accepts any error type. 
+
+Bug fixes:
+
+- With the `request` and `response` attribute macros, the `Content-Type` header
+  defaults to `application/octet-stream` instead of `application/json` if the
+  `raw_body` attribute is set on a field.
 
 Improvements:
 
@@ -25,6 +63,10 @@ Improvements:
   for development, and room version 12 should be used instead.
 - `Metadata::make_endpoint_url()` is also available as `VersionHistory::make_endpoint_url()`.
 - `PushCondition::ContainsDisplayName` is deprecated, according to MSC4210.
+- Add `SinglePath` as a `PathBuilder`. It should be used for APIs that don't
+  have a `/versions` endpoint and for endpoints that can't be versioned.
+- `AuthScheme` data can be extracted from incoming HTTP requests with
+  `AuthScheme::extract_authentication()`.
 
 # 0.16.0
 

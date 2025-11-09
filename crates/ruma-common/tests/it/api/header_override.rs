@@ -1,22 +1,25 @@
 #![allow(clippy::exhaustive_structs)]
 
+use std::borrow::Cow;
+
 use http::header::{Entry, CONTENT_TYPE, LOCATION};
 use ruma_common::{
     api::{
-        request, response, MatrixVersion, Metadata, OutgoingRequest as _, OutgoingResponse as _,
-        SendAccessToken, SupportedVersions,
+        auth_scheme::{NoAuthentication, SendAccessToken},
+        request, response, MatrixVersion, OutgoingRequest as _, OutgoingResponse as _,
+        SupportedVersions,
     },
     metadata,
 };
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: GET,
     rate_limited: false,
-    authentication: None,
+    authentication: NoAuthentication,
     history: {
         unstable => "/_matrix/my/endpoint",
     }
-};
+}
 
 /// Request type for the `no_fields` endpoint.
 #[request]
@@ -62,7 +65,7 @@ fn request_content_type_override() {
         .try_into_http_request::<Vec<u8>>(
             "https://homeserver.tld",
             SendAccessToken::None,
-            &supported,
+            Cow::Owned(supported),
         )
         .unwrap();
 
