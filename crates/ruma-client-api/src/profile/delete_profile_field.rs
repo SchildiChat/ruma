@@ -5,24 +5,24 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://github.com/matrix-org/matrix-spec-proposals/pull/4133
+    //! [spec]: https://spec.matrix.org/latest/client-server-api/#delete_matrixclientv3profileuseridkeyname
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata, OwnedUserId,
     };
 
     use crate::profile::ProfileFieldName;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: DELETE,
         rate_limited: true,
         authentication: AccessToken,
         history: {
             unstable("uk.tcpip.msc4133") => "/_matrix/client/unstable/uk.tcpip.msc4133/profile/{user_id}/{field}",
-            // 1.15 => "/_matrix/client/v3/profile/{user_id}/{field}",
+            1.16 => "/_matrix/client/v3/profile/{user_id}/{field}",
         }
-    };
+    }
 
     /// Request type for the `delete_profile_field` endpoint.
     #[request(error = crate::Error)]

@@ -7,22 +7,22 @@ pub mod v3 {
 
     use http::header::{LOCATION, SET_COOKIE};
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
     };
 
     #[cfg(feature = "unstable-msc3824")]
     use crate::session::SsoRedirectOidcAction;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             1.0 => "/_matrix/client/r0/login/sso/redirect",
             1.1 => "/_matrix/client/v3/login/sso/redirect",
         }
-    };
+    }
 
     /// Request type for the `sso_login` endpoint.
     #[request(error = crate::Error)]
@@ -76,8 +76,10 @@ pub mod v3 {
 
     #[cfg(all(test, feature = "client"))]
     mod tests {
+        use std::borrow::Cow;
+
         use ruma_common::api::{
-            MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions,
+            auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest, SupportedVersions,
         };
 
         use super::Request;
@@ -89,7 +91,11 @@ pub mod v3 {
                 features: Default::default(),
             };
             let req: http::Request<Vec<u8>> = Request::new("https://example.com/sso".to_owned())
-                .try_into_http_request("https://homeserver.tld", SendAccessToken::None, &supported)
+                .try_into_http_request(
+                    "https://homeserver.tld",
+                    SendAccessToken::None,
+                    Cow::Owned(supported),
+                )
                 .unwrap();
 
             assert_eq!(

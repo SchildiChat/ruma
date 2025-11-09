@@ -9,7 +9,7 @@ pub mod v1 {
 
     use js_int::UInt;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         serde::{Raw, StringEnum},
         OwnedRoomId,
@@ -18,7 +18,7 @@ pub mod v1 {
 
     use crate::PrivOwnedStr;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: true,
         authentication: AccessToken,
@@ -26,7 +26,7 @@ pub mod v1 {
             unstable => "/_matrix/client/unstable/org.matrix.msc3856/rooms/{room_id}/threads",
             1.4 => "/_matrix/client/v1/rooms/{room_id}/threads",
         }
-    };
+    }
 
     /// Request type for the `get_thread_roots` endpoint.
     #[request(error = crate::Error)]
@@ -88,7 +88,7 @@ pub mod v1 {
 
     /// Which threads to include in the response.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, StringEnum)]
+    #[derive(Clone, Default, StringEnum)]
     #[ruma_enum(rename_all = "lowercase")]
     #[non_exhaustive]
     pub enum IncludeThreads {

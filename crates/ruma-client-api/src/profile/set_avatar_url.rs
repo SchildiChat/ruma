@@ -8,11 +8,11 @@ pub mod v3 {
     //! [spec]: https://spec.matrix.org/v1.15/client-server-api/#put_matrixclientv3profileuseridavatar_url
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata, OwnedMxcUri, OwnedUserId,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: true,
         authentication: AccessToken,
@@ -20,7 +20,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/profile/{user_id}/avatar_url",
             1.1 => "/_matrix/client/v3/profile/{user_id}/avatar_url",
         }
-    };
+    }
 
     /// Request type for the `set_avatar_url` endpoint.
     #[request(error = crate::Error)]
@@ -69,6 +69,7 @@ pub mod v3 {
 
     impl Request {
         /// Creates a new `Request` with the given user ID and avatar URL.
+        #[deprecated = "Use the set_profile_field endpoint instead."]
         pub fn new(user_id: OwnedUserId, avatar_url: Option<OwnedMxcUri>) -> Self {
             Self {
                 user_id,

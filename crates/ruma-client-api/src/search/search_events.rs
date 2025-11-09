@@ -11,7 +11,7 @@ pub mod v3 {
 
     use js_int::{uint, UInt};
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         serde::{Raw, StringEnum},
         OwnedEventId, OwnedMxcUri, OwnedRoomId, OwnedUserId,
@@ -21,7 +21,7 @@ pub mod v3 {
 
     use crate::{filter::RoomEventFilter, PrivOwnedStr};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
         authentication: AccessToken,
@@ -29,7 +29,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/search",
             1.1 => "/_matrix/client/v3/search",
         }
-    };
+    }
 
     /// Request type for the `search` endpoint.
     #[request(error = crate::Error)]
@@ -250,7 +250,7 @@ pub mod v3 {
 
     /// The key within events to use for this grouping.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, StringEnum)]
+    #[derive(Clone, StringEnum)]
     #[ruma_enum(rename_all = "snake_case")]
     #[non_exhaustive]
     pub enum GroupingKey {
@@ -287,7 +287,7 @@ pub mod v3 {
 
     /// The keys to search for.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, PartialEq, Eq, StringEnum)]
+    #[derive(Clone, StringEnum)]
     #[non_exhaustive]
     pub enum SearchKeys {
         /// content.body
@@ -308,7 +308,7 @@ pub mod v3 {
 
     /// The order in which to search for results.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, PartialEq, Eq, StringEnum)]
+    #[derive(Clone, StringEnum)]
     #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     #[ruma_enum(rename_all = "snake_case")]
     pub enum OrderBy {

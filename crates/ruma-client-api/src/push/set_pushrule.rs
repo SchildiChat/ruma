@@ -8,13 +8,13 @@ pub mod v3 {
     //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3pushrulesglobalkindruleid
 
     use ruma_common::{
-        api::{response, Metadata},
+        api::{auth_scheme::AccessToken, response, Metadata},
         metadata,
         push::{Action, NewPushRule, PushCondition},
     };
     use serde::{Deserialize, Serialize};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: true,
         authentication: AccessToken,
@@ -22,7 +22,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/pushrules/global/{kind}/{rule_id}",
             1.1 => "/_matrix/client/v3/pushrules/global/{kind}/{rule_id}",
         }
-    };
+    }
 
     /// Request type for the `set_pushrule` endpoint.
     #[derive(Clone, Debug)]
@@ -64,22 +64,20 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            use http::header;
+            use ruma_common::api::auth_scheme::AuthScheme;
 
             let query_string = serde_html_form::to_string(RequestQuery {
                 before: self.before,
                 after: self.after,
             })?;
 
-            let url = METADATA.make_endpoint_url(
+            let url = Self::make_endpoint_url(
                 considering,
                 base_url,
                 &[&self.rule.kind(), &self.rule.rule_id()],
@@ -88,21 +86,17 @@ pub mod v3 {
 
             let body: RequestBody = self.rule.into();
 
-            http::Request::builder()
-                .method(METADATA.method)
+            let mut http_request = http::Request::builder()
+                .method(Self::METHOD)
                 .uri(url)
-                .header(header::CONTENT_TYPE, "application/json")
-                .header(
-                    header::AUTHORIZATION,
-                    format!(
-                        "Bearer {}",
-                        access_token
-                            .get_required_for_endpoint()
-                            .ok_or(ruma_common::api::error::IntoHttpError::NeedsAuthentication)?,
-                    ),
-                )
-                .body(ruma_common::serde::json_to_buf(&body)?)
-                .map_err(Into::into)
+                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
+                .body(ruma_common::serde::json_to_buf(&body)?)?;
+
+            Self::Authentication::add_authentication(&mut http_request, access_token).map_err(
+                |error| ruma_common::api::error::IntoHttpError::Authentication(error.into()),
+            )?;
+
+            Ok(http_request)
         }
     }
 
@@ -110,8 +104,6 @@ pub mod v3 {
     impl ruma_common::api::IncomingRequest for Request {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
-
-        const METADATA: Metadata = METADATA;
 
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
@@ -141,6 +133,8 @@ pub mod v3 {
                 before: Option<String>,
                 after: Option<String>,
             }
+
+            Self::check_request_method(request.method())?;
 
             let (kind, rule_id): (RuleKind, String) =
                 Deserialize::deserialize(serde::de::value::SeqDeserializer::<

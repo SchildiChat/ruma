@@ -44,11 +44,18 @@ impl Request {
         // `application/json` content-type would be wrong. It may also cause problems with CORS
         // policies that don't allow the `Content-Type` header (for things such as `.well-known`
         // that are commonly handled by something else than a homeserver).
-        let mut header_kvs = if self.raw_body_field().is_some() || self.has_body_fields() {
+        let mut header_kvs = if self.has_body_fields() {
             quote! {
                 req_headers.insert(
                     #http::header::CONTENT_TYPE,
-                    #http::header::HeaderValue::from_static("application/json"),
+                    #ruma_common::http_headers::APPLICATION_JSON,
+                );
+            }
+        } else if self.raw_body_field().is_some() {
+            quote! {
+                req_headers.insert(
+                    #http::header::CONTENT_TYPE,
+                    #ruma_common::http_headers::APPLICATION_OCTET_STREAM,
                 );
             }
         } else {
@@ -80,9 +87,14 @@ impl Request {
             }
         }));
 
-        header_kvs.extend(quote! {
-            req_headers.extend(METADATA.authorization_header(access_token)?);
-        });
+        if !header_kvs.is_empty() {
+            header_kvs = quote! {
+                {
+                    let req_headers = http_request.headers_mut();
+                    #header_kvs
+                }
+            };
+        }
 
         let request_body = if let Some(field) = self.raw_body_field() {
             let field_name = field.ident.as_ref().expect("expected field to have an identifier");
@@ -94,7 +106,7 @@ impl Request {
                 #ruma_common::serde::json_to_buf(&RequestBody { #initializers })?
             }
         } else {
-            quote! { METADATA.empty_request_body::<T>() }
+            quote! { <Self as #ruma_common::api::Metadata>::empty_request_body::<T>() }
         };
 
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
@@ -106,28 +118,29 @@ impl Request {
                 type EndpointError = #error_ty;
                 type IncomingResponse = Response;
 
-                const METADATA: #ruma_common::api::Metadata = METADATA;
-
-                fn try_into_http_request<T: ::std::default::Default + #bytes::BufMut>(
+                fn try_into_http_request<T: ::std::default::Default + #bytes::BufMut + ::std::convert::AsRef<[::std::primitive::u8]>>(
                     self,
                     base_url: &::std::primitive::str,
-                    access_token: #ruma_common::api::SendAccessToken<'_>,
-                    considering: &'_ #ruma_common::api::SupportedVersions,
+                    authentication_input: <<Self as #ruma_common::api::Metadata>::Authentication as #ruma_common::api::auth_scheme::AuthScheme>::Input<'_>,
+                    path_builder_input: <<Self as #ruma_common::api::Metadata>::PathBuilder as #ruma_common::api::path_builder::PathBuilder>::Input<'_>,
                 ) -> ::std::result::Result<#http::Request<T>, #ruma_common::api::error::IntoHttpError> {
-                    let mut req_builder = #http::Request::builder()
-                        .method(METADATA.method)
-                        .uri(METADATA.make_endpoint_url(
-                            considering,
+                    let mut http_request = #http::Request::builder()
+                        .method(<Self as #ruma_common::api::Metadata>::METHOD)
+                        .uri(<Self as #ruma_common::api::Metadata>::make_endpoint_url(
+                            path_builder_input,
                             base_url,
                             &[ #( &self.#path_fields ),* ],
                             #request_query_string,
-                        )?);
+                        )?)
+                        .body(#request_body)?;
 
-                    if let Some(mut req_headers) = req_builder.headers_mut() {
-                        #header_kvs
-                    }
+                    #header_kvs
 
-                    let http_request = req_builder.body(#request_body)?;
+                    <<Self as #ruma_common::api::Metadata>::Authentication as #ruma_common::api::auth_scheme::AuthScheme>::add_authentication(
+                        &mut http_request,
+                        authentication_input
+                    )
+                        .map_err(|error| #ruma_common::api::error::IntoHttpError::Authentication(error.into()))?;
 
                     Ok(http_request)
                 }

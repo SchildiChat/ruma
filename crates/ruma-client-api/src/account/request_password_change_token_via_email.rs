@@ -9,21 +9,21 @@ pub mod v3 {
 
     use js_int::UInt;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata, OwnedClientSecret, OwnedSessionId,
     };
 
     use crate::account::IdentityServerInfo;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             1.0 => "/_matrix/client/r0/account/password/email/requestToken",
             1.1 => "/_matrix/client/v3/account/password/email/requestToken",
         }
-    };
+    }
 
     /// Request type for the `request_password_change_token_via_email` endpoint.
     #[request(error = crate::Error)]

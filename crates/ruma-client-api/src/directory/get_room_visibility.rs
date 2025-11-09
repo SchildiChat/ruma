@@ -8,21 +8,21 @@ pub mod v3 {
     //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3directorylistroomroomid
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata, OwnedRoomId,
     };
 
     use crate::room::Visibility;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             1.0 => "/_matrix/client/r0/directory/list/room/{room_id}",
             1.1 => "/_matrix/client/v3/directory/list/room/{room_id}",
         }
-    };
+    }
 
     /// Request type for the `get_room_visibility` endpoint.
     #[request(error = crate::Error)]

@@ -9,19 +9,19 @@ pub mod v1 {
 
     use js_int::UInt;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{request, response},
         metadata, MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId, OwnedServerName,
     };
     use serde_json::value::RawValue as RawJsonValue;
 
-    const METADATA: Metadata = metadata! {
+    use crate::authentication::ServerSignatures;
+
+    metadata! {
         method: GET,
         rate_limited: false,
         authentication: ServerSignatures,
-        history: {
-            1.0 => "/_matrix/federation/v1/backfill/{room_id}",
-        }
-    };
+        path: "/_matrix/federation/v1/backfill/{room_id}",
+    }
 
     /// Request type for the `get_backfill` endpoint.
     #[request]

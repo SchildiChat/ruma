@@ -3,14 +3,17 @@
 #![allow(clippy::exhaustive_structs)]
 #![allow(dead_code)]
 
+use std::borrow::Cow;
+
 use bytes::BufMut;
 use http::{header::CONTENT_TYPE, method::Method};
 use ruma_common::{
     api::{
+        auth_scheme::{NoAuthentication, SendAccessToken},
         error::{FromHttpRequestError, FromHttpResponseError, IntoHttpError, MatrixError},
-        AuthScheme, EndpointError, IncomingRequest, IncomingResponse, MatrixVersion, Metadata,
-        OutgoingRequest, OutgoingResponse, SendAccessToken, StablePathSelector, SupportedVersions,
-        VersionHistory,
+        path_builder::{StablePathSelector, VersionHistory},
+        EndpointError, IncomingRequest, IncomingResponse, MatrixVersion, Metadata, OutgoingRequest,
+        OutgoingResponse, SupportedVersions,
     },
     OwnedRoomAliasId, OwnedRoomId,
 };
@@ -23,11 +26,12 @@ pub struct Request {
     pub room_alias: OwnedRoomAliasId, // path
 }
 
-const METADATA: Metadata = Metadata {
-    method: Method::PUT,
-    rate_limited: false,
-    authentication: AuthScheme::None,
-    history: VersionHistory::new(
+impl Metadata for Request {
+    const METHOD: Method = Method::PUT;
+    const RATE_LIMITED: bool = false;
+    type Authentication = NoAuthentication;
+    type PathBuilder = VersionHistory;
+    const PATH_BUILDER: VersionHistory = VersionHistory::new(
         &[
             (None, "/_matrix/client/unstable/directory/room/{room_alias}"),
             (
@@ -50,27 +54,25 @@ const METADATA: Metadata = Metadata {
         ],
         Some(MatrixVersion::V1_2),
         Some(MatrixVersion::V1_3),
-    ),
-};
+    );
+}
 
 impl OutgoingRequest for Request {
     type EndpointError = MatrixError;
     type IncomingResponse = Response;
 
-    const METADATA: Metadata = METADATA;
-
     fn try_into_http_request<T: Default + BufMut>(
         self,
         base_url: &str,
         _access_token: SendAccessToken<'_>,
-        considering: &'_ SupportedVersions,
+        considering: Cow<'_, SupportedVersions>,
     ) -> Result<http::Request<T>, IntoHttpError> {
-        let url = METADATA.make_endpoint_url(considering, base_url, &[&self.room_alias], "")?;
+        let url = Self::make_endpoint_url(considering, base_url, &[&self.room_alias], "")?;
 
         let request_body = RequestBody { room_id: self.room_id };
 
         let http_request = http::Request::builder()
-            .method(METADATA.method)
+            .method(Self::METHOD)
             .uri(url)
             .body(ruma_common::serde::json_to_buf(&request_body)?)
             // this cannot fail because we don't give user-supplied data to any of the
@@ -85,8 +87,6 @@ impl IncomingRequest for Request {
     type EndpointError = MatrixError;
     type OutgoingResponse = Response;
 
-    const METADATA: Metadata = METADATA;
-
     fn try_from_http_request<B, S>(
         request: http::Request<B>,
         path_args: &[S],
@@ -95,6 +95,8 @@ impl IncomingRequest for Request {
         B: AsRef<[u8]>,
         S: AsRef<str>,
     {
+        Self::check_request_method(request.method())?;
+
         let (room_alias,) = Deserialize::deserialize(serde::de::value::SeqDeserializer::<
             _,
             serde::de::value::Error,
@@ -136,7 +138,7 @@ impl OutgoingResponse for Response {
         self,
     ) -> Result<http::Response<T>, IntoHttpError> {
         let response = http::Response::builder()
-            .header(CONTENT_TYPE, "application/json")
+            .header(CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
             .body(ruma_common::serde::slice_to_buf(b"{}"))
             .unwrap();
 

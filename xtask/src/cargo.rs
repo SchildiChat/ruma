@@ -34,7 +34,6 @@ pub struct Package {
     pub dependencies: Vec<Dependency>,
 
     /// A map of the package features.
-    #[serde(default)]
     pub features: HashMap<String, Vec<String>>,
 }
 
@@ -70,6 +69,42 @@ impl Package {
         }
 
         false
+    }
+
+    /// The list of features matching the given filter.
+    pub fn filtered_features(&self, filter: FeatureFilter) -> Vec<&str> {
+        if filter == FeatureFilter::Default {
+            return self
+                .features
+                .get("default")
+                .into_iter()
+                .flatten()
+                .map(String::as_str)
+                .collect();
+        }
+
+        self.features
+            .keys()
+            .filter(move |feature| {
+                // We always filter out private features.
+                if FeatureFilter::is_private(feature) {
+                    return false;
+                }
+
+                match filter {
+                    FeatureFilter::Default => unreachable!(),
+                    FeatureFilter::Stable => {
+                        !FeatureFilter::is_unstable(feature) && !FeatureFilter::is_compat(feature)
+                    }
+                    FeatureFilter::Unstable => FeatureFilter::is_unstable(feature),
+                    FeatureFilter::UnstableAndCompat => {
+                        FeatureFilter::is_unstable(feature) || FeatureFilter::is_compat(feature)
+                    }
+                    FeatureFilter::All => true,
+                }
+            })
+            .map(String::as_str)
+            .collect()
     }
 }
 
@@ -244,6 +279,42 @@ impl Package {
         }
 
         Ok(())
+    }
+}
+
+/// The package features to filter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeatureFilter {
+    /// Only the default features.
+    Default,
+
+    /// Only the stable features.
+    Stable,
+
+    /// Only the unstable features.
+    Unstable,
+
+    /// Only the unstable and compat features.
+    UnstableAndCompat,
+
+    /// All the public features.
+    All,
+}
+
+impl FeatureFilter {
+    /// Whether the given feature is an unstable feature.
+    fn is_unstable(feature: &str) -> bool {
+        feature.starts_with("unstable-")
+    }
+
+    /// Whether the given feature is an unstable feature.
+    fn is_compat(feature: &str) -> bool {
+        feature.starts_with("compat-")
+    }
+
+    /// Whether the given features is a private feature.
+    fn is_private(feature: &str) -> bool {
+        feature.starts_with("_")
     }
 }
 

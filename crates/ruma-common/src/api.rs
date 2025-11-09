@@ -14,20 +14,19 @@
 
 use std::{convert::TryInto as _, error::Error as StdError};
 
-use as_variant::as_variant;
 use bytes::BufMut;
 /// Generates [`OutgoingRequest`] and [`IncomingRequest`] implementations.
 ///
-/// The `OutgoingRequest` impl is on the `Request` type this attribute is used on. It is
-/// feature-gated behind `cfg(feature = "client")`.
+/// The `OutgoingRequest` impl is feature-gated behind `cfg(feature = "client")`.
+/// The `IncomingRequest` impl is feature-gated behind `cfg(feature = "server")`.
 ///
-/// The `IncomingRequest` impl is on `IncomingRequest`, which is either a type alias to
-/// `Request` or a fully-owned version of the same, depending of whether `Request` has any
-/// lifetime parameters. It is feature-gated behind `cfg(feature = "server")`.
+/// The generated code expects the `Request` type to implement [`Metadata`], alongside a
+/// `Response` type that implements [`OutgoingResponse`] (for `cfg(feature = "server")`) and /
+/// or [`IncomingResponse`] (for `cfg(feature = "client")`).
 ///
-/// The generated code expects a `METADATA` constant of type [`Metadata`] to be in scope,
-/// alongside a `Response` type that implements [`OutgoingResponse`] (for
-/// `cfg(feature = "server")`) and / or [`IncomingResponse`] (for `cfg(feature = "client")`).
+/// The `Content-Type` header of the `OutgoingRequest` is unset for endpoints using the `GET`
+/// method, and defaults to `application/json` for all other methods, except if the `raw_body`
+/// attribute is set on a field, in which case it defaults to `application/octet-stream`.
 ///
 /// By default, the type this macro is used on gets a `#[non_exhaustive]` attribute. This
 /// behavior can be controlled by setting the `ruma_unstable_exhaustive_types` compile-time
@@ -35,7 +34,13 @@ use bytes::BufMut;
 /// `.cargo/config.toml` (under `[build]` -> `rustflags = ["..."]`). When that setting is
 /// activated, the attribute is not applied so the type is exhaustive.
 ///
-/// ## Attributes
+/// ## Container Attributes
+///
+/// * `#[request(error = ERROR_TYPE)]`: Override the `EndpointError` associated type of the
+///   `OutgoingRequest` and `IncomingRequest` implementations. The default error type is
+///   [`MatrixError`](error::MatrixError).
+///
+/// ## Field Attributes
 ///
 /// To declare which part of the request a field belongs to:
 ///
@@ -71,20 +76,17 @@ use bytes::BufMut;
 /// ```
 /// pub mod do_a_thing {
 ///     use ruma_common::{api::request, OwnedRoomId};
-///     # use ruma_common::{
-///     #     api::{response, Metadata},
-///     #     metadata,
-///     # };
+///     # use ruma_common::{api::{auth_scheme::NoAuthentication, response}, metadata};
 ///
-///     // const METADATA: Metadata = metadata! { ... };
-///     # const METADATA: Metadata = metadata! {
+///     // metadata! { ... };
+///     # metadata! {
 ///     #     method: POST,
 ///     #     rate_limited: false,
-///     #     authentication: None,
+///     #     authentication: NoAuthentication,
 ///     #     history: {
 ///     #         unstable => "/_matrix/some/endpoint/{room_id}",
 ///     #     },
-///     # };
+///     # }
 ///
 ///     #[request]
 ///     pub struct Request {
@@ -107,20 +109,17 @@ use bytes::BufMut;
 /// pub mod upload_file {
 ///     use http::header::CONTENT_TYPE;
 ///     use ruma_common::api::request;
-///     # use ruma_common::{
-///     #     api::{response, Metadata},
-///     #     metadata,
-///     # };
+///     # use ruma_common::{api::{auth_scheme::NoAuthentication, response}, metadata};
 ///
-///     // const METADATA: Metadata = metadata! { ... };
-///     # const METADATA: Metadata = metadata! {
+///     // metadata! { ... };
+///     # metadata! {
 ///     #     method: POST,
 ///     #     rate_limited: false,
-///     #     authentication: None,
+///     #     authentication: NoAuthentication,
 ///     #     history: {
 ///     #         unstable => "/_matrix/some/endpoint/{file_name}",
 ///     #     },
-///     # };
+///     # }
 ///
 ///     #[request]
 ///     pub struct Request {
@@ -148,7 +147,9 @@ pub use ruma_macros::request;
 /// The `OutgoingResponse` impl is feature-gated behind `cfg(feature = "server")`.
 /// The `IncomingResponse` impl is feature-gated behind `cfg(feature = "client")`.
 ///
-/// The generated code expects a `METADATA` constant of type [`Metadata`] to be in scope.
+/// The `Content-Type` header of the `OutgoingResponse` defaults to `application/json`, except
+/// if the `raw_body` attribute is set on a field, in which case it defaults to
+/// `application/octet-stream`.
 ///
 /// By default, the type this macro is used on gets a `#[non_exhaustive]` attribute. This
 /// behavior can be controlled by setting the `ruma_unstable_exhaustive_types` compile-time
@@ -156,20 +157,25 @@ pub use ruma_macros::request;
 /// `.cargo/config.toml` (under `[build]` -> `rustflags = ["..."]`). When that setting is
 /// activated, the attribute is not applied so the type is exhaustive.
 ///
-/// The status code of `OutgoingResponse` can be optionally overridden by adding the `status`
-/// attribute to `response`. The attribute value must be a status code constant from
-/// `http::StatusCode`, e.g. `IM_A_TEAPOT`.
+/// ## Container Attributes
 ///
-/// ## Attributes
+/// * `#[response(error = ERROR_TYPE)]`: Override the `EndpointError` associated type of the
+///   `IncomingResponse` implementation. The default error type is
+///   [`MatrixError`](error::MatrixError).
+/// * `#[response(status = HTTP_STATUS)]`: Override the status code of `OutgoingResponse`.
+///   `HTTP_STATUS` must be a status code constant from [`http::StatusCode`], e.g.
+///   `IM_A_TEAPOT`. The default status code is [`200 OK`](http::StatusCode::OK);
+///
+/// ## Field Attributes
 ///
 /// To declare which part of the response a field belongs to:
 ///
 /// * `#[ruma_api(header = HEADER_NAME)]`: Fields with this attribute will be treated as HTTP
-///   headers on the response. The value must implement `ToString` and `FromStr`. Generally
-///   this is a `String`. The attribute value shown above as `HEADER_NAME` must be a header
-///   name constant from `http::header`, e.g. `CONTENT_TYPE`. During deserialization of the
-///   response, if the field is an `Option` and parsing the header fails, the error will be
-///   ignored and the value will be `None`.
+///   headers on the response. `HEADER_NAME` must implement
+///   `TryInto<http::header::HeaderName>`, this is usually a constant from [`http::header`].
+///   The value of the field must implement `ToString` and `FromStr`, this is usually a
+///   `String`. During deserialization of the response, if the field is an `Option` and parsing
+///   the header fails, the error will be ignored and the value will be `None`.
 /// * No attribute: Fields without an attribute are part of the body. They can use `#[serde]`
 ///   attributes to customize (de)serialization.
 /// * `#[ruma_api(body)]`: Use this if multiple endpoints should share a response body type, or
@@ -185,20 +191,17 @@ pub use ruma_macros::request;
 /// ```
 /// pub mod do_a_thing {
 ///     use ruma_common::{api::response, OwnedRoomId};
-///     # use ruma_common::{
-///     #     api::{request, Metadata},
-///     #     metadata,
-///     # };
+///     # use ruma_common::{api::{auth_scheme::NoAuthentication, request}, metadata};
 ///
-///     // const METADATA: Metadata = metadata! { ... };
-///     # const METADATA: Metadata = metadata! {
+///     // metadata! { ... };
+///     # metadata! {
 ///     #     method: POST,
 ///     #     rate_limited: false,
-///     #     authentication: None,
+///     #     authentication: NoAuthentication,
 ///     #     history: {
 ///     #         unstable => "/_matrix/some/endpoint",
 ///     #     },
-///     # };
+///     # }
 ///
 ///     // #[request]
 ///     // pub struct Request { ... }
@@ -215,20 +218,17 @@ pub use ruma_macros::request;
 /// pub mod download_file {
 ///     use http::header::CONTENT_TYPE;
 ///     use ruma_common::api::response;
-///     # use ruma_common::{
-///     #     api::{request, Metadata},
-///     #     metadata,
-///     # };
+///     # use ruma_common::{api::{auth_scheme::NoAuthentication, request}, metadata};
 ///
-///     // const METADATA: Metadata = metadata! { ... };
-///     # const METADATA: Metadata = metadata! {
+///     // metadata! { ... };
+///     # metadata! {
 ///     #     method: POST,
 ///     #     rate_limited: false,
-///     #     authentication: None,
+///     #     authentication: NoAuthentication,
 ///     #     history: {
 ///     #         unstable => "/_matrix/some/endpoint",
 ///     #     },
-///     # };
+///     # }
 ///
 ///     // #[request]
 ///     // pub struct Request { ... }
@@ -251,108 +251,40 @@ use serde::{Deserialize, Serialize};
 use self::error::{FromHttpRequestError, FromHttpResponseError, IntoHttpError};
 #[doc(inline)]
 pub use crate::metadata;
-use crate::UserId;
+use crate::{DeviceId, UserId};
 
+pub mod auth_scheme;
 pub mod error;
 mod metadata;
+pub mod path_builder;
 
-pub use self::metadata::{
-    FeatureFlag, MatrixVersion, Metadata, StablePathSelector, SupportedVersions, VersionHistory,
-    VersioningDecision,
-};
-
-/// An enum to control whether an access token should be added to outgoing requests
-#[derive(Clone, Copy, Debug)]
-#[allow(clippy::exhaustive_enums)]
-pub enum SendAccessToken<'a> {
-    /// Add the given access token to the request only if the `METADATA` on the request requires
-    /// it.
-    IfRequired(&'a str),
-
-    /// Always add the access token.
-    Always(&'a str),
-
-    /// Add the given appservice token to the request only if the `METADATA` on the request
-    /// requires it.
-    Appservice(&'a str),
-
-    /// Don't add an access token.
-    ///
-    /// This will lead to an error if the request endpoint requires authentication
-    None,
-}
-
-impl<'a> SendAccessToken<'a> {
-    /// Get the access token for an endpoint that requires one.
-    ///
-    /// Returns `Some(_)` if `self` contains an access token.
-    pub fn get_required_for_endpoint(self) -> Option<&'a str> {
-        as_variant!(self, Self::IfRequired | Self::Appservice | Self::Always)
-    }
-
-    /// Get the access token for an endpoint that should not require one.
-    ///
-    /// Returns `Some(_)` only if `self` is `SendAccessToken::Always(_)`.
-    pub fn get_not_required_for_endpoint(self) -> Option<&'a str> {
-        as_variant!(self, Self::Always)
-    }
-
-    /// Gets the access token for an endpoint that requires one for appservices.
-    ///
-    /// Returns `Some(_)` if `self` is either `SendAccessToken::Appservice(_)`
-    /// or `SendAccessToken::Always(_)`
-    pub fn get_required_for_appservice(self) -> Option<&'a str> {
-        as_variant!(self, Self::Appservice | Self::Always)
-    }
-}
+pub use self::metadata::{FeatureFlag, MatrixVersion, Metadata, SupportedVersions};
 
 /// A request type for a Matrix API endpoint, used for sending requests.
-pub trait OutgoingRequest: Sized + Clone {
+pub trait OutgoingRequest: Metadata + Clone {
     /// A type capturing the expected error conditions the server can return.
     type EndpointError: EndpointError;
 
     /// Response type returned when the request is successful.
     type IncomingResponse: IncomingResponse<EndpointError = Self::EndpointError>;
 
-    /// Metadata about the endpoint.
-    const METADATA: Metadata;
-
     /// Tries to convert this request into an `http::Request`.
     ///
     /// On endpoints with authentication, when adequate information isn't provided through
-    /// access_token, this could result in an error. It may also fail with a serialization error
-    /// in case of bugs in Ruma though.
+    /// `authentication_input`, this could result in an error. It may also fail with a serialization
+    /// error in case of bugs in Ruma though.
     ///
-    /// It may also fail if, for every version in `considering`;
-    /// - The endpoint is too old, and has been removed in all versions.
-    ///   ([`EndpointRemoved`](error::IntoHttpError::EndpointRemoved))
-    /// - The endpoint is too new, and no unstable path is known for this endpoint.
-    ///   ([`NoUnstablePath`](error::IntoHttpError::NoUnstablePath))
-    ///
-    /// Finally, this will emit a warning through [`tracing`] if it detects that any version in
-    /// `considering` has deprecated this endpoint.
+    /// It may also fail if the `PathData::make_endpoint_url()` implementation returns an error.
     ///
     /// The endpoints path will be appended to the given `base_url`, for example
     /// `https://matrix.org`. Since all paths begin with a slash, it is not necessary for the
     /// `base_url` to have a trailing slash. If it has one however, it will be ignored.
-    fn try_into_http_request<T: Default + BufMut>(
+    fn try_into_http_request<T: Default + BufMut + AsRef<[u8]>>(
         self,
         base_url: &str,
-        access_token: SendAccessToken<'_>,
-        considering: &'_ SupportedVersions,
+        authentication_input: <Self::Authentication as auth_scheme::AuthScheme>::Input<'_>,
+        path_builder_input: <Self::PathBuilder as path_builder::PathBuilder>::Input<'_>,
     ) -> Result<http::Request<T>, IntoHttpError>;
-
-    /// Whether the homeserver advertises support for this endpoint.
-    ///
-    /// Returns `true` if any version or feature in the given [`SupportedVersions`] matches a path
-    /// in the history of this endpoint, unless the endpoint was removed.
-    ///
-    /// Note that this is likely to return false negatives, since some endpoints don't specify a
-    /// stable or unstable feature, and homeservers should not advertise support for a Matrix
-    /// version unless they support all of its features.
-    fn is_supported(considering_versions: &SupportedVersions) -> bool {
-        Self::METADATA.history.is_supported(considering_versions)
-    }
 }
 
 /// A response type for a Matrix API endpoint, used for receiving responses.
@@ -367,53 +299,79 @@ pub trait IncomingResponse: Sized {
 }
 
 /// An extension to [`OutgoingRequest`] which provides Appservice specific methods.
-pub trait OutgoingRequestAppserviceExt: OutgoingRequest {
-    /// Tries to convert this request into an `http::Request` and appends a virtual `user_id` to
-    /// [assert Appservice identity][id_assert].
-    ///
-    /// [id_assert]: https://spec.matrix.org/latest/application-service-api/#identity-assertion
-    fn try_into_http_request_with_user_id<T: Default + BufMut>(
+///
+/// This is only implemented for implementors of [`AuthScheme`](auth_scheme::AuthScheme) that use a
+/// [`SendAccessToken`](auth_scheme::SendAccessToken), because application services should only use
+/// these methods with the Client-Server API.
+pub trait OutgoingRequestAppserviceExt: OutgoingRequest
+where
+    for<'a> Self::Authentication:
+        auth_scheme::AuthScheme<Input<'a> = auth_scheme::SendAccessToken<'a>>,
+{
+    /// Tries to convert this request into an `http::Request` and adds the given
+    /// [`AppserviceUserIdentity`] to it, if the identity is not empty.
+    fn try_into_http_request_with_identity<T: Default + BufMut + AsRef<[u8]>>(
         self,
         base_url: &str,
-        access_token: SendAccessToken<'_>,
-        user_id: &UserId,
-        considering: &'_ SupportedVersions,
+        access_token: auth_scheme::SendAccessToken<'_>,
+        identity: AppserviceUserIdentity<'_>,
+        path_builder_input: <Self::PathBuilder as path_builder::PathBuilder>::Input<'_>,
     ) -> Result<http::Request<T>, IntoHttpError> {
-        let mut http_request = self.try_into_http_request(base_url, access_token, considering)?;
-        let user_id_query = serde_html_form::to_string([("user_id", user_id)])?;
+        let mut http_request =
+            self.try_into_http_request(base_url, access_token, path_builder_input)?;
 
-        let uri = http_request.uri().to_owned();
-        let mut parts = uri.into_parts();
+        if !identity.is_empty() {
+            let identity_query = serde_html_form::to_string(identity)?;
 
-        let path_and_query_with_user_id = match &parts.path_and_query {
-            Some(path_and_query) => match path_and_query.query() {
-                Some(_) => format!("{path_and_query}&{user_id_query}"),
-                None => format!("{path_and_query}?{user_id_query}"),
-            },
-            None => format!("/?{user_id_query}"),
-        };
+            let uri = http_request.uri().to_owned();
+            let mut parts = uri.into_parts();
 
-        parts.path_and_query =
-            Some(path_and_query_with_user_id.try_into().map_err(http::Error::from)?);
+            let path_and_query_with_user_id = match &parts.path_and_query {
+                Some(path_and_query) => match path_and_query.query() {
+                    Some(_) => format!("{path_and_query}&{identity_query}"),
+                    None => format!("{path_and_query}?{identity_query}"),
+                },
+                None => format!("/?{identity_query}"),
+            };
 
-        *http_request.uri_mut() = parts.try_into().map_err(http::Error::from)?;
+            parts.path_and_query =
+                Some(path_and_query_with_user_id.try_into().map_err(http::Error::from)?);
+
+            *http_request.uri_mut() = parts.try_into().map_err(http::Error::from)?;
+        }
 
         Ok(http_request)
     }
 }
 
-impl<T: OutgoingRequest> OutgoingRequestAppserviceExt for T {}
+impl<T: OutgoingRequest> OutgoingRequestAppserviceExt for T where
+    for<'a> Self::Authentication:
+        auth_scheme::AuthScheme<Input<'a> = auth_scheme::SendAccessToken<'a>>
+{
+}
 
 /// A request type for a Matrix API endpoint, used for receiving requests.
-pub trait IncomingRequest: Sized {
+pub trait IncomingRequest: Metadata {
     /// A type capturing the error conditions that can be returned in the response.
     type EndpointError: EndpointError;
 
     /// Response type to return when the request is successful.
     type OutgoingResponse: OutgoingResponse;
 
-    /// Metadata about the endpoint.
-    const METADATA: Metadata;
+    /// Check whether the given HTTP method from an incoming request is compatible with the expected
+    /// [`METHOD`](Metadata::METHOD) of this endpoint.
+    fn check_request_method(method: &http::Method) -> Result<(), FromHttpRequestError> {
+        if !(method == Self::METHOD
+            || (Self::METHOD == http::Method::GET && method == http::Method::HEAD))
+        {
+            return Err(FromHttpRequestError::MethodMismatch {
+                expected: Self::METHOD,
+                received: method.clone(),
+            });
+        }
+
+        Ok(())
+    }
 
     /// Tries to turn the given `http::Request` into this request type,
     /// together with the corresponding path arguments.
@@ -448,44 +406,6 @@ pub trait EndpointError: OutgoingResponse + StdError + Sized + Send + 'static {
     fn from_http_response<T: AsRef<[u8]>>(response: http::Response<T>) -> Self;
 }
 
-/// Authentication scheme used by the endpoint.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[allow(clippy::exhaustive_enums)]
-pub enum AuthScheme {
-    /// No authentication is performed.
-    None,
-
-    /// Authentication is performed by including an access token in the `Authentication` http
-    /// header, or an `access_token` query parameter.
-    ///
-    /// Using the query parameter is deprecated since Matrix 1.11.
-    AccessToken,
-
-    /// Authentication is optional, and it is performed by including an access token in the
-    /// `Authentication` http header, or an `access_token` query parameter.
-    ///
-    /// Using the query parameter is deprecated since Matrix 1.11.
-    AccessTokenOptional,
-
-    /// Authentication is required, and can only be performed for appservices, by including an
-    /// appservice access token in the `Authentication` http header, or `access_token` query
-    /// parameter.
-    ///
-    /// Using the query parameter is deprecated since Matrix 1.11.
-    AppserviceToken,
-
-    /// No authentication is performed for clients, but it can be performed for appservices, by
-    /// including an appservice access token in the `Authentication` http header, or an
-    /// `access_token` query parameter.
-    ///
-    /// Using the query parameter is deprecated since Matrix 1.11.
-    AppserviceTokenOptional,
-
-    /// Authentication is performed by including X-Matrix signatures in the request headers,
-    /// as defined in the federation API.
-    ServerSignatures,
-}
-
 /// The direction to return events from.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[allow(clippy::exhaustive_enums)]
@@ -498,4 +418,34 @@ pub enum Direction {
     /// Return events forwards in time from the requested `from` token.
     #[serde(rename = "f")]
     Forward,
+}
+
+/// Data to [assert the identity] of an appservice virtual user.
+///
+/// [assert the identity]: https://spec.matrix.org/latest/application-service-api/#identity-assertion
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+#[non_exhaustive]
+pub struct AppserviceUserIdentity<'a> {
+    /// The ID of the virtual user.
+    ///
+    /// If this is not set, the user implied by the `sender_localpart` property of the registration
+    /// will be used by the server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<&'a UserId>,
+
+    /// The ID of a specific device belonging to the virtual user.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_id: Option<&'a DeviceId>,
+}
+
+impl<'a> AppserviceUserIdentity<'a> {
+    /// Construct a new `AppserviceUserIdentity` with the given user ID.
+    pub fn new(user_id: &'a UserId) -> Self {
+        Self { user_id: Some(user_id), device_id: None }
+    }
+
+    /// Whether this identity is empty.
+    fn is_empty(&self) -> bool {
+        self.user_id.is_none() && self.device_id.is_none()
+    }
 }

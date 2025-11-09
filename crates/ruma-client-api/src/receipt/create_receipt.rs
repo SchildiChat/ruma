@@ -8,16 +8,16 @@ pub mod v3 {
     //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3roomsroomidreceiptreceipttypeeventid
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
-        serde::{OrdAsRefStr, PartialEqAsRefStr, PartialOrdAsRefStr, StringEnum},
+        serde::StringEnum,
         OwnedEventId, OwnedRoomId,
     };
     use ruma_events::receipt::ReceiptThread;
 
     use crate::PrivOwnedStr;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
         authentication: AccessToken,
@@ -25,7 +25,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/rooms/{room_id}/receipt/{receipt_type}/{event_id}",
             1.1 => "/_matrix/client/v3/rooms/{room_id}/receipt/{receipt_type}/{event_id}",
         }
-    };
+    }
 
     /// Request type for the `create_receipt` endpoint.
     #[request(error = crate::Error)]
@@ -81,7 +81,7 @@ pub mod v3 {
 
     /// The type of receipt.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, PartialOrdAsRefStr, OrdAsRefStr, PartialEqAsRefStr, Eq, StringEnum)]
+    #[derive(Clone, StringEnum)]
     #[non_exhaustive]
     pub enum ReceiptType {
         /// A [public read receipt].

@@ -8,21 +8,19 @@ pub mod v2 {
     //! [spec]: https://spec.matrix.org/latest/server-server-api/#get_matrixkeyv2server
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
         serde::Raw,
     };
 
     use crate::discovery::ServerSigningKeys;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
-        history: {
-            1.0 => "/_matrix/key/v2/server",
-        }
-    };
+        authentication: NoAuthentication,
+        path: "/_matrix/key/v2/server",
+    }
 
     /// Request type for the `get_server_keys` endpoint.
     #[request]

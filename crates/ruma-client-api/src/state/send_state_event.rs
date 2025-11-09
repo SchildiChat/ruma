@@ -10,7 +10,7 @@ pub mod v3 {
     use std::borrow::Borrow;
 
     use ruma_common::{
-        api::{response, Metadata},
+        api::{auth_scheme::AccessToken, response, Metadata},
         metadata,
         serde::Raw,
         MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedRoomId,
@@ -18,7 +18,7 @@ pub mod v3 {
     use ruma_events::{AnyStateEventContent, StateEventContent, StateEventType};
     use serde_json::value::to_raw_value as to_raw_json_value;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: false,
         authentication: AccessToken,
@@ -26,7 +26,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/rooms/{room_id}/state/{event_type}/{state_key}",
             1.1 => "/_matrix/client/v3/rooms/{room_id}/state/{event_type}/{state_key}",
         }
-    };
+    }
 
     /// Request type for the `send_state_event` endpoint.
     #[derive(Clone, Debug)]
@@ -111,38 +111,31 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            use http::header::{self, HeaderValue};
+            use ruma_common::api::auth_scheme::AuthScheme;
 
             let query_string =
                 serde_html_form::to_string(RequestQuery { timestamp: self.timestamp })?;
 
-            let http_request = http::Request::builder()
-                .method(http::Method::PUT)
-                .uri(METADATA.make_endpoint_url(
+            let mut http_request = http::Request::builder()
+                .method(Self::METHOD)
+                .uri(Self::make_endpoint_url(
                     considering,
                     base_url,
                     &[&self.room_id, &self.event_type, &self.state_key],
                     &query_string,
                 )?)
-                .header(header::CONTENT_TYPE, "application/json")
-                .header(
-                    header::AUTHORIZATION,
-                    HeaderValue::from_str(&format!(
-                        "Bearer {}",
-                        access_token
-                            .get_required_for_endpoint()
-                            .ok_or(ruma_common::api::error::IntoHttpError::NeedsAuthentication)?
-                    ))?,
-                )
+                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .body(ruma_common::serde::json_to_buf(&self.body)?)?;
+
+            Self::Authentication::add_authentication(&mut http_request, access_token).map_err(
+                |error| ruma_common::api::error::IntoHttpError::Authentication(error.into()),
+            )?;
 
             Ok(http_request)
         }
@@ -153,8 +146,6 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
             path_args: &[S],
@@ -163,6 +154,8 @@ pub mod v3 {
             B: AsRef<[u8]>,
             S: AsRef<str>,
         {
+            Self::check_request_method(request.method())?;
+
             // FIXME: find a way to make this if-else collapse with serde recognizing trailing
             // Option
             let (room_id, event_type, state_key): (OwnedRoomId, StateEventType, String) =
@@ -207,8 +200,13 @@ pub mod v3 {
     #[cfg(feature = "client")]
     #[test]
     fn serialize() {
+        use std::borrow::Cow;
+
         use ruma_common::{
-            api::{MatrixVersion, OutgoingRequest as _, SendAccessToken, SupportedVersions},
+            api::{
+                auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest as _,
+                SupportedVersions,
+            },
             owned_room_id,
         };
         use ruma_events::{room::name::RoomNameEventContent, EmptyStateKey};
@@ -228,7 +226,7 @@ pub mod v3 {
         .try_into_http_request::<Vec<u8>>(
             "https://server.tld",
             SendAccessToken::IfRequired("access_token"),
-            &supported,
+            Cow::Owned(supported),
         )
         .unwrap();
 

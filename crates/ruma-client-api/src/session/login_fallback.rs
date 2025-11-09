@@ -5,18 +5,16 @@
 //! [spec]: https://spec.matrix.org/latest/client-server-api/#login-fallback
 
 use ruma_common::{
-    api::{request, Metadata},
+    api::{auth_scheme::NoAuthentication, request},
     metadata, OwnedDeviceId,
 };
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: GET,
     rate_limited: false,
-    authentication: None,
-    history: {
-        1.0 => "/_matrix/static/client/login/",
-    }
-};
+    authentication: NoAuthentication,
+    path: "/_matrix/static/client/login/",
+}
 
 /// Request type for the `login_fallback` endpoint.
 #[request(error = crate::Error)]

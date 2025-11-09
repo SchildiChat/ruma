@@ -5,24 +5,32 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://github.com/matrix-org/matrix-spec-proposals/pull/4133
+    //! Although this endpoint has a similar format to [`set_avatar_url`] and [`set_display_name`],
+    //! it will only work with homeservers advertising support for the proper unstable feature or
+    //! a version compatible with Matrix 1.16.
+    //!
+    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3profileuseridkeyname
+    //! [`set_avatar_url`]: crate::profile::set_avatar_url
+    //! [`set_display_name`]: crate::profile::set_display_name
 
     use ruma_common::{
-        api::{response, Metadata},
+        api::{auth_scheme::AccessToken, response, Metadata},
         metadata, OwnedUserId,
     };
 
     use crate::profile::{profile_field_serde::ProfileFieldValueVisitor, ProfileFieldValue};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: PUT,
         rate_limited: true,
         authentication: AccessToken,
+        // History valid for fields that existed in Matrix 1.0, i.e. `displayname` and `avatar_url`.
         history: {
             unstable("uk.tcpip.msc4133") => "/_matrix/client/unstable/uk.tcpip.msc4133/profile/{user_id}/{field}",
-            // 1.15 => "/_matrix/client/v3/profile/{user_id}/{field}",
+            1.0 => "/_matrix/client/r0/profile/{user_id}/{field}",
+            1.1 => "/_matrix/client/v3/profile/{user_id}/{field}",
         }
-    };
+    }
 
     /// Request type for the `set_profile_field` endpoint.
     #[derive(Debug, Clone)]
@@ -47,28 +55,36 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            _access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            let url = METADATA.make_endpoint_url(
-                considering,
-                base_url,
-                &[&self.user_id, &self.value.field_name()],
-                "",
-            )?;
+            use ruma_common::api::{auth_scheme::AuthScheme, path_builder::PathBuilder};
 
-            let http_request = http::Request::builder()
-                .method(METADATA.method)
+            let field = self.value.field_name();
+
+            let url = if field.existed_before_extended_profiles() {
+                Self::make_endpoint_url(considering, base_url, &[&self.user_id, &field], "")?
+            } else {
+                crate::profile::EXTENDED_PROFILE_FIELD_HISTORY.make_endpoint_url(
+                    considering,
+                    base_url,
+                    &[&self.user_id, &field],
+                    "",
+                )?
+            };
+
+            let mut http_request = http::Request::builder()
+                .method(Self::METHOD)
                 .uri(url)
-                .body(ruma_common::serde::json_to_buf(&self.value)?)
-                // this cannot fail because we don't give user-supplied data to any of the
-                // builder methods
-                .unwrap();
+                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
+                .body(ruma_common::serde::json_to_buf(&self.value)?)?;
+
+            Self::Authentication::add_authentication(&mut http_request, access_token).map_err(
+                |error| ruma_common::api::error::IntoHttpError::Authentication(error.into()),
+            )?;
 
             Ok(http_request)
         }
@@ -78,8 +94,6 @@ pub mod v3 {
     impl ruma_common::api::IncomingRequest for Request {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
-
-        const METADATA: Metadata = METADATA;
 
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
@@ -92,6 +106,8 @@ pub mod v3 {
             use serde::de::{Deserializer, Error as _};
 
             use crate::profile::ProfileFieldName;
+
+            Self::check_request_method(request.method())?;
 
             let (user_id, field): (OwnedUserId, ProfileFieldName) =
                 serde::Deserialize::deserialize(serde::de::value::SeqDeserializer::<
@@ -136,30 +152,127 @@ mod tests {
     #[test]
     #[cfg(feature = "client")]
     fn serialize_request() {
-        use ruma_common::api::{OutgoingRequest, SendAccessToken, SupportedVersions};
+        use std::borrow::Cow;
 
-        let request = Request::new(
+        use http::header;
+        use ruma_common::api::{auth_scheme::SendAccessToken, OutgoingRequest, SupportedVersions};
+
+        // Profile field that existed in Matrix 1.0.
+        let avatar_url_request = Request::new(
             owned_user_id!("@alice:localhost"),
             ProfileFieldValue::AvatarUrl(owned_mxc_uri!("mxc://localhost/abcdef")),
         );
 
-        let http_request = request
+        // Matrix 1.11.
+        let http_request = avatar_url_request
+            .clone()
             .try_into_http_request::<Vec<u8>>(
                 "http://localhost/",
                 SendAccessToken::Always("access_token"),
-                &SupportedVersions::from_parts(&["v11".to_owned()], &Default::default()),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.11".to_owned()],
+                    &Default::default(),
+                )),
             )
             .unwrap();
-
         assert_eq!(
             http_request.uri().path(),
-            "/_matrix/client/unstable/uk.tcpip.msc4133/profile/@alice:localhost/avatar_url"
+            "/_matrix/client/v3/profile/@alice:localhost/avatar_url"
         );
         assert_eq!(
             from_json_slice::<JsonValue>(http_request.body().as_ref()).unwrap(),
             json!({
                 "avatar_url": "mxc://localhost/abcdef",
             })
+        );
+        assert_eq!(
+            http_request.headers().get(header::AUTHORIZATION).unwrap(),
+            "Bearer access_token"
+        );
+
+        // Matrix 1.16.
+        let http_request = avatar_url_request
+            .try_into_http_request::<Vec<u8>>(
+                "http://localhost/",
+                SendAccessToken::Always("access_token"),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.16".to_owned()],
+                    &Default::default(),
+                )),
+            )
+            .unwrap();
+        assert_eq!(
+            http_request.uri().path(),
+            "/_matrix/client/v3/profile/@alice:localhost/avatar_url"
+        );
+        assert_eq!(
+            from_json_slice::<JsonValue>(http_request.body().as_ref()).unwrap(),
+            json!({
+                "avatar_url": "mxc://localhost/abcdef",
+            })
+        );
+        assert_eq!(
+            http_request.headers().get(header::AUTHORIZATION).unwrap(),
+            "Bearer access_token"
+        );
+
+        // Profile field that didn't exist in Matrix 1.0.
+        let custom_field_request = Request::new(
+            owned_user_id!("@alice:localhost"),
+            ProfileFieldValue::new("dev.ruma.custom_field", json!(true)).unwrap(),
+        );
+
+        // Matrix 1.11.
+        let http_request = custom_field_request
+            .clone()
+            .try_into_http_request::<Vec<u8>>(
+                "http://localhost/",
+                SendAccessToken::Always("access_token"),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.11".to_owned()],
+                    &Default::default(),
+                )),
+            )
+            .unwrap();
+        assert_eq!(
+            http_request.uri().path(),
+            "/_matrix/client/unstable/uk.tcpip.msc4133/profile/@alice:localhost/dev.ruma.custom_field"
+        );
+        assert_eq!(
+            from_json_slice::<JsonValue>(http_request.body().as_ref()).unwrap(),
+            json!({
+                "dev.ruma.custom_field": true,
+            })
+        );
+        assert_eq!(
+            http_request.headers().get(header::AUTHORIZATION).unwrap(),
+            "Bearer access_token"
+        );
+
+        // Matrix 1.16.
+        let http_request = custom_field_request
+            .try_into_http_request::<Vec<u8>>(
+                "http://localhost/",
+                SendAccessToken::Always("access_token"),
+                Cow::Owned(SupportedVersions::from_parts(
+                    &["v1.16".to_owned()],
+                    &Default::default(),
+                )),
+            )
+            .unwrap();
+        assert_eq!(
+            http_request.uri().path(),
+            "/_matrix/client/v3/profile/@alice:localhost/dev.ruma.custom_field"
+        );
+        assert_eq!(
+            from_json_slice::<JsonValue>(http_request.body().as_ref()).unwrap(),
+            json!({
+                "dev.ruma.custom_field": true,
+            })
+        );
+        assert_eq!(
+            http_request.headers().get(header::AUTHORIZATION).unwrap(),
+            "Bearer access_token"
         );
     }
 
@@ -174,9 +287,14 @@ mod tests {
         .unwrap();
 
         let request = Request::try_from_http_request(
-            http::Request::put("http://localhost/_matrix/client/unstable/uk.tcpip.msc4133/profile/@alice:localhost/displayname").body(body).unwrap(),
+            http::Request::put(
+                "http://localhost/_matrix/client/v3/profile/@alice:localhost/displayname",
+            )
+            .body(body)
+            .unwrap(),
             &["@alice:localhost", "displayname"],
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(request.user_id, "@alice:localhost");
         assert_matches!(request.value, ProfileFieldValue::DisplayName(display_name));
@@ -194,8 +312,13 @@ mod tests {
         .unwrap();
 
         Request::try_from_http_request(
-            http::Request::put("http://localhost/_matrix/client/unstable/uk.tcpip.msc4133/profile/@alice:localhost/displayname").body(body).unwrap(),
+            http::Request::put(
+                "http://localhost/_matrix/client/v3/profile/@alice:localhost/displayname",
+            )
+            .body(body)
+            .unwrap(),
             &["@alice:localhost", "displayname"],
-        ).unwrap_err();
+        )
+        .unwrap_err();
     }
 }

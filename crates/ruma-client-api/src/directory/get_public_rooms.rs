@@ -9,20 +9,20 @@ pub mod v3 {
 
     use js_int::UInt;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         directory::PublicRoomsChunk,
         metadata, OwnedServerName,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
+        authentication: NoAuthentication,
         history: {
             1.0 => "/_matrix/client/r0/publicRooms",
             1.1 => "/_matrix/client/v3/publicRooms",
         }
-    };
+    }
 
     /// Request type for the `get_public_rooms` endpoint.
     #[request(error = crate::Error)]
@@ -86,8 +86,13 @@ pub mod v3 {
         #[cfg(feature = "client")]
         #[test]
         fn construct_request_from_refs() {
+            use std::borrow::Cow;
+
             use ruma_common::{
-                api::{MatrixVersion, OutgoingRequest as _, SendAccessToken, SupportedVersions},
+                api::{
+                    auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest as _,
+                    SupportedVersions,
+                },
                 server_name,
             };
 
@@ -104,7 +109,7 @@ pub mod v3 {
             .try_into_http_request::<Vec<u8>>(
                 "https://homeserver.tld",
                 SendAccessToken::IfRequired("auth_tok"),
-                &supported,
+                Cow::Owned(supported),
             )
             .unwrap();
 

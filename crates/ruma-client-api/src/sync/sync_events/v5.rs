@@ -12,8 +12,9 @@ use std::{collections::BTreeMap, time::Duration};
 use js_int::UInt;
 use js_option::JsOption;
 use ruma_common::{
-    api::{request, response, Metadata},
+    api::{auth_scheme::AccessToken, request, response},
     metadata,
+    presence::PresenceState,
     serde::{duration::opt_ms, Raw},
     OwnedMxcUri, OwnedRoomId, OwnedUserId,
 };
@@ -22,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use super::UnreadNotificationsCount;
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: POST,
     rate_limited: false,
     authentication: AccessToken,
@@ -30,7 +31,7 @@ const METADATA: Metadata = metadata! {
         unstable("org.matrix.simplified_msc3575") => "/_matrix/client/unstable/org.matrix.simplified_msc3575/sync",
         // 1.4 => "/_matrix/client/v5/sync",
     }
-};
+}
 
 /// Request type for the `/sync` endpoint.
 #[request(error = crate::Error)]
@@ -69,6 +70,13 @@ pub struct Request {
     #[serde(with = "opt_ms", default, skip_serializing_if = "Option::is_none")]
     #[ruma_api(query)]
     pub timeout: Option<Duration>,
+
+    /// Controls whether the client is automatically marked as online by polling this API.
+    ///
+    /// Defaults to `PresenceState::Online`.
+    #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
+    #[ruma_api(query)]
+    pub set_presence: PresenceState,
 
     /// Lists of rooms we are interested by, represented by ranges.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

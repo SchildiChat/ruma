@@ -1,5 +1,25 @@
 # [unreleased]
 
+Breaking changes:
+
+- All the endpoints use a `SinglePath` rather than a `VersionHistory` as
+  `Metadata::PathBuilder`. Making a request doesn't require to provide a dummy
+  `SupportedVersions` anymore.
+  - The endpoints that became stable from Matrix 1.1 onwards have a new
+    `unstable` module to be able to support the unstable endpoint defined in
+    their MSC.
+
+Improvements:
+
+- `RawStrippedState::Stripped` is deprecated in favor of the `Pdu` variant,
+  according to Matrix 1.16.
+- `ServerSignatures` supports adding the `X-Matrix` header to outgoing requests.
+- `XMatrix::request_object()` allows to construct the canonical JSON object to
+  sign from a request.
+- `XMatrix` can be constructed from a request with `try_from_http_request()`.
+- The signature in the `sig` field of `XMatrix` can be used to verify a request
+  with `verify_request()`.
+
 # 0.12.0
 
 Breaking changes:

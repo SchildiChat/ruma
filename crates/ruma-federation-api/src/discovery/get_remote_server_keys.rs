@@ -9,7 +9,7 @@ pub mod v2 {
     //! [spec]: https://spec.matrix.org/latest/server-server-api/#get_matrixkeyv2queryservername
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::NoAuthentication, request, response},
         metadata,
         serde::Raw,
         MilliSecondsSinceUnixEpoch, OwnedServerName,
@@ -17,14 +17,12 @@ pub mod v2 {
 
     use crate::discovery::ServerSigningKeys;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: None,
-        history: {
-            1.0 => "/_matrix/key/v2/query/{server_name}",
-        }
-    };
+        authentication: NoAuthentication,
+        path: "/_matrix/key/v2/query/{server_name}",
+    }
 
     /// Request type for the `get_remote_server_keys` endpoint.
     #[request]

@@ -8,11 +8,11 @@ pub mod v3 {
     //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3knockroomidoralias
 
     use ruma_common::{
-        api::{response, Metadata},
+        api::{auth_scheme::AccessToken, response, Metadata},
         metadata, OwnedRoomId, OwnedRoomOrAliasId, OwnedServerName,
     };
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
         authentication: AccessToken,
@@ -20,7 +20,7 @@ pub mod v3 {
             unstable => "/_matrix/client/unstable/xyz.amorgan.knock/knock/{room_id_or_alias}",
             1.1 => "/_matrix/client/v3/knock/{room_id_or_alias}",
         }
-    };
+    }
 
     /// Request type for the `knock_room` endpoint.
     #[derive(Clone, Debug)]
@@ -73,15 +73,13 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type IncomingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
-        fn try_into_http_request<T: Default + bytes::BufMut>(
+        fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
             self,
             base_url: &str,
-            access_token: ruma_common::api::SendAccessToken<'_>,
-            considering: &'_ ruma_common::api::SupportedVersions,
+            access_token: ruma_common::api::auth_scheme::SendAccessToken<'_>,
+            considering: std::borrow::Cow<'_, ruma_common::api::SupportedVersions>,
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
-            use http::header::{self, HeaderValue};
+            use ruma_common::api::auth_scheme::AuthScheme;
 
             // Only send `server_name` if the `via` parameter is not supported by the server.
             // `via` was introduced in Matrix 1.12.
@@ -99,25 +97,20 @@ pub mod v3 {
             let query_string =
                 serde_html_form::to_string(RequestQuery { server_name, via: self.via })?;
 
-            let http_request = http::Request::builder()
-                .method(METADATA.method)
-                .uri(METADATA.make_endpoint_url(
+            let mut http_request = http::Request::builder()
+                .method(Self::METHOD)
+                .uri(Self::make_endpoint_url(
                     considering,
                     base_url,
                     &[&self.room_id_or_alias],
                     &query_string,
                 )?)
-                .header(header::CONTENT_TYPE, "application/json")
-                .header(
-                    header::AUTHORIZATION,
-                    HeaderValue::from_str(&format!(
-                        "Bearer {}",
-                        access_token
-                            .get_required_for_endpoint()
-                            .ok_or(ruma_common::api::error::IntoHttpError::NeedsAuthentication)?
-                    ))?,
-                )
+                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .body(ruma_common::serde::json_to_buf(&RequestBody { reason: self.reason })?)?;
+
+            Self::Authentication::add_authentication(&mut http_request, access_token).map_err(
+                |error| ruma_common::api::error::IntoHttpError::Authentication(error.into()),
+            )?;
 
             Ok(http_request)
         }
@@ -128,8 +121,6 @@ pub mod v3 {
         type EndpointError = crate::Error;
         type OutgoingResponse = Response;
 
-        const METADATA: Metadata = METADATA;
-
         fn try_from_http_request<B, S>(
             request: http::Request<B>,
             path_args: &[S],
@@ -138,12 +129,7 @@ pub mod v3 {
             B: AsRef<[u8]>,
             S: AsRef<str>,
         {
-            if request.method() != METADATA.method {
-                return Err(ruma_common::api::error::FromHttpRequestError::MethodMismatch {
-                    expected: METADATA.method,
-                    received: request.method().clone(),
-                });
-            }
+            Self::check_request_method(request.method())?;
 
             let (room_id_or_alias,) =
                 serde::Deserialize::deserialize(serde::de::value::SeqDeserializer::<
@@ -190,9 +176,12 @@ pub mod v3 {
 
     #[cfg(all(test, any(feature = "client", feature = "server")))]
     mod tests {
+        #[cfg(feature = "client")]
+        use std::borrow::Cow;
+
         use ruma_common::{
             api::{
-                IncomingRequest as _, MatrixVersion, OutgoingRequest, SendAccessToken,
+                auth_scheme::SendAccessToken, IncomingRequest as _, MatrixVersion, OutgoingRequest,
                 SupportedVersions,
             },
             owned_room_id, owned_server_name,
@@ -214,7 +203,7 @@ pub mod v3 {
                 .try_into_http_request::<Vec<u8>>(
                     "https://matrix.org",
                     SendAccessToken::IfRequired("tok"),
-                    &supported,
+                    Cow::Owned(supported),
                 )
                 .unwrap();
             assert_eq!(req.uri().query(), Some("via=f.oo&server_name=f.oo"));
@@ -234,7 +223,7 @@ pub mod v3 {
                 .try_into_http_request::<Vec<u8>>(
                     "https://matrix.org",
                     SendAccessToken::IfRequired("tok"),
-                    &supported,
+                    Cow::Owned(supported),
                 )
                 .unwrap();
             assert_eq!(req.uri().query(), Some("via=f.oo"));

@@ -9,21 +9,21 @@ pub mod unstable {
     //! [MSC]: https://github.com/matrix-org/matrix-spec-proposals/pull/4140
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         serde::StringEnum,
     };
 
     use crate::PrivOwnedStr;
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: true,
         authentication: AccessToken,
         history: {
             unstable("org.matrix.msc4140") => "/_matrix/client/unstable/org.matrix.msc4140/delayed_events/{delay_id}",
         }
-    };
+    }
 
     /// The possible update actions we can do for updating a delayed event.
     #[derive(Clone, StringEnum)]
@@ -73,8 +73,10 @@ pub mod unstable {
 
     #[cfg(all(test, feature = "client"))]
     mod tests {
+        use std::borrow::Cow;
+
         use ruma_common::api::{
-            MatrixVersion, OutgoingRequest, SendAccessToken, SupportedVersions,
+            auth_scheme::SendAccessToken, MatrixVersion, OutgoingRequest, SupportedVersions,
         };
         use serde_json::{json, Value as JsonValue};
 
@@ -90,7 +92,7 @@ pub mod unstable {
                     .try_into_http_request(
                         "https://homeserver.tld",
                         SendAccessToken::IfRequired("auth_tok"),
-                        &supported,
+                        Cow::Owned(supported),
                     )
                     .unwrap();
 

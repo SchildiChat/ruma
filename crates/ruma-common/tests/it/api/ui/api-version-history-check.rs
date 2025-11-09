@@ -1,16 +1,22 @@
 #![allow(unexpected_cfgs)]
 
+use std::borrow::Cow;
+
 use http::header::CONTENT_TYPE;
 use ruma_common::{
-    api::{request, response, Metadata},
+    api::{
+        auth_scheme::NoAuthentication,
+        path_builder::{PathBuilder, StablePathSelector},
+        request, response, MatrixVersion, Metadata, SupportedVersions,
+    },
     metadata,
     serde::Raw,
 };
 
-const METADATA: Metadata = metadata! {
+metadata! {
     method: POST, // An `http::Method` constant. No imports required.
     rate_limited: false,
-    authentication: None,
+    authentication: NoAuthentication,
     history: {
         unstable => "/_matrix/some/msc1234/endpoint/{baz}",
         unstable("org.bar.msc1234") => "/_matrix/unstable/org.bar.msc1234/endpoint/{baz}",
@@ -20,7 +26,7 @@ const METADATA: Metadata = metadata! {
         1.2 => deprecated,
         1.3 => removed,
     }
-};
+}
 
 /// Request type for the `some_endpoint` endpoint.
 #[request]
@@ -37,7 +43,7 @@ pub struct Request {
     pub bar: String,
 
     // This value will be inserted into the request's URL in place of the
-    // ":baz" path component.
+    // "{baz}" path component.
     #[ruma_api(path)]
     pub baz: String,
 }
@@ -67,17 +73,15 @@ pub struct Response {
 pub struct Event {}
 
 fn main() {
-    use ruma_common::api::{MatrixVersion, StablePathSelector};
-
     assert_eq!(
-        METADATA.history.unstable_paths().collect::<Vec<_>>(),
+        Request::PATH_BUILDER.unstable_paths().collect::<Vec<_>>(),
         &[
             (None, "/_matrix/some/msc1234/endpoint/{baz}"),
             (Some("org.bar.msc1234"), "/_matrix/unstable/org.bar.msc1234/endpoint/{baz}")
         ],
     );
     assert_eq!(
-        METADATA.history.stable_paths().collect::<Vec<_>>(),
+        Request::PATH_BUILDER.stable_paths().collect::<Vec<_>>(),
         &[
             (
                 StablePathSelector::Feature("org.bar.msc1234.stable"),
@@ -94,7 +98,7 @@ fn main() {
         ],
     );
     assert_eq!(
-        METADATA.history.all_paths().collect::<Vec<_>>(),
+        Request::PATH_BUILDER.all_paths().collect::<Vec<_>>(),
         &[
             "/_matrix/some/msc1234/endpoint/{baz}",
             "/_matrix/unstable/org.bar.msc1234/endpoint/{baz}",
@@ -104,7 +108,21 @@ fn main() {
         ],
     );
 
-    assert_eq!(METADATA.history.added_in(), Some(MatrixVersion::V1_0));
-    assert_eq!(METADATA.history.deprecated_in(), Some(MatrixVersion::V1_2));
-    assert_eq!(METADATA.history.removed_in(), Some(MatrixVersion::V1_3));
+    assert_eq!(Request::PATH_BUILDER.added_in(), Some(MatrixVersion::V1_0));
+    assert_eq!(Request::PATH_BUILDER.deprecated_in(), Some(MatrixVersion::V1_2));
+    assert_eq!(Request::PATH_BUILDER.removed_in(), Some(MatrixVersion::V1_3));
+
+    let path = Request::PATH_BUILDER
+        .select_path(Cow::Owned(SupportedVersions {
+            versions: [
+                MatrixVersion::V1_0,
+                MatrixVersion::V1_1,
+                MatrixVersion::V1_2,
+                MatrixVersion::V1_3,
+            ]
+            .into(),
+            features: Default::default(),
+        }))
+        .unwrap();
+    assert_eq!(path, "/_matrix/some/v3/endpoint/{baz}");
 }

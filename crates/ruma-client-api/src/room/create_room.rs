@@ -9,7 +9,7 @@ pub mod v3 {
 
     use assign::assign;
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{auth_scheme::AccessToken, request, response},
         metadata,
         room::RoomType,
         serde::{Raw, StringEnum},
@@ -26,7 +26,7 @@ pub mod v3 {
 
     use crate::{membership::Invite3pid, room::Visibility, PrivOwnedStr};
 
-    const METADATA: Metadata = metadata! {
+    metadata! {
         method: POST,
         rate_limited: false,
         authentication: AccessToken,
@@ -34,7 +34,7 @@ pub mod v3 {
             1.0 => "/_matrix/client/r0/createRoom",
             1.1 => "/_matrix/client/v3/createRoom",
         }
-    };
+    }
 
     /// Request type for the `create_room` endpoint.
     #[request(error = crate::Error)]
@@ -194,7 +194,7 @@ pub mod v3 {
 
     /// A convenience parameter for setting a few default state events.
     #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
-    #[derive(Clone, PartialEq, Eq, StringEnum)]
+    #[derive(Clone, StringEnum)]
     #[ruma_enum(rename_all = "snake_case")]
     #[non_exhaustive]
     pub enum RoomPreset {

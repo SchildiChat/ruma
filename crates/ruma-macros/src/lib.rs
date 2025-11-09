@@ -38,15 +38,11 @@ use self::{
     },
     identifiers::IdentifierInput,
     serde::{
-        as_str_as_ref_str::expand_as_str_as_ref_str,
-        debug_as_ref_str::expand_debug_as_ref_str,
+        as_str_as_ref_str::expand_as_str_as_ref_str, debug_as_ref_str::expand_debug_as_ref_str,
         deserialize_from_cow_str::expand_deserialize_from_cow_str,
-        display_as_ref_str::expand_display_as_ref_str,
-        enum_as_ref_str::expand_enum_as_ref_str,
-        enum_from_string::expand_enum_from_string,
-        eq_as_ref_str::expand_partial_eq_as_ref_str,
-        ord_as_ref_str::{expand_ord_as_ref_str, expand_partial_ord_as_ref_str},
-        serialize_as_ref_str::expand_serialize_as_ref_str,
+        display_as_ref_str::expand_display_as_ref_str, enum_as_ref_str::expand_enum_as_ref_str,
+        enum_from_string::expand_enum_from_string, eq_as_ref_str::expand_eq_as_ref_str,
+        ord_as_ref_str::expand_ord_as_ref_str, serialize_as_ref_str::expand_serialize_as_ref_str,
     },
     util::{import_ruma_common, import_ruma_events},
 };
@@ -417,8 +413,26 @@ pub fn derive_event_content(input: TokenStream) -> TokenStream {
 ///
 /// If the field is missing, its `Default` implementation is used.
 ///
+/// ### `default_on_error`
+///
+/// If an error occurs during deserialization of the value of this field, its `Default`
+/// implementation is used. The error is logged with the [tracing] crate at the debug level, which
+/// means that it must be a dependency of the crate where the macro is used.
+///
+/// ### `rename = "serialized_name"`
+///
+/// Use a different name when the field is serialized. The name is used both during serialization
+/// and deserialization.
+///
+/// ### `alias = "alt_name"`
+///
+/// Allow a different name for the field during deserialization. This can be used several times for
+/// different aliases.
+///
 /// You can use `cargo doc` to find out more details, its `--document-private-items` flag also lets
 /// you generate documentation for binaries or private parts of a library.
+///
+/// [tracing]: https://crates.io/crates/tracing
 #[proc_macro_derive(Event, attributes(ruma_event))]
 pub fn derive_event(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -648,31 +662,22 @@ pub fn derive_deserialize_from_cow_str(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Derive the `PartialOrd` trait using the `AsRef<str>` implementation of the type.
-#[proc_macro_derive(PartialOrdAsRefStr)]
-pub fn derive_partial_ord_as_ref_str(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    expand_partial_ord_as_ref_str(&input.ident)
-        .unwrap_or_else(syn::Error::into_compile_error)
-        .into()
-}
-
-/// Derive the `Ord` trait using the `AsRef<str>` implementation of the type.
+/// Derive the `Ord` and `PartialOrd` traits using the `AsRef<str>` implementation of the type.
 #[proc_macro_derive(OrdAsRefStr)]
 pub fn derive_ord_as_ref_str(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     expand_ord_as_ref_str(&input.ident).unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
-/// Derive the `PartialEq` trait using the `AsRef<str>` implementation of the type.
-#[proc_macro_derive(PartialEqAsRefStr)]
-pub fn derive_partial_eq_as_ref_str(input: TokenStream) -> TokenStream {
+/// Derive the `PartialEq` and `Eq` traits using the `AsRef<str>` implementation of the type.
+#[proc_macro_derive(EqAsRefStr)]
+pub fn derive_eq_as_ref_str(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    expand_partial_eq_as_ref_str(&input.ident).unwrap_or_else(syn::Error::into_compile_error).into()
+    expand_eq_as_ref_str(&input.ident).unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
 /// Shorthand for the derives `AsRefStr`, `FromString`, `DisplayAsRefStr`, `DebugAsRefStr`,
-/// `SerializeAsRefStr` and `DeserializeFromCowStr`.
+/// `SerializeAsRefStr`, `DeserializeFromCowStr`, `EqAsRefStr` and `OrdAsRefStr`.
 #[proc_macro_derive(StringEnum, attributes(ruma_enum))]
 pub fn derive_string_enum(input: TokenStream) -> TokenStream {
     fn expand_all(input: ItemEnum) -> syn::Result<proc_macro2::TokenStream> {
@@ -683,6 +688,8 @@ pub fn derive_string_enum(input: TokenStream) -> TokenStream {
         let debug_impl = expand_debug_as_ref_str(&input.ident)?;
         let serialize_impl = expand_serialize_as_ref_str(&input.ident)?;
         let deserialize_impl = expand_deserialize_from_cow_str(&input.ident)?;
+        let eq_and_partial_eq_impl = expand_eq_as_ref_str(&input.ident)?;
+        let ord_and_partial_ord_impl = expand_ord_as_ref_str(&input.ident)?;
 
         Ok(quote! {
             #as_ref_str_impl
@@ -692,6 +699,8 @@ pub fn derive_string_enum(input: TokenStream) -> TokenStream {
             #debug_impl
             #serialize_impl
             #deserialize_impl
+            #eq_and_partial_eq_impl
+            #ord_and_partial_ord_impl
         })
     }
 

@@ -11,19 +11,19 @@ pub mod v1 {
     use std::collections::BTreeMap;
 
     use ruma_common::{
-        api::{request, response, Metadata},
+        api::{request, response},
         metadata,
     };
     use serde_json::Value as JsonValue;
 
-    const METADATA: Metadata = metadata! {
+    use crate::authentication::ServerSignatures;
+
+    metadata! {
         method: GET,
         rate_limited: false,
-        authentication: AccessToken,
-        history: {
-            1.0 => "/_matrix/federation/v1/query/{query_type}",
-        }
-    };
+        authentication: ServerSignatures,
+        path: "/_matrix/federation/v1/query/{query_type}",
+    }
 
     /// Request type for the `get_custom_information` endpoint.
     #[request]

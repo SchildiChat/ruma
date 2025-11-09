@@ -6,7 +6,7 @@ use std::path::Path;
 use clap::{Args, Subcommand};
 use xshell::Shell;
 
-use crate::{bench::BenchPackage, cmd, Metadata, Result, NIGHTLY};
+use crate::{bench::BenchPackage, cargo::FeatureFilter, cmd, Metadata, Result, NIGHTLY};
 
 mod reexport_features;
 mod spec_links;
@@ -213,14 +213,19 @@ impl CiTask {
     fn stable_benches(&self) -> Result<()> {
         let packages = BenchPackage::ALL_PACKAGES_ARGS;
 
-        cmd!(&self.sh, "rustup run stable cargo check {packages...} --benches --features criterion")
-            .run()
-            .map_err(Into::into)
+        cmd!(
+            &self.sh,
+            "rustup run stable cargo check {packages...} --benches --features __criterion"
+        )
+        .run()
+        .map_err(Into::into)
     }
 
     /// Run tests on all crates with almost all features with the stable version.
     fn test_all(&self) -> Result<()> {
-        cmd!(&self.sh, "rustup run stable cargo test --tests --features __ci")
+        let features = self.project_metadata.ruma_features(RumaFeatures::All)?;
+
+        cmd!(&self.sh, "rustup run stable cargo test --tests --features {features}")
             .run()
             .map_err(Into::into)
     }
@@ -228,14 +233,18 @@ impl CiTask {
     /// Run tests on all crates with almost all features and the compat features with the stable
     /// version.
     fn test_compat(&self) -> Result<()> {
-        cmd!(&self.sh, "rustup run stable cargo test --tests --features __ci,__compat")
+        let features = self.project_metadata.ruma_features(RumaFeatures::Compat)?;
+
+        cmd!(&self.sh, "rustup run stable cargo test --tests --features {features}")
             .run()
             .map_err(Into::into)
     }
 
     /// Run doctests on all crates with almost all features with the stable version.
     fn test_doc(&self) -> Result<()> {
-        cmd!(&self.sh, "rustup run stable cargo test --doc --features __ci")
+        let features = self.project_metadata.ruma_features(RumaFeatures::All)?;
+
+        cmd!(&self.sh, "rustup run stable cargo test --doc --features {features}")
             .run()
             .map_err(Into::into)
     }
@@ -304,7 +313,7 @@ impl CiTask {
             &self.sh,
             "
             rustup run {NIGHTLY} cargo clippy
-                --workspace --all-targets --features=full -- -D warnings
+                --workspace --all-targets --features full -- -D warnings
             "
         )
         .run()
@@ -313,11 +322,13 @@ impl CiTask {
 
     /// Lint ruma with clippy with the nightly version and wasm target.
     fn clippy_wasm(&self) -> Result<()> {
+        let features = self.project_metadata.ruma_features(RumaFeatures::Wasm)?;
+
         cmd!(
             &self.sh,
             "
-            rustup run {NIGHTLY} cargo clippy --target wasm32-unknown-unknown -p ruma --features
-                __unstable-mscs,api,canonical-json,client-api,events,html-matrix,identity-service-api,js,markdown,rand,signatures -- -D warnings
+            rustup run {NIGHTLY} cargo clippy --target wasm32-unknown-unknown
+                -p ruma --features {features} -- -D warnings
             "
         )
         .env("CLIPPY_CONF_DIR", ".wasm")
@@ -327,11 +338,13 @@ impl CiTask {
 
     /// Lint almost all features with clippy with the nightly version.
     fn clippy_all(&self) -> Result<()> {
+        let features = self.project_metadata.ruma_features(RumaFeatures::Compat)?;
+
         cmd!(
             &self.sh,
             "
             rustup run {NIGHTLY} cargo clippy
-                --workspace --all-targets --features=__ci,__compat -- -D warnings
+                --workspace --all-targets --features {features} -- -D warnings
             "
         )
         .run()
@@ -346,7 +359,7 @@ impl CiTask {
             &self.sh,
             "
             rustup run {NIGHTLY} cargo clippy {packages...}
-                --benches --features criterion -- -D warnings
+                --benches --features __criterion -- -D warnings
             "
         )
         .run()
@@ -395,5 +408,67 @@ impl CiTask {
             );
         }
         cmd!(&self.sh, "typos").run().map_err(Into::into)
+    }
+}
+
+/// The features of the ruma package to enable.
+#[derive(Debug, Clone, Copy)]
+enum RumaFeatures {
+    /// Almost all features.
+    ///
+    /// This includes the `full` feature and the unstable features.
+    All,
+
+    /// `All` features and compat features.
+    Compat,
+
+    /// Features that we want to test for WASM.
+    ///
+    /// Includes all the stable features that can be enabled by Matrix clients and all the unstable
+    /// features.
+    Wasm,
+}
+
+impl Metadata {
+    /// Get the ruma features from this project metadata as a string.
+    ///
+    /// Returns a list of comma-separated features.
+    ///
+    /// Errors if the ruma package cannot be found in the project metadata.
+    fn ruma_features(&self, ruma_features: RumaFeatures) -> Result<String> {
+        let Some(ruma_package) = self.find_package("ruma") else {
+            return Err("Could not find ruma package in project metadata".into());
+        };
+
+        let features = match ruma_features {
+            RumaFeatures::All => {
+                let mut features = ruma_package.filtered_features(FeatureFilter::Unstable);
+                features.push("full");
+                features
+            }
+            RumaFeatures::Compat => {
+                let mut features = ruma_package.filtered_features(FeatureFilter::UnstableAndCompat);
+                features.push("full");
+                features
+            }
+            RumaFeatures::Wasm => {
+                let mut features = ruma_package.filtered_features(FeatureFilter::Unstable);
+                features.extend([
+                    "api",
+                    "canonical-json",
+                    "client-api",
+                    "events",
+                    "html-matrix",
+                    "identity-service-api",
+                    "js",
+                    "markdown",
+                    "rand",
+                    "signatures",
+                ]);
+                features
+            }
+        };
+
+        Ok(features.join(","))
     }
 }
