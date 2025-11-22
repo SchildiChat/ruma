@@ -11,8 +11,9 @@ pub mod unstable {
 
     use js_int::UInt;
     use ruma_common::{
-        api::{auth_scheme::AccessToken, request, response, Direction},
-        metadata, OwnedEventId, OwnedRoomId,
+        OwnedEventId, OwnedRoomId,
+        api::{Direction, auth_scheme::AccessToken, request, response},
+        metadata,
     };
     use serde::{Deserialize, Serialize};
 
@@ -30,7 +31,8 @@ pub mod unstable {
     pub struct Request {
         /// The direction to use for pagination.
         ///
-        /// Always `b`ackwards at the time of implementation (2025-08-21).
+        /// Only `Direction::Backward` is meant to be supported, which is why this field is private
+        /// for now (as of 2025-08-21).
         #[ruma_api(query)]
         dir: Direction,
 

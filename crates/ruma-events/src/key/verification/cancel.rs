@@ -2,11 +2,11 @@
 //!
 //! [`m.key.verification.cancel`]: https://spec.matrix.org/latest/client-server-api/#mkeyverificationcancel
 
-use ruma_common::{serde::StringEnum, OwnedTransactionId};
+use ruma_common::{OwnedTransactionId, serde::StringEnum};
 use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
-use crate::{relation::Reference, PrivOwnedStr};
+use crate::{PrivOwnedStr, relation::Reference};
 
 /// The content of a to-device `m.key.verification.cancel` event.
 ///
@@ -67,7 +67,7 @@ impl KeyVerificationCancelEventContent {
 /// Custom error codes should use the Java package naming convention.
 #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
 #[derive(Clone, StringEnum)]
-#[ruma_enum(rename_all = "m.snake_case")]
+#[ruma_enum(rename_all(prefix = "m.", rule = "snake_case"))]
 #[non_exhaustive]
 pub enum CancelCode {
     /// The user cancelled the verification.

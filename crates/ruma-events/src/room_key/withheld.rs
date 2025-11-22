@@ -5,11 +5,11 @@
 use std::borrow::Cow;
 
 use ruma_common::{
-    serde::{from_raw_json_value, Base64, JsonObject},
     EventEncryptionAlgorithm, OwnedRoomId,
+    serde::{Base64, JsonObject, from_raw_json_value},
 };
 use ruma_macros::{EventContent, StringEnum};
-use serde::{de, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 use serde_json::value::RawValue as RawJsonValue;
 
 use crate::PrivOwnedStr;
@@ -192,7 +192,7 @@ pub struct CustomRoomKeyWithheldCodeInfo {
 /// The possible codes for why a megolm key was not sent.
 #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
 #[derive(Clone, StringEnum)]
-#[ruma_enum(rename_all = "m.snake_case")]
+#[ruma_enum(rename_all(prefix = "m.", rule = "snake_case"))]
 #[non_exhaustive]
 pub enum RoomKeyWithheldCode {
     /// `m.blacklisted`
@@ -231,7 +231,7 @@ pub enum RoomKeyWithheldCode {
 #[cfg(test)]
 mod tests {
     use assert_matches2::assert_matches;
-    use ruma_common::{owned_room_id, serde::Base64, EventEncryptionAlgorithm};
+    use ruma_common::{EventEncryptionAlgorithm, owned_room_id, serde::Base64};
     use serde_json::{from_value as from_json_value, json, to_value as to_json_value};
 
     use super::{

@@ -5,23 +5,23 @@ use std::{collections::BTreeMap, fmt, str::FromStr, sync::Arc};
 use as_variant::as_variant;
 use bytes::{BufMut, Bytes};
 use ruma_common::{
+    RoomVersionId,
     api::{
+        EndpointError, OutgoingResponse,
         error::{
             FromHttpResponseError, HeaderDeserializationError, HeaderSerializationError,
             IntoHttpError, MatrixErrorBody,
         },
-        EndpointError, OutgoingResponse,
     },
     serde::StringEnum,
-    RoomVersionId,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{from_slice as from_json_slice, Value as JsonValue};
+use serde_json::{Value as JsonValue, from_slice as from_json_slice};
 use web_time::{Duration, SystemTime};
 
 use crate::{
-    http_headers::{http_date_to_system_time, system_time_to_http_date},
     PrivOwnedStr,
+    http_headers::{http_date_to_system_time, system_time_to_http_date},
 };
 
 /// Deserialize and Serialize implementations for ErrorKind.
@@ -495,7 +495,7 @@ pub struct Extra(BTreeMap<String, JsonValue>);
 /// [error codes]: https://spec.matrix.org/latest/client-server-api/#standard-error-response
 #[derive(Clone, StringEnum)]
 #[non_exhaustive]
-#[ruma_enum(rename_all = "M_MATRIX_ERROR_CASE")]
+#[ruma_enum(rename_all(prefix = "M_", rule = "SCREAMING_SNAKE_CASE"))]
 // Please keep the variants sorted alphabetically.
 pub enum ErrorCode {
     /// `M_BAD_ALIAS`
@@ -1163,7 +1163,7 @@ mod tests {
     use assert_matches2::assert_matches;
     use ruma_common::api::{EndpointError, OutgoingResponse};
     use serde_json::{
-        from_slice as from_json_slice, from_value as from_json_value, json, Value as JsonValue,
+        Value as JsonValue, from_slice as from_json_slice, from_value as from_json_value, json,
     };
     use web_time::{Duration, UNIX_EPOCH};
 

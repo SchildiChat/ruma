@@ -1,14 +1,14 @@
 use ruma_common::{
-    serde::from_raw_json_value, EventId, MilliSecondsSinceUnixEpoch, OwnedRoomId, RoomId,
-    TransactionId, UserId,
+    EventId, MilliSecondsSinceUnixEpoch, OwnedRoomId, RoomId, TransactionId, UserId,
+    serde::from_raw_json_value,
 };
 #[cfg(feature = "unstable-msc3381")]
 use ruma_events::{
     poll::{start::PollStartEventContent, unstable_start::UnstablePollStartEventContent},
     room::encrypted::Replacement,
 };
-use ruma_macros::{event_enum, EventEnumFromEvent};
-use serde::{de, Deserialize};
+use ruma_macros::{EventEnumFromEvent, event_enum};
+use serde::{Deserialize, de};
 use serde_json::value::RawValue as RawJsonValue;
 
 use super::room::encrypted;
@@ -165,7 +165,7 @@ event_enum! {
         "m.room.canonical_alias" => super::room::canonical_alias,
         "m.room.create" => super::room::create,
         "m.room.encryption" => super::room::encryption,
-        #[cfg(feature = "unstable-msc3414")]
+        #[cfg(feature = "unstable-msc4362")]
         "m.room.encrypted" => super::room::encrypted::unstable_state,
         "m.room.guest_access" => super::room::guest_access,
         "m.room.history_visibility" => super::room::history_visibility,

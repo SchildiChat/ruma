@@ -5,7 +5,7 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
 use js_int::UInt;
-use ruma_common::{serde::JsonObject, OwnedDeviceId, OwnedEventId};
+use ruma_common::{OwnedDeviceId, OwnedEventId, serde::JsonObject};
 use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +16,7 @@ use crate::{
 };
 
 mod relation_serde;
-#[cfg(feature = "unstable-msc3414")]
+#[cfg(feature = "unstable-msc4362")]
 pub mod unstable_state;
 
 /// The content of an `m.room.encrypted` event.

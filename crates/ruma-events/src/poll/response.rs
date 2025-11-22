@@ -6,7 +6,7 @@ use ruma_common::OwnedEventId;
 use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
-use super::{start::PollContentBlock, validate_selections, PollResponseData};
+use super::{PollResponseData, start::PollContentBlock, validate_selections};
 use crate::relation::Reference;
 
 /// The payload for a poll response event.
@@ -93,7 +93,7 @@ impl SelectionsContentBlock {
     pub fn validate<'a>(
         &'a self,
         poll: &PollContentBlock,
-    ) -> Option<impl Iterator<Item = &'a str>> {
+    ) -> Option<impl Iterator<Item = &'a str> + use<'a>> {
         let answer_ids = poll.answers.iter().map(|a| a.id.as_str()).collect();
         validate_selections(&answer_ids, poll.max_selections, &self.0)
     }

@@ -19,7 +19,7 @@ pub(crate) trait Verifier {
     ///
     /// Returns an error if verification fails.
     fn verify_json(&self, public_key: &[u8], signature: &[u8], message: &[u8])
-        -> Result<(), Error>;
+    -> Result<(), Error>;
 }
 
 /// A verifier for Ed25519 digital signatures.
@@ -65,7 +65,9 @@ pub enum Verified {
 }
 
 /// Get the verifier for the given algorithm, if it is supported.
-pub(crate) fn verifier_from_algorithm(algorithm: &SigningKeyAlgorithm) -> Option<impl Verifier> {
+pub(crate) fn verifier_from_algorithm(
+    algorithm: &SigningKeyAlgorithm,
+) -> Option<impl Verifier + use<>> {
     match algorithm {
         SigningKeyAlgorithm::Ed25519 => Some(Ed25519Verifier),
         _ => None,

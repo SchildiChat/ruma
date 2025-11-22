@@ -4,7 +4,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
   # Keep in sync with version in `rust-toolchain.toml` and `xtask/src/main.rs`
-  NIGHTLY: nightly-2025-10-01
+  NIGHTLY: nightly-2025-11-06
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check spelling
-        uses: crate-ci/typos@v1.33.1
+        uses: crate-ci/typos@v1.39.0
 
       - name: Install cargo-sort
         uses: taiki-e/cache-cargo-install-action@v2
@@ -74,14 +74,15 @@ jobs:
       - name: Install MSRV toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.82"
+          # keep in sync with README.md, the root Cargo.toml and xtask/src/ci.rs
+          toolchain: "1.85"
 
       - uses: Swatinem/rust-cache@v2
         with:
           # A stable compiler update should automatically not reuse old caches.
           # Add the MSRV as a stable cache key too so bumping it also gets us a
           # fresh cache.
-          shared-key: msrv1.82
+          shared-key: msrv1.85
 
       - name: Get xtask
         uses: actions/cache@v4

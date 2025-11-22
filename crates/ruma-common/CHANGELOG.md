@@ -47,13 +47,28 @@ Breaking changes:
   `AppserviceUserIdentity` instead of a `UserId`. This allows to specify a
   device ID, according to MSC4326.
 - `IntoHttpError::NeedsAuthentication` is a newtype variant renamed to
-  `Authentication` that accepts any error type. 
+  `Authentication` that accepts any error type.
+- Remove support for the following rules for the `StringEnum`, `AsRefStr` and
+  `FromString` derive macros' `rename_all` attribute, because they either can be
+  replaced by the `(prefix = "prefix", rule = "rule")` syntax or are unused as
+  far as we know:
+  - `"PascalCase"`
+  - `"SCREAMING-KEBAB-CASE"`
+  - `"m.dotted.case"`
+  - `"M_MATRIX_ERROR_CASE"`
+  - `"m.lowercase"`
+  - `"m.snake_case"`
+  - `".m.rule.snake_case"`
+  - `"m.role.snake_case"`
 
 Bug fixes:
 
 - With the `request` and `response` attribute macros, the `Content-Type` header
   defaults to `application/octet-stream` instead of `application/json` if the
   `raw_body` attribute is set on a field.
+- Fix the check to make sure that all paths used to build `VersionHistory`
+  contain the same number of variables. It was broken since the syntax was
+  changed from `:variable` to `{variable}`.
 
 Improvements:
 
@@ -67,6 +82,11 @@ Improvements:
   have a `/versions` endpoint and for endpoints that can't be versioned.
 - `AuthScheme` data can be extracted from incoming HTTP requests with
   `AuthScheme::extract_authentication()`.
+- The `StringEnum`, `AsRefStr` and `FromString` derive macros allow to set a
+  custom prefix alongside the rule to rename all the variants, like this:
+  `#[ruma_enum(rename_all(prefix = "m.", rule = "snake_case"))]`. The previous
+  syntax using `#[ruma_enum(rename_all = "snake_case")]` still works and assumes
+  that the prefix is empty. 
 
 # 0.16.0
 

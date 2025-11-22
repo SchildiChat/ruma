@@ -5,7 +5,7 @@
 use std::{error::Error as StdError, fmt, num::ParseIntError, sync::Arc};
 
 use bytes::{BufMut, Bytes};
-use serde_json::{from_slice as from_json_slice, Value as JsonValue};
+use serde_json::{Value as JsonValue, from_slice as from_json_slice};
 use thiserror::Error;
 
 use super::{EndpointError, MatrixVersion, OutgoingResponse};
@@ -351,8 +351,10 @@ impl fmt::Display for UnknownVersionError {
 
 impl StdError for UnknownVersionError {}
 
-/// An error that happens when an incorrect amount of arguments have been passed to PathData parts
-/// formatting.
+/// An error that happens when an incorrect amount of arguments have been passed to [`PathBuilder`]
+/// parts formatting.
+///
+/// [`PathBuilder`]: super::path_builder::PathBuilder
 #[derive(Debug)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct IncorrectArgumentCount {

@@ -10,7 +10,7 @@ use http::Method;
 use ruma_macros::StringEnum;
 
 use super::{auth_scheme::AuthScheme, error::UnknownVersionError, path_builder::PathBuilder};
-use crate::{api::error::IntoHttpError, serde::slice_to_buf, PrivOwnedStr, RoomVersionId};
+use crate::{PrivOwnedStr, RoomVersionId, api::error::IntoHttpError, serde::slice_to_buf};
 
 /// Convenient constructor for [`Metadata`] implementation.
 ///
@@ -159,28 +159,24 @@ macro_rules! metadata {
 
     ( @field history: {
         $( unstable $(($unstable_feature:literal))? => $unstable_path:literal, )*
-        $( stable ($stable_feature_only:literal) => $stable_feature_path:literal, )?
-        $( $( $version:literal $(| stable ($stable_feature:literal))? => $rhs:tt, )+ )?
+        $( stable ($stable_feature_only:literal) => $stable_feature_path:literal, )*
+        $( $version:literal $(| stable ($stable_feature:literal))? => $stable_rhs:tt, )*
     } ) => {
         $crate::metadata! {
             @history_impl
-            [ $( $unstable_path $(= $unstable_feature)? ),* ]
-            $( stable ($stable_feature_only) => $stable_feature_path, )?
+            $( unstable $( ($unstable_feature) )? => $unstable_path, )*
+            $( stable ($stable_feature_only) => $stable_feature_path, )*
             // Flip left and right to avoid macro parsing ambiguities
-            $( $( $rhs = $version $(| stable ($stable_feature))? ),+ )?
+            $( $stable_rhs = $version $( | stable ($stable_feature) )?, )*
         }
     };
 
     ( @history_impl
-        [ $( $unstable_path:literal $(= $unstable_feature:literal)? ),* ]
-        $( stable ($stable_feature_only:literal) => $stable_feature_path:literal, )?
-        $(
-            $( $stable_path:literal = $version:literal $(| stable ($stable_feature:literal))? ),+
-            $(,
-                deprecated = $deprecated_version:literal
-                $(, removed = $removed_version:literal )?
-            )?
-        )?
+        $( unstable $(($unstable_feature:literal))? => $unstable_path:literal, )*
+        $( stable ($stable_feature_only:literal) => $stable_feature_path:literal, )*
+        $( $stable_path:literal = $version:literal $(| stable ($stable_feature:literal))?, )*
+        $( deprecated = $deprecated_version:literal, )?
+        $( removed = $removed_version:literal, )?
     ) => {
         type PathBuilder = $crate::api::path_builder::VersionHistory;
         const PATH_BUILDER: $crate::api::path_builder::VersionHistory = $crate::api::path_builder::VersionHistory::new(
@@ -189,14 +185,14 @@ macro_rules! metadata {
                 $((
                     $crate::metadata!(@stable_path_selector stable($stable_feature_only)),
                     $stable_feature_path
-                ),)?
-                $($((
-                    $crate::metadata!(@stable_path_selector $version $(| stable($stable_feature))?),
+                ),)*
+                $((
+                    $crate::metadata!(@stable_path_selector $version $( | stable($stable_feature) )?),
                     $stable_path
-                )),+)?
+                ),)*
             ],
-            $crate::metadata!(@optional_version $($( $deprecated_version )?)?),
-            $crate::metadata!(@optional_version $($($( $removed_version )?)?)?),
+            $crate::metadata!(@optional_version $( $deprecated_version )?),
+            $crate::metadata!(@optional_version $( $removed_version )?),
         );
     };
 
@@ -245,11 +241,7 @@ pub trait Metadata: Sized {
     where
         B: Default + BufMut,
     {
-        if Self::METHOD == Method::GET {
-            Default::default()
-        } else {
-            slice_to_buf(b"{}")
-        }
+        if Self::METHOD == Method::GET { Default::default() } else { slice_to_buf(b"{}") }
     }
 
     /// Generate the endpoint URL for this endpoint.
@@ -570,11 +562,7 @@ impl MatrixVersion {
         use konst::primitive::cmp::cmp_u8;
 
         let major_ord = cmp_u8(self_parts.0, other_parts.0);
-        if major_ord.is_ne() {
-            major_ord
-        } else {
-            cmp_u8(self_parts.1, other_parts.1)
-        }
+        if major_ord.is_ne() { major_ord } else { cmp_u8(self_parts.1, other_parts.1) }
     }
 
     // Internal function to check if this version is the legacy (v1.0) version in const-fn contexts

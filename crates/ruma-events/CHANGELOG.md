@@ -28,6 +28,9 @@ Improvements:
 - Add `dm.filament.do_not_disturb` account data event as per MSC4359.
 - `RoomMemberUnsigned` has a `knock_room_state` field. This is the equivalent to
   `invite_room_state` but after a knock rather than an invite.
+- The `unstable-msc4362` feature is renamed (previously `unstable-msc3414`).
+- The unstable prefix for `encrypt_state_events` in `RoomEncryptionEventContent`
+  is renamed to `io.element.msc4362.` (previously `io.element.msc3414.`).
 
 # 0.31.0
 
@@ -489,7 +492,7 @@ Deprecation of the crate. It is now part of ruma-common 0.9.0.
 
 Breaking changes:
 
-* Bump versions of `ruma-common`, `ruma-idenfiers`
+* Bump versions of `ruma-common`, `ruma-identifiers`
 
 # 0.25.0
 

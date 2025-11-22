@@ -2,10 +2,11 @@
 
 use js_int::uint;
 use ruma_common::{
-    api::{auth_scheme::AuthScheme, OutgoingRequest},
+    MilliSecondsSinceUnixEpoch,
+    api::{OutgoingRequest, auth_scheme::AuthScheme},
     owned_server_name,
     serde::Base64,
-    server_name, MilliSecondsSinceUnixEpoch,
+    server_name,
 };
 use ruma_federation_api::{
     authentication::{ServerSignatures, ServerSignaturesInput},
@@ -13,7 +14,8 @@ use ruma_federation_api::{
 };
 use ruma_signatures::{Ed25519KeyPair, PublicKeyMap, PublicKeySet};
 
-static PKCS8_ED25519_DER: &[u8] = include_bytes!("../../../ruma-signatures/tests/keys/ed25519.der");
+static PKCS8_ED25519_DER: &[u8] =
+    include_bytes!("../../../ruma-signatures/tests/it/keys/ed25519.der");
 
 #[test]
 fn server_signatures_roundtrip() {

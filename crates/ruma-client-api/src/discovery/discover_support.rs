@@ -5,10 +5,10 @@
 //! Get server admin contact and support page of a homeserver's domain.
 
 use ruma_common::{
+    OwnedUserId,
     api::{auth_scheme::NoAuthentication, request, response},
     metadata,
     serde::StringEnum,
-    OwnedUserId,
 };
 use serde::{Deserialize, Serialize};
 
@@ -101,7 +101,7 @@ impl Contact {
 /// An informal description of what the contact methods are used for.
 #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/doc/string_enum.md"))]
 #[derive(Clone, StringEnum)]
-#[ruma_enum(rename_all = "m.role.snake_case")]
+#[ruma_enum(rename_all(prefix = "m.role.", rule = "snake_case"))]
 #[non_exhaustive]
 pub enum ContactRole {
     /// A catch-all role for any queries.
