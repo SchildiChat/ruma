@@ -1,5 +1,7 @@
 # [unreleased]
 
+# 0.32.0
+
 Breaking changes:
 
 - Upgrade `js_option` to v0.2.0
@@ -21,6 +23,8 @@ Breaking changes:
 
 Improvements:
 
+- Add unstable support for the `m.invite_permission_config` account data event which blocks
+  invites to a user, wholesale: ([MSC4380](https://github.com/matrix-org/matrix-spec-proposals/pull/4380)).
 - Add support for the room account data `m.space_order` event which powers top 
   level space ordering as per [MSC3230](https://github.com/matrix-org/matrix-spec-proposals/pull/3230).
 - Add `m.rtc.notification` event support and deprecate the (non MSC conformant)
