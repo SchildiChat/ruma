@@ -137,6 +137,9 @@ pub mod macros {
     pub use ruma_macros::{Event, EventContent};
 }
 
+/// SC: m.bridge event
+pub mod bridge;
+
 #[cfg(feature = "unstable-msc3927")]
 pub mod audio;
 #[cfg(feature = "unstable-msc3489")]

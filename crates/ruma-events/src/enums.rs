@@ -160,6 +160,7 @@ event_enum! {
 
     /// Any state event.
     enum State {
+        "m.bridge" => super::bridge, // SC
         "m.policy.rule.room" => super::policy::rule::room,
         "m.policy.rule.server" => super::policy::rule::server,
         "m.policy.rule.user" => super::policy::rule::user,
