@@ -1,5 +1,24 @@
 # [unreleased]
 
+# 0.17.1
+
+Bug fixes:
+
+- Fix the `Clone` implementation of the `Owned*` types generated with the
+  `IdDst` macro. It used to always create a new instance from the borrowed type
+  instead of using the `Clone` implementation of the internal type.
+
+Improvements:
+
+- Add `AppserviceUserIdentity::maybe_add_to_uri()` to add an identity
+  assertion to an `http::Uri`. This allows to reimplement the behavior of
+  `OutgoingRequestAppserviceExt::try_into_http_request_with_identity()` outside
+  of Ruma, if using this trait is inconvenient.
+- Add `MatrixVersion::V1_17`.
+- `JoinRule` holds arbitrary data in its fallback variant, with can be accessed
+  with `JoinRule::data()`. It also means that this type won't fail to serialize
+  for undocumented variants anymore.
+
 # 0.17.0
 
 Breaking changes:

@@ -1,5 +1,12 @@
 # [unreleased]
 
+# 0.32.1
+
+Improvements:
+
+- Add list of state event types recommended by the spec for servers to transfer
+  upon room upgrade.
+
 # 0.32.0
 
 Breaking changes:

@@ -10,7 +10,6 @@
 // https://github.com/rust-lang/rust-clippy/issues/9029
 #![allow(clippy::derive_partial_eq_without_eq)]
 
-use identifiers::expand_id_dst;
 use proc_macro::TokenStream;
 use quote::quote;
 use ruma_identifiers_validation::{
@@ -36,7 +35,7 @@ use self::{
         event_enum::{EventEnumInput, expand_event_enum},
         event_enum_from_event::expand_event_enum_from_event,
     },
-    identifiers::IdentifierInput,
+    identifiers::{constructor::IdentifierConstructor, id_dst::expand_id_dst},
     serde::{
         as_str_as_ref_str::expand_as_str_as_ref_str, debug_as_ref_str::expand_debug_as_ref_str,
         deserialize_from_cow_str::expand_deserialize_from_cow_str,
@@ -44,7 +43,6 @@ use self::{
         enum_from_string::expand_enum_from_string, eq_as_ref_str::expand_eq_as_ref_str,
         ord_as_ref_str::expand_ord_as_ref_str, serialize_as_ref_str::expand_serialize_as_ref_str,
     },
-    util::{import_ruma_common, import_ruma_events},
 };
 
 /// Generates enums to represent the various Matrix event types.
@@ -187,7 +185,7 @@ use self::{
 #[proc_macro]
 pub fn event_enum(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as EventEnumInput);
-    expand_event_enum(input).unwrap_or_else(syn::Error::into_compile_error).into()
+    expand_event_enum(input).into()
 }
 
 /// Generates traits implementations and types for an event content.
@@ -318,7 +316,7 @@ pub fn event_enum(input: TokenStream) -> TokenStream {
 /// The kind of the event, always required. It must be one of these values, which matches the
 /// [`event_enum!`] macro:
 ///
-/// * `MessageLike` - A message-like event sent in the timeline
+/// * `MessageLike` - A message-like (i.e. non-state) event sent in the timeline
 /// * `State` - A state event sent in the timeline
 /// * `GlobalAccountData` - Global config event
 /// * `RoomAccountData` - Per-room config event
@@ -382,10 +380,8 @@ pub fn event_enum(input: TokenStream) -> TokenStream {
 /// An example can be found in the docs at the root of `ruma_events`.
 #[proc_macro_derive(EventContent, attributes(ruma_event))]
 pub fn derive_event_content(input: TokenStream) -> TokenStream {
-    let ruma_events = import_ruma_events();
     let input = parse_macro_input!(input as DeriveInput);
-
-    expand_event_content(&input, &ruma_events).unwrap_or_else(syn::Error::into_compile_error).into()
+    expand_event_content(input).unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
 /// Generates trait implementations for Matrix event types.
@@ -443,7 +439,7 @@ pub fn derive_event(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(EventEnumFromEvent)]
 pub fn derive_from_event_to_enum(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    expand_event_enum_from_event(input).into()
+    expand_event_enum_from_event(input).unwrap_or_else(syn::Error::into_compile_error).into()
 }
 
 /// Generate methods and trait impl's for DST identifier type.
@@ -489,95 +485,55 @@ pub fn derive_id_dst(input: TokenStream) -> TokenStream {
 /// Compile-time checked `EventId` construction.
 #[proc_macro]
 pub fn event_id(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(event_id::validate(&id.value()).is_ok(), "Invalid event id");
-
-    let output = quote! {
-        <&#dollar_crate::EventId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&EventId", event_id::validate).into()
 }
 
 /// Compile-time checked `RoomAliasId` construction.
 #[proc_macro]
 pub fn room_alias_id(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(room_alias_id::validate(&id.value()).is_ok(), "Invalid room_alias_id");
-
-    let output = quote! {
-        <&#dollar_crate::RoomAliasId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&RoomAliasId", room_alias_id::validate).into()
 }
 
 /// Compile-time checked `RoomId` construction.
 #[proc_macro]
 pub fn room_id(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(room_id::validate(&id.value()).is_ok(), "Invalid room_id");
-
-    let output = quote! {
-        <&#dollar_crate::RoomId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&RoomId", room_id::validate).into()
 }
 
 /// Compile-time checked `RoomVersionId` construction.
 #[proc_macro]
 pub fn room_version_id(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(room_version_id::validate(&id.value()).is_ok(), "Invalid room_version_id");
-
-    let output = quote! {
-        <#dollar_crate::RoomVersionId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("RoomVersionId", room_version_id::validate).into()
 }
 
 /// Compile-time checked `ServerSigningKeyVersion` construction.
 #[proc_macro]
 pub fn server_signing_key_version(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(
-        server_signing_key_version::validate(&id.value()).is_ok(),
-        "Invalid server_signing_key_version"
-    );
-
-    let output = quote! {
-        <&#dollar_crate::ServerSigningKeyVersion as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor
+        .validate_and_expand_str_conversion(
+            "&ServerSigningKeyVersion",
+            server_signing_key_version::validate,
+        )
+        .into()
 }
 
 /// Compile-time checked `ServerName` construction.
 #[proc_macro]
 pub fn server_name(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(server_name::validate(&id.value()).is_ok(), "Invalid server_name");
-
-    let output = quote! {
-        <&#dollar_crate::ServerName as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&ServerName", server_name::validate).into()
 }
 
 /// Compile-time checked `MxcUri` construction.
 #[proc_macro]
 pub fn mxc_uri(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(mxc_uri::validate(&id.value()).is_ok(), "Invalid mxc://");
-
-    let output = quote! {
-        <&#dollar_crate::MxcUri as ::std::convert::From<&str>>::from(#id)
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&MxcUri", mxc_uri::validate).into()
 }
 
 /// Compile-time checked `UserId` construction.
@@ -585,27 +541,17 @@ pub fn mxc_uri(input: TokenStream) -> TokenStream {
 /// The user ID is validated using the same rules as `UserId::validate_strict()`.
 #[proc_macro]
 pub fn user_id(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(user_id::validate_strict(&id.value()).is_ok(), "Invalid user_id");
-
-    let output = quote! {
-        <&#dollar_crate::UserId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor.validate_and_expand_str_conversion("&UserId", user_id::validate).into()
 }
 
 /// Compile-time checked `Base64PublicKey` construction.
 #[proc_macro]
 pub fn base64_public_key(input: TokenStream) -> TokenStream {
-    let IdentifierInput { dollar_crate, id } = parse_macro_input!(input as IdentifierInput);
-    assert!(base64_public_key::validate(&id.value()).is_ok(), "Invalid base64 public key");
-
-    let output = quote! {
-        <&#dollar_crate::DeviceKeyId as ::std::convert::TryFrom<&str>>::try_from(#id).unwrap()
-    };
-
-    output.into()
+    let id_ctor = parse_macro_input!(input as IdentifierConstructor);
+    id_ctor
+        .validate_and_expand_str_conversion("&Base64PublicKey", base64_public_key::validate)
+        .into()
 }
 
 /// Derive the `AsRef<str>` trait for an enum.
@@ -817,19 +763,27 @@ pub fn fake_derive_serde(_input: TokenStream) -> TokenStream {
 /// > ⚠ If this is the only documentation you see, please navigate to the docs for
 /// > `ruma_common::api::request`, where actual documentation can be found.
 #[proc_macro_attribute]
-pub fn request(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr = parse_macro_input!(attr);
+pub fn request(attrs: TokenStream, item: TokenStream) -> TokenStream {
+    let mut request_attrs = api::request::RequestAttrs::default();
+    let attrs_parser = syn::meta::parser(|meta| request_attrs.try_merge(meta));
+    parse_macro_input!(attrs with attrs_parser);
+
     let item = parse_macro_input!(item);
-    expand_request(attr, item).into()
+
+    expand_request(request_attrs, item).into()
 }
 
 /// > ⚠ If this is the only documentation you see, please navigate to the docs for
 /// > `ruma_common::api::response`, where actual documentation can be found.
 #[proc_macro_attribute]
-pub fn response(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr = parse_macro_input!(attr);
+pub fn response(attrs: TokenStream, item: TokenStream) -> TokenStream {
+    let mut response_attrs = api::response::ResponseAttrs::default();
+    let attrs_parser = syn::meta::parser(|meta| response_attrs.try_merge(meta));
+    parse_macro_input!(attrs with attrs_parser);
+
     let item = parse_macro_input!(item);
-    expand_response(attr, item).into()
+
+    expand_response(response_attrs, item).into()
 }
 
 /// Internal helper that the request macro delegates most of its work to.

@@ -1,120 +1,39 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::Field;
 
-use super::{Request, RequestField};
+use super::{KIND, Request, RequestQuery};
+use crate::{
+    api::StructSuffix,
+    util::{RumaCommon, RumaCommonReexport, StructFieldExt},
+};
 
 impl Request {
-    pub fn expand_outgoing(&self, ruma_common: &TokenStream) -> TokenStream {
-        let bytes = quote! { #ruma_common::exports::bytes };
-        let http = quote! { #ruma_common::exports::http };
-        let serde_html_form = quote! { #ruma_common::exports::serde_html_form };
+    /// Generate the `ruma_common::api::OutgoingRequest` implementation for this request struct.
+    pub fn expand_outgoing(&self, ruma_common: &RumaCommon) -> TokenStream {
+        let bytes = ruma_common.reexported(RumaCommonReexport::Bytes);
+        let http = ruma_common.reexported(RumaCommonReexport::Http);
 
-        let error_ty = &self.error_ty;
+        let path_fields = self.path.expand_fields();
+        let path_idents = self.path.0.iter().map(|field| field.ident());
 
-        let path_fields =
-            self.path_fields().map(|f| f.ident.as_ref().expect("path fields have a name"));
+        let query_serialize = self.query.expand_serialize(ruma_common);
+        let query_fields = self.query.expand_fields();
 
-        let request_query_string = if let Some(field) = self.query_all_field() {
-            let field_name = field.ident.as_ref().expect("expected field to have identifier");
+        let headers_serialize = self.headers.expand_serialize(KIND, &self.body, ruma_common, &http);
+        let headers_fields = self.headers.expand_fields();
 
-            quote! {{
-                let request_query = RequestQuery(self.#field_name);
-
-                &#serde_html_form::to_string(request_query)?
-            }}
-        } else if self.has_query_fields() {
-            let request_query_init_fields = struct_init_fields(
-                self.fields.iter().filter_map(RequestField::as_query_field),
-                quote! { self },
-            );
-
-            quote! {{
-                let request_query = RequestQuery {
-                    #request_query_init_fields
-                };
-
-                &#serde_html_form::to_string(request_query)?
-            }}
-        } else {
-            quote! { "" }
-        };
-
-        // If there are no body fields, the request body will be empty (not `{}`), so the
-        // `application/json` content-type would be wrong. It may also cause problems with CORS
-        // policies that don't allow the `Content-Type` header (for things such as `.well-known`
-        // that are commonly handled by something else than a homeserver).
-        let mut header_kvs = if self.has_body_fields() {
-            quote! {
-                req_headers.insert(
-                    #http::header::CONTENT_TYPE,
-                    #ruma_common::http_headers::APPLICATION_JSON,
-                );
-            }
-        } else if self.raw_body_field().is_some() {
-            quote! {
-                req_headers.insert(
-                    #http::header::CONTENT_TYPE,
-                    #ruma_common::http_headers::APPLICATION_OCTET_STREAM,
-                );
-            }
-        } else {
-            TokenStream::new()
-        };
-
-        header_kvs.extend(self.header_fields().map(|(field, header_name)| {
-            let field_name = &field.ident;
-
-            match &field.ty {
-                syn::Type::Path(syn::TypePath { path: syn::Path { segments, .. }, .. })
-                    if segments.last().unwrap().ident == "Option" =>
-                {
-                    quote! {
-                        if let Some(header_val) = self.#field_name.as_ref() {
-                            req_headers.insert(
-                                #header_name,
-                                #http::header::HeaderValue::from_str(&header_val.to_string())?,
-                            );
-                        }
-                    }
-                }
-                _ => quote! {
-                    req_headers.insert(
-                        #header_name,
-                        #http::header::HeaderValue::from_str(&self.#field_name.to_string())?,
-                    );
-                },
-            }
-        }));
-
-        if !header_kvs.is_empty() {
-            header_kvs = quote! {
-                {
-                    let req_headers = http_request.headers_mut();
-                    #header_kvs
-                }
-            };
-        }
-
-        let request_body = if let Some(field) = self.raw_body_field() {
-            let field_name = field.ident.as_ref().expect("expected field to have an identifier");
-            quote! { #ruma_common::serde::slice_to_buf(&self.#field_name) }
-        } else if self.has_body_fields() {
-            let initializers = struct_init_fields(self.body_fields(), quote! { self });
-
-            quote! {
-                #ruma_common::serde::json_to_buf(&RequestBody { #initializers })?
-            }
-        } else {
-            quote! { <Self as #ruma_common::api::Metadata>::empty_request_body::<T>() }
-        };
+        let body_serialize = self.body.expand_serialize(KIND, ruma_common);
+        let body_fields = self.body.expand_fields();
 
         let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
+        let ident = &self.ident;
+        let error_ty = &self.error_ty;
+        let request = KIND.as_variable_ident();
 
         quote! {
             #[automatically_derived]
             #[cfg(feature = "client")]
-            impl #impl_generics #ruma_common::api::OutgoingRequest for Request #ty_generics #where_clause {
+            impl #impl_generics #ruma_common::api::OutgoingRequest for #ident #ty_generics #where_clause {
                 type EndpointError = #error_ty;
                 type IncomingResponse = Response;
 
@@ -124,50 +43,57 @@ impl Request {
                     authentication_input: <<Self as #ruma_common::api::Metadata>::Authentication as #ruma_common::api::auth_scheme::AuthScheme>::Input<'_>,
                     path_builder_input: <<Self as #ruma_common::api::Metadata>::PathBuilder as #ruma_common::api::path_builder::PathBuilder>::Input<'_>,
                 ) -> ::std::result::Result<#http::Request<T>, #ruma_common::api::error::IntoHttpError> {
-                    let request_query_string = #request_query_string;
+                    let Self {
+                        #path_fields
+                        #query_fields
+                        #headers_fields
+                        #body_fields
+                    } = self;
 
-                    let mut http_request = #http::Request::builder()
+                    let request_query_string = #query_serialize;
+
+                    let mut #request = #http::Request::builder()
                         .method(<Self as #ruma_common::api::Metadata>::METHOD)
                         .uri(<Self as #ruma_common::api::Metadata>::make_endpoint_url(
                             path_builder_input,
                             base_url,
-                            &[ #( &self.#path_fields ),* ],
+                            &[ #( &#path_idents ),* ],
                             &request_query_string,
                         )?)
-                        .body(#request_body)?;
+                        .body(#body_serialize)?;
 
-                    #header_kvs
+                    #headers_serialize
 
                     <<Self as #ruma_common::api::Metadata>::Authentication as #ruma_common::api::auth_scheme::AuthScheme>::add_authentication(
-                        &mut http_request,
+                        &mut #request,
                         authentication_input
                     )
                         .map_err(|error| #ruma_common::api::error::IntoHttpError::Authentication(error.into()))?;
 
-                    Ok(http_request)
+                    Ok(#request)
                 }
             }
         }
     }
 }
 
-/// Produces code for a struct initializer for the given field kind to be accessed through the
-/// given variable name.
-fn struct_init_fields<'a>(
-    fields: impl IntoIterator<Item = &'a Field>,
-    src: TokenStream,
-) -> TokenStream {
-    fields
-        .into_iter()
-        .map(|field| {
-            let field_name = field.ident.as_ref().expect("expected field to have an identifier");
-            let cfg_attrs =
-                field.attrs.iter().filter(|a| a.path().is_ident("cfg")).collect::<Vec<_>>();
+impl RequestQuery {
+    /// Generate code to serialize the query string.
+    fn expand_serialize(&self, ruma_common: &RumaCommon) -> TokenStream {
+        if matches!(self, Self::None) {
+            return quote! { "" };
+        }
 
-            quote! {
-                #( #cfg_attrs )*
-                #field_name: #src.#field_name,
-            }
-        })
-        .collect()
+        let serde_html_form = ruma_common.reexported(RumaCommonReexport::SerdeHtmlForm);
+        let fields = self.expand_fields();
+        let serde_struct = KIND.as_struct_ident(StructSuffix::Query);
+
+        quote! {{
+            let request_query = #serde_struct {
+                #fields
+            };
+
+            &#serde_html_form::to_string(request_query)?
+        }}
+    }
 }
