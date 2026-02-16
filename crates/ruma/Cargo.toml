@@ -16,9 +16,8 @@ all-features = true
 
 [features]
 api = ["ruma-common/api"]
-canonical-json = ["ruma-common/canonical-json", "ruma-events?/canonical-json"]
 events = ["dep:ruma-events"]
-signatures = ["dep:ruma-signatures", "canonical-json"]
+signatures = ["dep:ruma-signatures"]
 state-res = ["dep:ruma-state-res"]
 
 appservice-api-c = ["api", "events", "dep:ruma-appservice-api", "ruma-appservice-api?/client"]
@@ -194,7 +193,6 @@ unstable-msc4140 = ["ruma-common/unstable-msc4140", "ruma-client-api?/unstable-m
 unstable-msc4143 = ["ruma-client-api?/unstable-msc4143"]
 unstable-msc4171 = ["ruma-events?/unstable-msc4171"]
 unstable-msc4186 = ["ruma-common/unstable-msc4186", "ruma-client-api?/unstable-msc4186"]
-unstable-msc4191 = ["ruma-client-api?/unstable-msc4191"]
 unstable-msc4195 = ["unstable-msc4143", "ruma-client-api?/unstable-msc4195"]
 unstable-msc4203 = ["ruma-appservice-api?/unstable-msc4203"]
 unstable-msc4230 = ["ruma-events?/unstable-msc4230"]
@@ -215,6 +213,7 @@ unstable-msc4380 = [
     "ruma-events?/unstable-msc4380",
     "ruma-client-api?/unstable-msc4380",
 ]
+unstable-msc4388 = ["ruma-common/unstable-msc4388", "ruma-client-api?/unstable-msc4388"]
 
 [dependencies]
 assign = { workspace = true }

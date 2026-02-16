@@ -1,5 +1,26 @@
 # [unreleased]
 
+Breaking changes:
+
+- The variants of `CanonicalJsonError` variants changed.
+- `to_canonical_value()` has stricter rules, it now returns errors for the
+  following cases which were never documented to work in the first place:
+  - Serializing bytes.
+  - Serializing booleans and integers as keys for an object.
+  - Serializing the same key twice in an object.
+- The `canonical-json` feature was removed. The `canonical_json` module is no
+  longer gated behind a cargo feature.
+
+Improvements:
+
+- Add `canonical_json::Serializer`, which allows to serialize a type directly to
+  a `CanonicalJsonValue`, with stricter rules than
+  `serde_json::value::Serializer`. This serializer is also used in
+  `to_canonical_value()`.
+- Add the `assert_to_canonical_json_eq!` macro that can be used in tests to
+  check the canonical JSON serialization of a type against its expected value.
+- Add `io.element.msc4388` unstable feature support to `/versions`.
+
 # 0.17.1
 
 Bug fixes:
