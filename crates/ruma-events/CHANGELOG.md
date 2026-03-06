@@ -8,6 +8,15 @@ Breaking changes:
   required but it is removed during redaction.
 - The `canonical-json` feature was removed. The code that was behind it is no
   longer gated behind a cargo feature.
+- The `Reply` struct variant of `message::Relation`, `encrypted::Relation` and
+  `RelationWithoutReplacement` is now a tuple variant containing a
+  non-exhaustive struct.
+- The `(Any)FullStateEventContent` enums were renamed to
+  `(Any)StateEventContentChange` to reflect better the purpose of those enums.
+  The method to access `AnyStateEventContentChange` on `Any(Sync)StateEvent` is
+  called `content_change()`.
+- The `content()` method on `Any(Sync)StateEvent` returns an
+  `AnyPossiblyRedactedStateEventContent`.
 
 Bug fixes:
 
@@ -24,6 +33,14 @@ Improvements:
 - Implement `RedactContent for PossiblyRedacted*EventContent` for all state
   events. 
 - Add support for the recently used emoji account data, according to MSC4356.
+- Stabilize support for invite blocking, according to MSC4380. Since the format
+  of the account data changed, the previous event content struct as well as its
+  variants in `AnyGlobalAccountDataEvent(Content)` are now prefixed with
+  `Unstable`. The new `InvitePermissionConfigEventContent` struct uses the new
+  format with a `default_action` field instead of `block_all`.
+- Add support for to-device event for pushing secrets, according to MSC4385.
+- Add support for video/audio call intent according to MSC4075 as part of the 
+  `RtcNotificationEventContent` new `call_intent` field.
 
 # 0.32.1
 

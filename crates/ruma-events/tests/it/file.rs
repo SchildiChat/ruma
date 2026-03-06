@@ -5,14 +5,14 @@ use js_int::uint;
 use ruma_common::{
     MilliSecondsSinceUnixEpoch,
     canonical_json::assert_to_canonical_json_eq,
-    mxc_uri, owned_event_id,
+    owned_event_id, owned_mxc_uri,
     serde::{Base64, CanBeEmpty},
 };
 use ruma_events::{
     AnyMessageLikeEvent, MessageLikeEvent,
     file::{EncryptedContentInit, FileEventContent},
     message::TextContentBlock,
-    relation::InReplyTo,
+    relation::Reply,
     room::{JsonWebKeyInit, message::Relation},
 };
 use serde_json::{from_value as from_json_value, json};
@@ -21,7 +21,7 @@ use serde_json::{from_value as from_json_value, json};
 fn plain_content_serialization() {
     let event_content = FileEventContent::plain_with_plain_text(
         "Upload: my_file.txt",
-        mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+        owned_mxc_uri!("mxc://notareal.hs/abcdef"),
         "my_file.txt".to_owned(),
     );
 
@@ -43,7 +43,7 @@ fn plain_content_serialization() {
 fn encrypted_content_serialization() {
     let event_content = FileEventContent::encrypted_with_plain_text(
         "Upload: my_file.txt",
-        mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+        owned_mxc_uri!("mxc://notareal.hs/abcdef"),
         "my_file.txt".to_owned(),
         EncryptedContentInit {
             key: JsonWebKeyInit {
@@ -95,14 +95,13 @@ fn encrypted_content_serialization() {
 fn file_event_serialization() {
     let mut content = FileEventContent::plain(
         TextContentBlock::html("Upload: my_file.txt", "Upload: <strong>my_file.txt</strong>"),
-        mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+        owned_mxc_uri!("mxc://notareal.hs/abcdef"),
         "my_file.txt".to_owned(),
     );
     content.file.mimetype = Some("text/plain".to_owned());
     content.file.size = Some(uint!(774));
-    content.relates_to = Some(Relation::Reply {
-        in_reply_to: InReplyTo::new(owned_event_id!("$replyevent:example.com")),
-    });
+    content.relates_to =
+        Some(Relation::Reply(Reply::with_event_id(owned_event_id!("$replyevent:example.com"))));
 
     assert_to_canonical_json_eq!(
         content,

@@ -6,6 +6,40 @@ Breaking changes:
   new `RoomPowerLevelsContentOverride` type. It has the same fields as
   `RoomPowerLevelsEventContent` except all `Int` fields are `Option<Int>`, which
   allows uploading explicit values no matter what the default ones are.
+- The `server` module was renamed to `admin`, to make it easier to find since it
+  contains all the administration endpoints, and it matches the namespace in the
+  spec.
+- `BackupAlgorithm::MegolmBackupV1Curve25519AesSha2` is now a tuple variant
+  containing a non-exhaustive struct.
+- The `groups` field of `ResultRoomEvents` is now a
+  `ResultGroupMapsByGroupingKey`. This is a wrapper around a map that ensure
+  that each `ResultGroupMap` uses the appropriate key type for their
+  `GroupingKey`. As a result, the `OwnedRoomIdOrUserId` enum was removed.
+- `InvitationRecipient::UserId` is now a tuple variant containing a
+  non-exhaustive struct, and the `reason` field of `invite_user::v3::Request`
+  was moved to `InviteUserId`, because it is not available for third-party IDs.
+- `StateEventFormat` can represent any custom string value now, but it doesn't
+  implement `Copy` anymore.
+- Remove support for the OAuth 2.0 `WWW-AUTHENTICATE` header data in
+  `ErrorKind::Forbidden`, because it was dropped from MSC2967 and it is not part
+  of any new MSC. `ErrorKind::Forbidden` is now a unit variant, and the
+  `ErrorKind::forbidden()` method to construct it was removed.
+  `AuthenticateError` was removed.
+- The following `ErrorKind` struct variants are now tuple structs containing a
+  non-exhaustive struct:
+  - `BadStatus`, and its serialization was fixed.
+  - `IncompatibleRoomVersion`
+  - `LimitExceeded`
+  - `ResourceLimitExceeded`
+  - `UnknownToken`
+  - `WrongRoomKeysVersion`, and its `current_version` field is now required and
+    its serialization was fixed.
+
+Bug fixes:
+
+- In the `search::search_events::v3` module, fix the deserialization of:
+  - `Criteria` when the `filter` field is omitted.
+  - `SearchResult` when the `context` field is omitted.
 
 Improvements:
 
@@ -18,10 +52,16 @@ Improvements:
     and unstable account management actions:
     `is_account_management_action_supported()` allows to check whether either of
     the stable or unstable version of an action is advertised by the server, and
-    `action_management_url_with_action` allows to build an account management
+    `account_management_url_with_action` allows to build an account management
     URL including the proper version of the action, depending on what the server
     advertises.
 - Add support for updated rendezvous session from MSC4388 behind `unstable-msc4388`.
+- Stabilize support for the `M_INVITE_BLOCKED` error code, according to MSC4380.
+- Stabilize support for OAuth 2.0 aware clients, according to MSC3824. Unstable
+  support was dropped entirely.
+- `BackupAlgorithm` can be deserialized from unsupported algorithms. The name
+  and data of the algorithm can be accessed via the `algorithm()` and
+  `auth_data()` methods respectively.
 
 # 0.22.1
 

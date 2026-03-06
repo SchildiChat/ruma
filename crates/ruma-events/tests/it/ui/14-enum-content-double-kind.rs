@@ -1,5 +1,8 @@
 #![allow(unexpected_cfgs)]
 
+#[cfg(feature = "unstable-uniffi")]
+uniffi::setup_scaffolding!();
+
 use ruma_macros::event_enum;
 
 mod event {
@@ -47,6 +50,4 @@ fn main() {
     assert_eq!(RoomAccountDataEventType::MacroTest.to_string(), "m.macro.test");
 }
 
-#[doc(hidden)]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PrivOwnedStr(Box<str>);
+ruma_common::priv_owned_str!(uniffi);

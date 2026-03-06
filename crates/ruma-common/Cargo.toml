@@ -35,7 +35,6 @@ unstable-msc4140 = []
 unstable-msc4186 = []
 # Thread subscriptions.
 unstable-msc4306 = []
-unstable-msc4380 = []
 unstable-msc4388 = []
 
 # Allow IDs to exceed 255 bytes.
@@ -75,12 +74,12 @@ serde = { workspace = true }
 serde_html_form = { workspace = true }
 serde_json = { workspace = true, features = ["raw_value"] }
 thiserror = { workspace = true }
-time = "0.3.34"
+time = "0.3.47"
 tracing = { workspace = true, features = ["attributes"] }
 url = { workspace = true }
 uuid = { version = "1.0.0", optional = true, features = ["v4"] }
 web-time = { workspace = true }
-wildmatch = "2.0.0"
+wildmatch = { workspace = true }
 zeroize = { workspace = true }
 
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]

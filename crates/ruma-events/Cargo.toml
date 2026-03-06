@@ -53,7 +53,9 @@ unstable-msc4319 = []
 unstable-msc4334 = ["dep:language-tags"]
 unstable-msc4359 = []
 unstable-msc4362 = []
-unstable-msc4380 = ["ruma-common/unstable-msc4380"]
+unstable-msc4380 = []
+unstable-msc4385 = []
+unstable-uniffi = ["dep:uniffi"]
 
 # Allow some mandatory fields to be missing, defaulting them to an empty string
 # in deserialization.
@@ -98,9 +100,10 @@ serde = { workspace = true }
 serde_json = { workspace = true, features = ["raw_value"] }
 thiserror = { workspace = true }
 tracing = { workspace = true, features = ["attributes"] }
+uniffi = { workspace = true, optional = true }
 url = { workspace = true }
 web-time = { workspace = true }
-wildmatch = "2.0.0"
+wildmatch = { workspace = true }
 zeroize = { workspace = true }
 
 # dev-dependencies can't be optional, so this is a regular dependency

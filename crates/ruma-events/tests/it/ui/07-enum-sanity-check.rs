@@ -1,5 +1,8 @@
 #![allow(unexpected_cfgs)]
 
+#[cfg(feature = "unstable-uniffi")]
+uniffi::setup_scaffolding!();
+
 use ruma_macros::event_enum;
 
 event_enum! {
@@ -37,6 +40,4 @@ fn main() {
     assert_eq!(GlobalAccountDataEventType::IdentityServer.to_cow_str(), "io.ruma.identity_server");
 }
 
-#[doc(hidden)]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PrivOwnedStr(Box<str>);
+ruma_common::priv_owned_str!(uniffi);

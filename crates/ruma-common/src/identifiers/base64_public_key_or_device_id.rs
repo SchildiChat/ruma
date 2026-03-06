@@ -48,7 +48,7 @@ impl<'a> From<&'a DeviceId> for &'a Base64PublicKeyOrDeviceId {
 
 impl From<OwnedDeviceId> for OwnedBase64PublicKeyOrDeviceId {
     fn from(value: OwnedDeviceId) -> Self {
-        Self::from(value.as_str())
+        unsafe { Self::from_inner_unchecked(value.into_inner()) }
     }
 }
 
@@ -60,6 +60,29 @@ impl<'a> From<&'a Base64PublicKey> for &'a Base64PublicKeyOrDeviceId {
 
 impl From<OwnedBase64PublicKey> for OwnedBase64PublicKeyOrDeviceId {
     fn from(value: OwnedBase64PublicKey) -> Self {
-        Self::from(value.as_str())
+        unsafe { Self::from_inner_unchecked(value.into_inner()) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OwnedBase64PublicKeyOrDeviceId;
+    use crate::{OwnedBase64PublicKey, OwnedDeviceId};
+
+    #[test]
+    fn convert_owned_device_id_to_owned_base64_public_key_or_device_id() {
+        let device_id: OwnedDeviceId = "MYDEVICE".into();
+        let mixed: OwnedBase64PublicKeyOrDeviceId = device_id.into();
+
+        assert_eq!(mixed.as_str(), "MYDEVICE");
+    }
+
+    #[test]
+    fn convert_owned_base64_public_key_to_owned_base64_public_key_or_device_id() {
+        let base64_public_key: OwnedBase64PublicKey =
+            "base64+master+public+key".try_into().unwrap();
+        let mixed: OwnedBase64PublicKeyOrDeviceId = base64_public_key.into();
+
+        assert_eq!(mixed.as_str(), "base64+master+public+key");
     }
 }

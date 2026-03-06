@@ -10,6 +10,7 @@
 #![warn(missing_docs)]
 
 pub mod account;
+pub mod admin;
 pub mod alias;
 pub mod appservice;
 pub mod authenticated_media;
@@ -46,7 +47,6 @@ pub mod room;
 #[cfg(feature = "unstable-msc4143")]
 pub mod rtc;
 pub mod search;
-pub mod server;
 pub mod session;
 pub mod space;
 pub mod state;
@@ -60,19 +60,6 @@ pub mod uiaa;
 pub mod user_directory;
 pub mod voip;
 
-use std::fmt;
-
 pub use error::Error;
 
-// Wrapper around `Box<str>` that cannot be used in a meaningful way outside of
-// this crate. Used for string enums because their `_Custom` variant can't be
-// truly private (only `#[doc(hidden)]`).
-#[doc(hidden)]
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PrivOwnedStr(Box<str>);
-
-impl fmt::Debug for PrivOwnedStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
+ruma_common::priv_owned_str!();

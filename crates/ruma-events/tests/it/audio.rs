@@ -7,7 +7,7 @@ use js_int::uint;
 use ruma_common::{
     MilliSecondsSinceUnixEpoch,
     canonical_json::assert_to_canonical_json_eq,
-    mxc_uri, owned_event_id,
+    owned_event_id, owned_mxc_uri,
     serde::{Base64, CanBeEmpty},
 };
 #[cfg(feature = "unstable-msc3246")]
@@ -17,7 +17,7 @@ use ruma_events::{
     audio::{AudioDetailsContentBlock, AudioEventContent},
     file::{EncryptedContentInit, FileContentBlock},
     message::TextContentBlock,
-    relation::InReplyTo,
+    relation::Reply,
     room::{JsonWebKeyInit, message::Relation},
 };
 use serde_json::{from_value as from_json_value, json};
@@ -36,7 +36,7 @@ fn plain_content_serialization() {
     let event_content = AudioEventContent::with_plain_text(
         "Upload: my_sound.ogg",
         FileContentBlock::plain(
-            mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+            owned_mxc_uri!("mxc://notareal.hs/abcdef"),
             "my_sound.ogg".to_owned(),
         ),
     );
@@ -60,7 +60,7 @@ fn encrypted_content_serialization() {
     let event_content = AudioEventContent::with_plain_text(
         "Upload: my_sound.ogg",
         FileContentBlock::encrypted(
-            mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+            owned_mxc_uri!("mxc://notareal.hs/abcdef"),
             "my_sound.ogg".to_owned(),
             EncryptedContentInit {
                 key: JsonWebKeyInit {
@@ -114,16 +114,15 @@ fn event_serialization() {
     let mut content = AudioEventContent::new(
         TextContentBlock::html("Upload: my_mix.mp3", "Upload: <strong>my_mix.mp3</strong>"),
         FileContentBlock::plain(
-            mxc_uri!("mxc://notareal.hs/abcdef").to_owned(),
+            owned_mxc_uri!("mxc://notareal.hs/abcdef"),
             "my_mix.mp3".to_owned(),
         ),
     );
     content.file.mimetype = Some("audio/mp3".to_owned());
     content.file.size = Some(uint!(897_774));
     content.audio_details = Some(AudioDetailsContentBlock::new(Duration::from_secs(123)));
-    content.relates_to = Some(Relation::Reply {
-        in_reply_to: InReplyTo::new(owned_event_id!("$replyevent:example.com")),
-    });
+    content.relates_to =
+        Some(Relation::Reply(Reply::with_event_id(owned_event_id!("$replyevent:example.com"))));
 
     assert_to_canonical_json_eq!(
         content,
