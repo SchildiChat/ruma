@@ -17,6 +17,16 @@ Breaking changes:
   called `content_change()`.
 - The `content()` method on `Any(Sync)StateEvent` returns an
   `AnyPossiblyRedactedStateEventContent`.
+- `RequestAction` doesn't implement `(Partial)Eq` and `(Partial)Ord` anymore and
+  its `Request` variant contains a non-exhaustive struct instead of a
+  `SecretName`.
+- `SecretEncryptedData` is now a non-constructible struct rather than an enum,
+  that should always be used as `Raw<SecretEncryptedData>`. Because there is no
+  indicator in the data for which algorithm was used for encrypting it, it won't
+  be possible to determine reliably which algorithm is matched during
+  deserialization when more algorithms are added. This type should be `.cast()`
+  from and to other types when the algorithm is known from external data. The
+  previous `AesHmacSha2EncryptedData` variant is now a separate struct.
 
 Bug fixes:
 
@@ -41,6 +51,7 @@ Improvements:
 - Add support for to-device event for pushing secrets, according to MSC4385.
 - Add support for video/audio call intent according to MSC4075 as part of the 
   `RtcNotificationEventContent` new `call_intent` field.
+- Add `AnySyncTimelineEvent::is_redacted()` helper.
 
 # 0.32.1
 

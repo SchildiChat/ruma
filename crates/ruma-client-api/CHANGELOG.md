@@ -34,6 +34,12 @@ Breaking changes:
   - `UnknownToken`
   - `WrongRoomKeysVersion`, and its `current_version` field is now required and
     its serialization was fixed.
+- Remove the `score` field from `report_content::v3::Request` according to
+  MSC4277. `report_content::v3::Request::new()` now only takes a room ID and an
+  event ID.
+- `Typing::Yes` now holds a non-exhaustive struct rather than a `Duration`, to
+  potentially allow to add more fields in the future without it being a breaking
+  change.
 
 Bug fixes:
 
@@ -62,6 +68,7 @@ Improvements:
 - `BackupAlgorithm` can be deserialized from unsupported algorithms. The name
   and data of the algorithm can be accessed via the `algorithm()` and
   `auth_data()` methods respectively.
+- `RegistrationKind` and `LoginType` can now represent custom values.
 
 # 0.22.1
 

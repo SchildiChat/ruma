@@ -4,7 +4,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
   # Keep in sync with version in `rust-toolchain.toml` and `xtask/src/main.rs`
-  NIGHTLY: nightly-2026-01-23
+  NIGHTLY: nightly-2026-03-06
 
 on:
   push:
@@ -32,12 +32,17 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Check spelling
-        uses: crate-ci/typos@v1.42.1
+        uses: crate-ci/typos@v1.44.0
 
       - name: Install cargo-sort
         uses: taiki-e/cache-cargo-install-action@v3
         with:
-          tool: cargo-sort
+          tool: cargo-sort@2.1.1
+
+      - name: Install cargo-machete
+        uses: taiki-e/cache-cargo-install-action@v3
+        with:
+          tool: cargo-machete@0.9.1
 
       - name: Get xtask
         uses: actions/cache@v5
@@ -242,10 +247,11 @@ jobs:
 
       - name: Upload docs as artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docs
           path: docs.tar.zstd
+          archive: false
 
       - name: Upload docs as pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
