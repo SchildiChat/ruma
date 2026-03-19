@@ -17,6 +17,9 @@ pub struct ReactionEventContent {
     /// Information about the related event.
     #[serde(rename = "m.relates_to")]
     pub relates_to: Annotation,
+    /// SC: shortcode
+    #[serde(rename = "com.beeper.reaction.shortcode", skip_serializing_if = "Option::is_none")]
+    pub shortcode: Option<String>,
 }
 
 impl ReactionEventContent {
@@ -24,7 +27,7 @@ impl ReactionEventContent {
     ///
     /// You can also construct a `ReactionEventContent` from an annotation using `From` / `Into`.
     pub fn new(relates_to: Annotation) -> Self {
-        Self { relates_to }
+        Self { relates_to, shortcode: None }
     }
 }
 
