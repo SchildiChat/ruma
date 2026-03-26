@@ -15,6 +15,11 @@ Breaking changes:
   preferred.
 - `EventId::new()` was renamed to `EventId::new_v1()`, since it works only for
   the first format of event IDs.
+- The `NoAuthentication` authentication scheme doesn't take a `SendAccessToken`
+  as input anymore, because it doesn't make sense to be able to send access
+  tokens for APIs that don't use them as a form of authentication. The new
+  `NoAccessToken` authentication scheme should be used instead for APIs that
+  rely on access tokens as a form of authentication.
 
 Improvements:
 
@@ -24,7 +29,6 @@ Improvements:
   `to_canonical_value()`.
 - Add the `assert_to_canonical_json_eq!` macro that can be used in tests to
   check the canonical JSON serialization of a type against its expected value.
-- Add `io.element.msc4388` unstable feature support to `/versions`.
 - Add crate-internal into_raw() / from_raw() helpers for IdDst owned IDs and
   use them in OwnedRoomId / OwnedRoomAliasId <-> OwnedRoomOrAliasId
   conversions.
@@ -35,6 +39,8 @@ Improvements:
   reallocate when possible.
 - Add `EventId::new_v2_or_v3()` to construct event IDs formats which are based
   on the event reference hash.
+- Add `RoomType::Call` & `RoomTypeFilter::Call` to support MSC3417 behind
+  `unstable-msc3417`
 
 # 0.17.1
 

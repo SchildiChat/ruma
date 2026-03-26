@@ -10,16 +10,16 @@ pub mod unstable {
     use std::time::Duration;
 
     use ruma_common::{
-        api::{auth_scheme::NoAuthentication, request, response},
+        api::{auth_scheme::NoAccessToken, request, response},
         metadata,
     };
 
     metadata! {
         method: GET,
         rate_limited: true,
-        authentication: NoAuthentication,
+        authentication: NoAccessToken,
         history: {
-            unstable("io.element.msc4388") => "/_matrix/client/unstable/io.element.msc4388/rendezvous/{id}",
+            unstable => "/_matrix/client/unstable/io.element.msc4388/rendezvous/{id}",
         }
     }
 

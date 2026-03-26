@@ -40,6 +40,8 @@ Breaking changes:
 - `Typing::Yes` now holds a non-exhaustive struct rather than a `Duration`, to
   potentially allow to add more fields in the future without it being a breaking
   change.
+- The endpoints that were using the `NoAuthentication` authentication scheme now
+  use `NoAccessToken`.
 
 Bug fixes:
 
@@ -69,6 +71,8 @@ Improvements:
   and data of the algorithm can be accessed via the `algorithm()` and
   `auth_data()` methods respectively.
 - `RegistrationKind` and `LoginType` can now represent custom values.
+- Stabilize support for the OAuth 2.0 Device Authorization Grant, according to
+  MSC4341.
 
 # 0.22.1
 
