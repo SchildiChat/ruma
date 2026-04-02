@@ -27,6 +27,17 @@ Breaking changes:
   deserialization when more algorithms are added. This type should be `.cast()`
   from and to other types when the algorithm is known from external data. The
   previous `AesHmacSha2EncryptedData` variant is now a separate struct.
+- Some fields of `EncryptedFile` are now grouped by version in a new
+  `EncryptedFileInfo` enum. This allows to support custom encryption algorithms
+  and to hide fields that should be set to a constant value to have a stricter
+  validation during construction and deserialization. Now that there are fewer
+  fields, this type can be constructed with `EncryptedFile::new()`.
+  - Similarly, the `hashes` field uses a stricter `EncryptedFileHashes` map type
+    to ensure that a decoded hash has the appropriate format for the algorithm
+    in the key.
+  - `EncryptedFileInit`, `JsonWebKey` and `JsonWebKeyInit` were removed.
+  - The same changes were applied to the unstable `EncryptedContent`.
+  
 
 Bug fixes:
 

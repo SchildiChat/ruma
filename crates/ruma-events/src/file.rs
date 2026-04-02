@@ -2,16 +2,14 @@
 //!
 //! [MSC3551]: https://github.com/matrix-org/matrix-spec-proposals/pull/3551
 
-use std::collections::BTreeMap;
-
 use js_int::UInt;
-use ruma_common::{OwnedMxcUri, serde::Base64};
+use ruma_common::OwnedMxcUri;
 use ruma_macros::EventContent;
 use serde::{Deserialize, Serialize};
 
 use super::{
     message::TextContentBlock,
-    room::{EncryptedFile, JsonWebKey, message::Relation},
+    room::{EncryptedFile, EncryptedFileHashes, EncryptedFileInfo, message::Relation},
 };
 
 /// The payload for an extensible file message.
@@ -172,64 +170,30 @@ impl FileContentBlock {
 }
 
 /// The encryption info of a file sent to a room with end-to-end encryption enabled.
-///
-/// To create an instance of this type, first create a `EncryptedContentInit` and convert it via
-/// `EncryptedContent::from` / `.into()`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 pub struct EncryptedContent {
-    /// A [JSON Web Key](https://tools.ietf.org/html/rfc7517#appendix-A.3) object.
-    pub key: JsonWebKey,
+    /// Information about the encryption of the file.
+    #[serde(flatten)]
+    pub info: EncryptedFileInfo,
 
-    /// The 128-bit unique counter block used by AES-CTR, encoded as unpadded base64.
-    pub iv: Base64,
-
-    /// A map from an algorithm name to a hash of the ciphertext, encoded as unpadded base64.
+    /// A map from an algorithm name to a hash of the ciphertext.
     ///
     /// Clients should support the SHA-256 hash, which uses the key sha256.
-    pub hashes: BTreeMap<String, Base64>,
-
-    /// Version of the encrypted attachments protocol.
-    ///
-    /// Must be `v2`.
-    pub v: String,
+    pub hashes: EncryptedFileHashes,
 }
 
-/// Initial set of fields of `EncryptedContent`.
-///
-/// This struct will not be updated even if additional fields are added to `EncryptedContent` in a
-/// new (non-breaking) release of the Matrix specification.
-#[derive(Debug)]
-#[allow(clippy::exhaustive_structs)]
-pub struct EncryptedContentInit {
-    /// A [JSON Web Key](https://tools.ietf.org/html/rfc7517#appendix-A.3) object.
-    pub key: JsonWebKey,
-
-    /// The 128-bit unique counter block used by AES-CTR, encoded as unpadded base64.
-    pub iv: Base64,
-
-    /// A map from an algorithm name to a hash of the ciphertext, encoded as unpadded base64.
-    ///
-    /// Clients should support the SHA-256 hash, which uses the key sha256.
-    pub hashes: BTreeMap<String, Base64>,
-
-    /// Version of the encrypted attachments protocol.
-    ///
-    /// Must be `v2`.
-    pub v: String,
-}
-
-impl From<EncryptedContentInit> for EncryptedContent {
-    fn from(init: EncryptedContentInit) -> Self {
-        let EncryptedContentInit { key, iv, hashes, v } = init;
-        Self { key, iv, hashes, v }
+impl EncryptedContent {
+    /// Construct a new `EncryptedContent` with the given encryption info and hashes.
+    pub fn new(info: EncryptedFileInfo, hashes: EncryptedFileHashes) -> Self {
+        Self { info, hashes }
     }
 }
 
 impl From<&EncryptedFile> for EncryptedContent {
     fn from(encrypted: &EncryptedFile) -> Self {
-        let EncryptedFile { key, iv, hashes, v, .. } = encrypted;
-        Self { key: key.to_owned(), iv: iv.to_owned(), hashes: hashes.to_owned(), v: v.to_owned() }
+        let EncryptedFile { info, hashes, .. } = encrypted;
+        Self { info: info.to_owned(), hashes: hashes.to_owned() }
     }
 }
 
