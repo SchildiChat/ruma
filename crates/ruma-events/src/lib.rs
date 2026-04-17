@@ -273,7 +273,7 @@ pub struct Mentions {
     /// The list of mentioned users.
     ///
     /// Defaults to an empty `BTreeSet`.
-    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty", deserialize_with = "deserialize_mentions_user_ids")]
     pub user_ids: BTreeSet<OwnedUserId>,
 
     /// Whether the whole room is mentioned.
@@ -303,6 +303,40 @@ impl Mentions {
         self.user_ids.extend(mentions.user_ids);
         self.room |= mentions.room;
     }
+}
+
+fn deserialize_mentions_user_ids<'de, D>(deserializer: D) -> Result<BTreeSet<OwnedUserId>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct SkipInvalid(std::marker::PhantomData<OwnedUserId>);
+
+    impl<'de> serde::de::Visitor<'de> for SkipInvalid {
+        type Value = BTreeSet<OwnedUserId>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            formatter.write_str("list of user IDs with possibly invalid items")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut user_ids = BTreeSet::new();
+
+            while let Some(result) = seq.next_element::<OwnedUserId>().transpose() {
+                let Ok(user_id) = result else {
+                    continue;
+                };
+
+                user_ids.insert(user_id);
+            }
+
+            Ok(user_ids)
+        }
+    }
+
+    deserializer.deserialize_seq(SkipInvalid(std::marker::PhantomData))
 }
 
 ruma_common::priv_owned_str!(uniffi);
