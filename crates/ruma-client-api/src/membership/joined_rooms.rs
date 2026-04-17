@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3joined_rooms
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3joined_rooms
 
     use ruma_common::{
         OwnedRoomId,
@@ -24,12 +24,12 @@ pub mod v3 {
     }
 
     /// Request type for the `joined_rooms` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `joined_rooms` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A list of the rooms the user is in, i.e. the ID of each room in
         /// which the user has joined membership.

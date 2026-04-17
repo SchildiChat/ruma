@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3pushrulesglobalkindruleidenabled
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3pushrulesglobalkindruleidenabled
 
     use ruma_common::{
         api::{auth_scheme::AccessToken, request, response},
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `set_pushrule_enabled` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The kind of rule
         #[ruma_api(path)]
@@ -40,7 +40,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_pushrule_enabled` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

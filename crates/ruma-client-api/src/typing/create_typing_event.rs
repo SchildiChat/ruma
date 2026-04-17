@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3roomsroomidtypinguserid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3roomsroomidtypinguserid
 
     use std::time::Duration;
 
@@ -27,7 +27,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_typing_event` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room in which the user is typing.
         #[ruma_api(path)]
@@ -43,7 +43,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_typing_event` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

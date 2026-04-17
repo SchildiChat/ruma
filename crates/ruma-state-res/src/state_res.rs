@@ -33,7 +33,7 @@ use crate::{
 /// This is the representation of what the Matrix specification calls a "room state" or a "state
 /// map" during [state resolution].
 ///
-/// [state resolution]: https://spec.matrix.org/latest/rooms/v2/#state-resolution
+/// [state resolution]: https://spec.matrix.org/v1.18/rooms/v2/#state-resolution
 pub type StateMap<T> = HashMap<(StateEventType, String), T>;
 
 /// Apply the [state resolution] algorithm introduced in room version 2 to resolve the state of a
@@ -65,7 +65,7 @@ pub type StateMap<T> = HashMap<(StateEventType, String), T>;
 ///
 /// The resolved room state.
 ///
-/// [state resolution]: https://spec.matrix.org/latest/rooms/v2/#state-resolution
+/// [state resolution]: https://spec.matrix.org/v1.18/rooms/v2/#state-resolution
 #[instrument(skip_all)]
 pub fn resolve<'a, E, MapsIter>(
     auth_rules: &AuthorizationRules,
@@ -676,7 +676,7 @@ fn iterative_auth_checks<E: Event + Clone>(
             }
             Err(error) => {
                 // Don't add this event to the state.
-                warn!("event failed the authentication check: {error}");
+                warn!(event_id = ?event.event_id(), "event failed the authentication check: {error}");
             }
         }
 

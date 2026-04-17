@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3devicesdeviceid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3devicesdeviceid
 
     use ruma_common::{
         OwnedDeviceId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_device` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The device to retrieve.
         #[ruma_api(path)]
@@ -34,7 +34,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_device` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Information about the device.
         #[ruma_api(body)]

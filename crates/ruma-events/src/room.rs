@@ -23,7 +23,6 @@ use zeroize::Zeroize;
 
 use crate::PrivOwnedStr;
 
-pub mod aliases;
 pub mod avatar;
 pub mod canonical_alias;
 pub mod create;
@@ -39,6 +38,7 @@ pub mod member;
 pub mod message;
 pub mod name;
 pub mod pinned_events;
+pub mod policy;
 pub mod power_levels;
 pub mod redaction;
 pub mod server_acl;

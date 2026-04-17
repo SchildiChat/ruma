@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3presenceuseridstatus
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3presenceuseridstatus
 
     use ruma_common::{
         OwnedUserId,
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `set_presence` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The user whose presence state will be updated.
         #[ruma_api(path)]
@@ -40,7 +40,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_presence` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

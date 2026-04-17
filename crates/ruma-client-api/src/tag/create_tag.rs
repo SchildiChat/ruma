@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3useruseridroomsroomidtagstag
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3useruseridroomsroomidtagstag
 
     use ruma_common::{
         OwnedRoomId, OwnedUserId,
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_tag` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the user creating the tag.
         #[ruma_api(path)]
@@ -45,7 +45,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_tag` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

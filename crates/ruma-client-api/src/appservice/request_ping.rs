@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/application-service-api/#post_matrixclientv1appserviceappserviceidping
+    //! [spec]: https://spec.matrix.org/v1.18/application-service-api/#post_matrixclientv1appserviceappserviceidping
 
     use std::time::Duration;
 
@@ -26,7 +26,7 @@ pub mod v1 {
     }
 
     /// Request type for the `request_ping` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The appservice ID of the appservice to ping.
         ///
@@ -41,7 +41,7 @@ pub mod v1 {
     }
 
     /// Response type for the `request_ping` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The duration in milliseconds that the `POST /_matrix/app/v1/ping` request took from the
         /// homeserver's point of view.

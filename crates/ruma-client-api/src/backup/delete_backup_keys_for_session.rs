@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#delete_matrixclientv3room_keyskeysroomidsessionid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#delete_matrixclientv3room_keyskeysroomidsessionid
 
     use js_int::UInt;
     use ruma_common::{
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `delete_backup_keys_for_session` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The backup version from which to delete keys.
         #[ruma_api(query)]
@@ -42,7 +42,7 @@ pub mod v3 {
     }
 
     /// Response type for the `delete_backup_keys_for_session` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// An opaque string representing stored keys in the backup.
         ///

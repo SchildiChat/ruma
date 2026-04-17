@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv1roomsroomidthreads
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv1roomsroomidthreads
 
     use js_int::UInt;
     use ruma_common::{
@@ -29,7 +29,7 @@ pub mod v1 {
     }
 
     /// Request type for the `get_thread_roots` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room ID where the thread roots are located.
         #[ruma_api(path)]
@@ -57,7 +57,7 @@ pub mod v1 {
     }
 
     /// Response type for the `get_thread_roots` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The thread roots, ordered by the `latest_event` in each event's aggregation bundle.
         ///
@@ -104,7 +104,7 @@ pub mod v1 {
         ///
         /// Only include thread roots for threads where [`current_user_participated`] is `true`.
         ///
-        /// [`current_user_participated`]: https://spec.matrix.org/latest/client-server-api/#server-side-aggregation-of-mthread-relationships
+        /// [`current_user_participated`]: https://spec.matrix.org/v1.18/client-server-api/#server-side-aggregation-of-mthread-relationships
         Participated,
 
         #[doc(hidden)]

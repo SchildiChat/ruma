@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv1registermloginregistration_tokenvalidity
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv1registermloginregistration_tokenvalidity
 
     use ruma_common::{
         api::{auth_scheme::NoAccessToken, request, response},
@@ -23,7 +23,7 @@ pub mod v1 {
     }
 
     /// Request type for the `check_registration_token_validity` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The registration token to check the validity of.
         #[ruma_api(query)]
@@ -31,7 +31,7 @@ pub mod v1 {
     }
 
     /// Response type for the `check_registration_token_validity` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A flag to indicate that the registration token is valid.
         pub valid: bool,

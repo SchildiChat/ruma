@@ -1,6 +1,6 @@
 //! `GET /.well-known/matrix/client` ([spec])
 //!
-//! [spec]: https://spec.matrix.org/latest/client-server-api/#getwell-knownmatrixclient
+//! [spec]: https://spec.matrix.org/v1.18/client-server-api/#getwell-knownmatrixclient
 //!
 //! Get discovery information about the domain.
 
@@ -27,12 +27,12 @@ metadata! {
 }
 
 /// Request type for the `client_well_known` endpoint.
-#[request(error = crate::Error)]
+#[request]
 #[derive(Default)]
 pub struct Request {}
 
 /// Response type for the `client_well_known` endpoint.
-#[response(error = crate::Error)]
+#[response]
 pub struct Response {
     /// Information about the homeserver to connect to.
     #[serde(rename = "m.homeserver")]
@@ -233,7 +233,7 @@ pub struct CustomRtcFocusInfo {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "unstable-msc4143")]
-    use assert_matches2::assert_matches;
+    use assert_matches2::assert_let;
     #[cfg(feature = "unstable-msc4143")]
     use ruma_common::canonical_json::assert_to_canonical_json_eq;
     #[cfg(feature = "unstable-msc4143")]
@@ -255,7 +255,7 @@ mod tests {
         let focus: RtcFocusInfo = from_json_value(json).unwrap();
 
         // Then it should be recognized as a LiveKit focus with the correct service URL.
-        assert_matches!(focus, RtcFocusInfo::LiveKit(info));
+        assert_let!(RtcFocusInfo::LiveKit(info) = focus);
         assert_eq!(info.service_url, "https://livekit.example.com");
     }
 

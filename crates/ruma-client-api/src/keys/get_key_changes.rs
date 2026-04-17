@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3keyschanges
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3keyschanges
 
     use ruma_common::{
         OwnedUserId,
@@ -24,7 +24,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_key_changes` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The desired start point of the list.
         ///
@@ -41,7 +41,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_key_changes` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The Matrix User IDs of all users who updated their device identity keys.
         pub changed: Vec<OwnedUserId>,

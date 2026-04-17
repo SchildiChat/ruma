@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3roomsroomidcontexteventid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomidcontexteventid
 
     use js_int::{UInt, uint};
     use ruma_common::{
@@ -29,7 +29,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_context` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room to get events from.
         #[ruma_api(path)]
@@ -60,7 +60,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_context` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {
         /// A token that can be used to paginate backwards with.

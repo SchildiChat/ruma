@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3voipturnserver
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3voipturnserver
 
     use std::time::Duration;
 
@@ -25,12 +25,12 @@ pub mod v3 {
     }
 
     /// Request type for the `turn_server_info` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `turn_server_info` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The username to use.
         pub username: String,

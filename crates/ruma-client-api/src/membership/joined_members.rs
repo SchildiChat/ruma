@@ -6,7 +6,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3roomsroomidjoined_members
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomidjoined_members
 
     use std::collections::BTreeMap;
 
@@ -28,7 +28,7 @@ pub mod v3 {
     }
 
     /// Request type for the `joined_members` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room to get the members of.
         #[ruma_api(path)]
@@ -36,7 +36,7 @@ pub mod v3 {
     }
 
     /// Response type for the `joined_members` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A list of the rooms the user is in, i.e.
         /// the ID of each room in which the user has joined membership.

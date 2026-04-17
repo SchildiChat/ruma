@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3room_keyskeysroomid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3room_keyskeysroomid
 
     use std::collections::BTreeMap;
 
@@ -30,7 +30,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_backup_keys_for_room` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The backup version to retrieve keys from.
         #[ruma_api(query)]
@@ -42,7 +42,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_backup_keys_for_room` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A map of session IDs to key data.
         pub sessions: BTreeMap<String, Raw<KeyBackupData>>,

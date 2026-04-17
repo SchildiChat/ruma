@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#fallback
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#fallback
 
     use ruma_common::{
         api::{auth_scheme::NoAccessToken, request},
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `authorize_fallback` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The type name (`m.login.dummy`, etc.) of the UIAA stage to get a fallback page for.
         #[ruma_api(path)]
@@ -102,7 +102,7 @@ pub mod v3 {
 
     #[cfg(feature = "client")]
     impl ruma_common::api::IncomingResponse for Response {
-        type EndpointError = crate::Error;
+        type EndpointError = ruma_common::api::error::Error;
 
         fn try_from_http_response<T: AsRef<[u8]>>(
             response: http::Response<T>,
@@ -140,7 +140,7 @@ pub mod v3 {
 
     #[cfg(all(test, feature = "client"))]
     mod tests_client {
-        use assert_matches2::assert_matches;
+        use assert_matches2::assert_let;
         use http::header::{CONTENT_TYPE, LOCATION};
         use ruma_common::api::IncomingResponse;
 
@@ -157,7 +157,7 @@ pub mod v3 {
                 .unwrap();
 
             let response = Response::try_from_http_response(http_response).unwrap();
-            assert_matches!(response, Response::Redirect(Redirect { url }));
+            assert_let!(Response::Redirect(Redirect { url }) = response);
             assert_eq!(url, "http://localhost/redirect");
         }
 
@@ -172,7 +172,7 @@ pub mod v3 {
                 .unwrap();
 
             let response = Response::try_from_http_response(http_response).unwrap();
-            assert_matches!(response, Response::Html(HtmlPage { body }));
+            assert_let!(Response::Html(HtmlPage { body }) = response);
             assert_eq!(body, b"<h1>My Page</h1>");
         }
     }

@@ -1,6 +1,6 @@
 //! `GET /.well-known/matrix/support` ([spec])
 //!
-//! [spec]: https://spec.matrix.org/latest/client-server-api/#getwell-knownmatrixsupport
+//! [spec]: https://spec.matrix.org/v1.18/client-server-api/#getwell-knownmatrixsupport
 //!
 //! Get server admin contact and support page of a homeserver's domain.
 
@@ -22,12 +22,12 @@ metadata! {
 }
 
 /// Request type for the `discover_support` endpoint.
-#[request(error = crate::Error)]
+#[request]
 #[derive(Default)]
 pub struct Request {}
 
 /// Response type for the `discover_support` endpoint.
-#[response(error = crate::Error)]
+#[response]
 pub struct Response {
     /// Ways to contact the server administrator.
     ///
@@ -84,17 +84,40 @@ pub struct Contact {
     /// At least one of `matrix_id` or `email_address` is required.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub matrix_id: Option<OwnedUserId>,
+
+    /// An optional URI leading to a PGP key that may be used to encrypt messages sent to the
+    /// contact.
+    ///
+    /// This field uses the unstable prefix defined in [MSC4439].
+    ///
+    /// [MSC4439]: https://github.com/matrix-org/matrix-spec-proposals/pull/4439
+    #[cfg(feature = "unstable-msc4439")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "dev.zirco.msc4439.pgp_key")]
+    pub pgp_key: Option<String>,
 }
 
 impl Contact {
     /// Creates a new `Contact` with the given role and email address.
     pub fn with_email_address(role: ContactRole, email_address: String) -> Self {
-        Self { role, email_address: Some(email_address), matrix_id: None }
+        Self {
+            role,
+            email_address: Some(email_address),
+            matrix_id: None,
+            #[cfg(feature = "unstable-msc4439")]
+            pgp_key: None,
+        }
     }
 
     /// Creates a new `Contact` with the given role and Matrix User ID.
     pub fn with_matrix_id(role: ContactRole, matrix_id: OwnedUserId) -> Self {
-        Self { role, email_address: None, matrix_id: Some(matrix_id) }
+        Self {
+            role,
+            email_address: None,
+            matrix_id: Some(matrix_id),
+            #[cfg(feature = "unstable-msc4439")]
+            pgp_key: None,
+        }
     }
 }
 

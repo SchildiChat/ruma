@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3useruseridaccount_datatype
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3useruseridaccount_datatype
 
     use ruma_common::{
         OwnedUserId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_global_account_data` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// User ID of user for whom to retrieve data.
         #[ruma_api(path)]
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_global_account_data` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Account data content for the given type.
         ///

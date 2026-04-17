@@ -16,7 +16,7 @@ use super::room::encrypted;
 /// Event types that servers should send as [stripped state] to help clients identify a room when
 /// they can't access the full room state.
 ///
-/// [stripped state]: https://spec.matrix.org/latest/client-server-api/#stripped-state
+/// [stripped state]: https://spec.matrix.org/v1.18/client-server-api/#stripped-state
 pub const RECOMMENDED_STRIPPED_STATE_EVENT_TYPES: &[StateEventType] = &[
     StateEventType::RoomCreate,
     StateEventType::RoomName,
@@ -30,7 +30,7 @@ pub const RECOMMENDED_STRIPPED_STATE_EVENT_TYPES: &[StateEventType] = &[
 /// Event types that servers should transfer upon [room upgrade]. The exact details for what is
 /// transferred is left as an implementation detail.
 ///
-/// [room upgrade]: https://spec.matrix.org/v1.17/client-server-api/#server-behaviour-19
+/// [room upgrade]: https://spec.matrix.org/v1.18/client-server-api/#server-behaviour-21
 pub const RECOMMENDED_TRANSFERABLE_STATE_EVENT_TYPES: &[StateEventType] = &[
     StateEventType::RoomServerAcl,
     StateEventType::RoomEncryption,
@@ -182,7 +182,6 @@ event_enum! {
         "m.policy.rule.room" => super::policy::rule::room,
         "m.policy.rule.server" => super::policy::rule::server,
         "m.policy.rule.user" => super::policy::rule::user,
-        "m.room.aliases" => super::room::aliases,
         "m.room.avatar" => super::room::avatar,
         "m.room.canonical_alias" => super::room::canonical_alias,
         "m.room.create" => super::room::create,
@@ -198,6 +197,7 @@ event_enum! {
         "m.room.member" => super::room::member,
         "m.room.name" => super::room::name,
         "m.room.pinned_events" => super::room::pinned_events,
+        "m.room.policy" => super::room::policy,
         "m.room.power_levels" => super::room::power_levels,
         "m.room.server_acl" => super::room::server_acl,
         "m.room.third_party_invite" => super::room::third_party_invite,

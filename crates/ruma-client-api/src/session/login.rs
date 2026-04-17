@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3login
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3login
 
     use std::{fmt, time::Duration};
 
@@ -34,7 +34,7 @@ pub mod v3 {
     }
 
     /// Request type for the `login` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The authentication mechanism.
         #[serde(flatten)]
@@ -52,13 +52,13 @@ pub mod v3 {
 
         /// If set to `true`, the client supports [refresh tokens].
         ///
-        /// [refresh tokens]: https://spec.matrix.org/latest/client-server-api/#refreshing-access-tokens
+        /// [refresh tokens]: https://spec.matrix.org/v1.18/client-server-api/#refreshing-access-tokens
         #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
         pub refresh_token: bool,
     }
 
     /// Response type for the `login` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The fully-qualified Matrix ID that has been registered.
         pub user_id: OwnedUserId,
@@ -91,7 +91,7 @@ pub mod v3 {
         /// This token can be used to obtain a new access token when it expires by calling the
         /// [`refresh_token`] endpoint.
         ///
-        /// [refresh token]: https://spec.matrix.org/latest/client-server-api/#refreshing-access-tokens
+        /// [refresh token]: https://spec.matrix.org/v1.18/client-server-api/#refreshing-access-tokens
         /// [`refresh_token`]: crate::session::refresh_token
         #[serde(skip_serializing_if = "Option::is_none")]
         pub refresh_token: Option<String>,
@@ -417,8 +417,8 @@ pub mod v3 {
                 .unwrap(),
                 LoginInfo::Password(login)
             );
-            assert_matches!(login.identifier, Some(UserIdentifier::UserIdOrLocalpart(user)));
-            assert_eq!(user, "cheeky_monkey");
+            assert_matches!(login.identifier, Some(UserIdentifier::Matrix(id)));
+            assert_eq!(id.user, "cheeky_monkey");
             assert_eq!(login.password, "ilovebananas");
 
             assert_matches!(
@@ -443,7 +443,7 @@ pub mod v3 {
             use serde_json::Value as JsonValue;
 
             use super::{LoginInfo, Password, Request, Token};
-            use crate::uiaa::UserIdentifier;
+            use crate::uiaa::{EmailUserIdentifier, UserIdentifier};
 
             let supported = SupportedVersions {
                 versions: [MatrixVersion::V1_1].into(),
@@ -476,9 +476,9 @@ pub mod v3 {
             let req: http::Request<Vec<u8>> = Request {
                 #[allow(deprecated)]
                 login_info: LoginInfo::Password(Password {
-                    identifier: Some(UserIdentifier::Email {
-                        address: "hello@example.com".to_owned(),
-                    }),
+                    identifier: Some(UserIdentifier::Email(EmailUserIdentifier::new(
+                        "hello@example.com".to_owned(),
+                    ))),
                     password: "deadbeef".to_owned(),
                     user: None,
                     address: None,

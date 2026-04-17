@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3pushrulesglobalkindruleidactions
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3pushrulesglobalkindruleidactions
 
     use ruma_common::{
         api::{auth_scheme::AccessToken, request, response},
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_pushrule_actions` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The kind of rule
         #[ruma_api(path)]
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_pushrule_actions` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The actions to perform for this rule.
         pub actions: Vec<Action>,

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3user_directorysearch
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3user_directorysearch
 
     use http::header::ACCEPT_LANGUAGE;
     use js_int::{UInt, uint};
@@ -27,7 +27,7 @@ pub mod v3 {
     }
 
     /// Request type for the `search_users` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The term to search for.
         pub search_term: String,
@@ -48,7 +48,7 @@ pub mod v3 {
     }
 
     /// Response type for the `search_users` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Ordered by rank and then whether or not profile info is available.
         pub results: Vec<User>,

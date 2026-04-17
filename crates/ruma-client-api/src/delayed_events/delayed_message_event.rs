@@ -29,7 +29,7 @@ pub mod unstable {
     }
     /// Request type for the [`delayed_message_event`](crate::delayed_events::delayed_message_event)
     /// endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room to send the event to.
         #[ruma_api(path)]
@@ -47,7 +47,7 @@ pub mod unstable {
         ///
         /// It will be used by the server to ensure idempotency of requests.
         ///
-        /// [access token is refreshed]: https://spec.matrix.org/latest/client-server-api/#refreshing-access-tokens
+        /// [access token is refreshed]: https://spec.matrix.org/v1.18/client-server-api/#refreshing-access-tokens
         #[ruma_api(path)]
         pub txn_id: OwnedTransactionId,
 
@@ -62,7 +62,7 @@ pub mod unstable {
 
     /// Response type for the
     /// [`delayed_message_event`](crate::delayed_events::delayed_message_event) endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The `delay_id` generated for this delayed event. Used to interact with delayed events.
         pub delay_id: String,

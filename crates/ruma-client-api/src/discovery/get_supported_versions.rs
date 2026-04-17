@@ -2,7 +2,7 @@
 //!
 //! Get the versions of the client-server API supported by this homeserver.
 //!
-//! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientversions
+//! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientversions
 
 use std::collections::BTreeMap;
 
@@ -19,12 +19,12 @@ metadata! {
 }
 
 /// Request type for the `api_versions` endpoint.
-#[request(error = crate::Error)]
+#[request]
 #[derive(Default)]
 pub struct Request {}
 
 /// Response type for the `api_versions` endpoint.
-#[response(error = crate::Error)]
+#[response]
 pub struct Response {
     /// A list of Matrix client API protocol versions supported by the homeserver.
     pub versions: Vec<String>,

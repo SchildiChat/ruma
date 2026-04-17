@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv1mediathumbnailservernamemediaid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv1mediathumbnailservernamemediaid
 
     use std::time::Duration;
 
@@ -30,7 +30,7 @@ pub mod v1 {
     }
 
     /// Request type for the `get_content_thumbnail` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The server name from the mxc:// URI (the authoritory component).
         #[ruma_api(path)]
@@ -80,7 +80,7 @@ pub mod v1 {
     }
 
     /// Response type for the `get_content_thumbnail` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A thumbnail of the requested content.
         #[ruma_api(raw_body)]

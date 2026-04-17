@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3roomsroomidforget
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3roomsroomidforget
 
     use ruma_common::{
         OwnedRoomId,
@@ -24,7 +24,7 @@ pub mod v3 {
     }
 
     /// Request type for the `forget_room` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room to forget.
         #[ruma_api(path)]
@@ -32,7 +32,7 @@ pub mod v3 {
     }
 
     /// Response type for the `forget_room` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

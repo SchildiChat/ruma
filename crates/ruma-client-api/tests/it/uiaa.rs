@@ -2,12 +2,11 @@
 
 use assert_matches2::assert_matches;
 use assign::assign;
-use ruma_client_api::{
-    error::ErrorKind,
-    uiaa::{self, AuthData, AuthFlow, AuthType, UiaaInfo, UiaaResponse, UserIdentifier},
+use ruma_client_api::uiaa::{
+    self, AuthData, AuthFlow, AuthType, UiaaInfo, UiaaResponse, UserIdentifier,
 };
 use ruma_common::{
-    api::{EndpointError, OutgoingResponse},
+    api::{EndpointError, OutgoingResponse, error::ErrorKind},
     canonical_json::assert_to_canonical_json_eq,
 };
 use serde_json::{
@@ -16,16 +15,16 @@ use serde_json::{
 };
 
 #[test]
-fn deserialize_user_identifier() {
+fn deserialize_matrix_user_identifier() {
     assert_matches!(
         from_json_value(json!({
             "type": "m.id.user",
             "user": "cheeky_monkey"
         }))
         .unwrap(),
-        UserIdentifier::UserIdOrLocalpart(id)
+        UserIdentifier::Matrix(id)
     );
-    assert_eq!(id, "cheeky_monkey");
+    assert_eq!(id.user, "cheeky_monkey");
 }
 
 #[test]

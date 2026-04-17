@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#peeking_get_matrixclientv3events
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#peeking_get_matrixclientv3events
 
     use std::time::Duration;
 
@@ -28,7 +28,7 @@ pub mod v3 {
     }
 
     /// Request type for the `listen_to_new_events` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The token to stream from.
         ///
@@ -59,7 +59,7 @@ pub mod v3 {
     }
 
     /// Response type for the `listen_to_new_events` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {
         /// An array of new events.

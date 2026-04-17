@@ -6,7 +6,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3login
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3login
 
     use std::borrow::Cow;
 
@@ -32,12 +32,12 @@ pub mod v3 {
     }
 
     /// Request type for the `get_login_types` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `get_login_types` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The homeserver's supported login types.
         pub flows: Vec<LoginType>,
@@ -175,9 +175,9 @@ pub mod v3 {
 
         /// Whether this flow is preferred over other flows.
         ///
-        /// If this is `true`, [OAuth 2.0 aware] clients must only offer this flow to the user.
+        /// If this is `true`, [OAuth 2.0 aware clients] must only offer this flow to the user.
         ///
-        /// [OAuth 2.0 aware]: https://github.com/matrix-org/matrix-spec-proposals/pull/3824
+        /// [OAuth 2.0 aware clients]: https://spec.matrix.org/v1.18/client-server-api/#oauth-20-aware-clients
         #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
         pub oauth_aware_preferred: bool,
     }
@@ -319,7 +319,7 @@ pub mod v3 {
 
     #[cfg(test)]
     mod tests {
-        use assert_matches2::assert_matches;
+        use assert_matches2::{assert_let, assert_matches};
         use ruma_common::{canonical_json::assert_to_canonical_json_eq, mxc_uri};
         use serde::{Deserialize, Serialize};
         use serde_json::{Value as JsonValue, from_value as from_json_value, json};
@@ -357,7 +357,7 @@ pub mod v3 {
             }))
             .unwrap();
             assert_eq!(wrapper.flows.len(), 1);
-            assert_matches!(&wrapper.flows[0], LoginType::_Custom(custom));
+            assert_let!(LoginType::_Custom(custom) = &wrapper.flows[0]);
             assert_eq!(custom.type_, "io.ruma.custom");
             assert_eq!(custom.data.len(), 1);
             assert_eq!(custom.data.get("color"), Some(&JsonValue::from("green")));
@@ -388,9 +388,9 @@ pub mod v3 {
             assert_eq!(wrapper.flows.len(), 1);
             let flow = &wrapper.flows[0];
 
-            assert_matches!(
-                flow,
-                LoginType::Sso(SsoLoginType { identity_providers, oauth_aware_preferred: false })
+            assert_let!(
+                LoginType::Sso(SsoLoginType { identity_providers, oauth_aware_preferred: false }) =
+                    flow
             );
             assert_eq!(identity_providers.len(), 2);
 

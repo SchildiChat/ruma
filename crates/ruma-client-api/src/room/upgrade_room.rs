@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3roomsroomidupgrade
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3roomsroomidupgrade
 
     use ruma_common::{
         OwnedRoomId, OwnedUserId, RoomVersionId,
@@ -24,7 +24,7 @@ pub mod v3 {
     }
 
     /// Request type for the `upgrade_room` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// A list of user IDs to consider as additional creators, and hence grant an "infinite"
         /// immutable power level, from room version 12 onwards.
@@ -40,7 +40,7 @@ pub mod v3 {
     }
 
     /// Response type for the `upgrade_room` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// ID of the new room.
         pub replacement_room: OwnedRoomId,

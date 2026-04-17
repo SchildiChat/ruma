@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3pushrules
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3pushrules
 
     use ruma_common::{
         api::{auth_scheme::AccessToken, request, response},
@@ -24,12 +24,12 @@ pub mod v3 {
     }
 
     /// Request type for the `get_pushrules_all` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `get_pushrules_all` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The global ruleset.
         pub global: Ruleset,

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3room_keyskeysroomidsessionid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3room_keyskeysroomidsessionid
 
     use js_int::UInt;
     use ruma_common::{
@@ -29,7 +29,7 @@ pub mod v3 {
     }
 
     /// Request type for the `add_backup_keys_for_session` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The backup version to add keys to.
         ///
@@ -51,7 +51,7 @@ pub mod v3 {
     }
 
     /// Response type for the `add_backup_keys_for_session` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// An opaque string representing stored keys in the backup.
         ///

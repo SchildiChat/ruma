@@ -9,17 +9,16 @@ pub mod v3 {
     //! it will only work with homeservers advertising support for the proper unstable feature or
     //! a version compatible with Matrix 1.16.
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3profileuseridkeyname
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3profileuseridkeyname
     //! [`set_avatar_url`]: crate::profile::set_avatar_url
     //! [`set_display_name`]: crate::profile::set_display_name
 
     use ruma_common::{
         OwnedUserId,
-        api::{auth_scheme::AccessToken, response},
+        api::{auth_scheme::AccessToken, error::Error, response},
         metadata,
+        profile::ProfileFieldValue,
     };
-
-    use crate::profile::ProfileFieldValue;
 
     metadata! {
         method: PUT,
@@ -53,7 +52,7 @@ pub mod v3 {
 
     #[cfg(feature = "client")]
     impl ruma_common::api::OutgoingRequest for Request {
-        type EndpointError = crate::Error;
+        type EndpointError = Error;
         type IncomingResponse = Response;
 
         fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
@@ -64,9 +63,11 @@ pub mod v3 {
         ) -> Result<http::Request<T>, ruma_common::api::error::IntoHttpError> {
             use ruma_common::api::{Metadata, auth_scheme::AuthScheme, path_builder::PathBuilder};
 
+            use crate::profile::field_existed_before_extended_profiles;
+
             let field = self.value.field_name();
 
-            let url = if field.existed_before_extended_profiles() {
+            let url = if field_existed_before_extended_profiles(&field) {
                 Self::make_endpoint_url(considering, base_url, &[&self.user_id, &field], "")?
             } else {
                 crate::profile::EXTENDED_PROFILE_FIELD_HISTORY.make_endpoint_url(
@@ -93,7 +94,7 @@ pub mod v3 {
 
     #[cfg(feature = "server")]
     impl ruma_common::api::IncomingRequest for Request {
-        type EndpointError = crate::Error;
+        type EndpointError = Error;
         type OutgoingResponse = Response;
 
         fn try_from_http_request<B, S>(
@@ -104,9 +105,8 @@ pub mod v3 {
             B: AsRef<[u8]>,
             S: AsRef<str>,
         {
+            use ruma_common::profile::{ProfileFieldName, ProfileFieldValueVisitor};
             use serde::de::{Deserializer, Error as _};
-
-            use crate::profile::{ProfileFieldName, profile_field_serde::ProfileFieldValueVisitor};
 
             Self::check_request_method(request.method())?;
 
@@ -119,7 +119,7 @@ pub mod v3 {
                 ))?;
 
             let value = serde_json::Deserializer::from_slice(request.body().as_ref())
-                .deserialize_map(ProfileFieldValueVisitor(Some(field.clone())))?
+                .deserialize_map(ProfileFieldValueVisitor::new(Some(field.clone())))?
                 .ok_or_else(|| serde_json::Error::custom(format!("missing field `{field}`")))?;
 
             Ok(Request { user_id, value })
@@ -127,7 +127,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_profile_field` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 
@@ -147,11 +147,11 @@ mod tests_client {
     use ruma_common::{
         api::{OutgoingRequest, SupportedVersions, auth_scheme::SendAccessToken},
         owned_mxc_uri, owned_user_id,
+        profile::ProfileFieldValue,
     };
     use serde_json::{Value as JsonValue, from_slice as from_json_slice, json};
 
     use super::v3::Request;
-    use crate::profile::ProfileFieldValue;
 
     #[test]
     fn serialize_request() {
@@ -277,12 +277,11 @@ mod tests_client {
 
 #[cfg(all(test, feature = "server"))]
 mod tests_server {
-    use assert_matches2::assert_matches;
-    use ruma_common::api::IncomingRequest;
+    use assert_matches2::assert_let;
+    use ruma_common::{api::IncomingRequest, profile::ProfileFieldValue};
     use serde_json::{json, to_vec as to_json_vec};
 
     use super::v3::Request;
-    use crate::profile::ProfileFieldValue;
 
     #[test]
     fn deserialize_request_valid_field() {
@@ -302,7 +301,7 @@ mod tests_server {
         .unwrap();
 
         assert_eq!(request.user_id, "@alice:localhost");
-        assert_matches!(request.value, ProfileFieldValue::DisplayName(display_name));
+        assert_let!(ProfileFieldValue::DisplayName(display_name) = request.value);
         assert_eq!(display_name, "Alice");
     }
 

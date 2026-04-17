@@ -23,7 +23,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3refresh
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3refresh
 
     use std::time::Duration;
 
@@ -43,14 +43,14 @@ pub mod v3 {
     }
 
     /// Request type for the `refresh` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The refresh token.
         pub refresh_token: String,
     }
 
     /// Response type for the `refresh` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The new access token to use.
         pub access_token: String,

@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv1mediadownloadservernamemediaidfilename
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv1mediadownloadservernamemediaidfilename
 
     use std::time::Duration;
 
@@ -28,7 +28,7 @@ pub mod v1 {
     }
 
     /// Request type for the `get_media_content_as_filename` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The server name from the mxc:// URI (the authoritory component).
         #[ruma_api(path)]
@@ -56,7 +56,7 @@ pub mod v1 {
     }
 
     /// Response type for the `get_media_content_as_filename` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The content that was previously uploaded.
         #[ruma_api(raw_body)]

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3accountwhoami
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3accountwhoami
 
     use ruma_common::{
         OwnedDeviceId, OwnedUserId,
@@ -24,12 +24,12 @@ pub mod v3 {
     }
 
     /// Request type for the `whoami` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `whoami` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The id of the user that owns the access token.
         pub user_id: OwnedUserId,

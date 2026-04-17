@@ -1,6 +1,6 @@
 //! `/v3/` ([spec])
 //!
-//! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3keysclaim
+//! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3keysclaim
 
 use std::{collections::BTreeMap, time::Duration};
 
@@ -24,7 +24,7 @@ metadata! {
 }
 
 /// Request type for the `claim_keys` endpoint.
-#[request(error = crate::Error)]
+#[request]
 pub struct Request {
     /// The time (in milliseconds) to wait when downloading keys from remote servers.
     /// 10 seconds is the recommended default.
@@ -40,7 +40,7 @@ pub struct Request {
 }
 
 /// Response type for the `claim_keys` endpoint.
-#[response(error = crate::Error)]
+#[response]
 pub struct Response {
     /// If any remote homeservers could not be reached, they are recorded here.
     ///

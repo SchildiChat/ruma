@@ -7,7 +7,7 @@ mod result_group_map_serde;
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3search
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3search
 
     use std::{
         collections::{BTreeMap, btree_map},
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Request type for the `search` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The point to return events from.
         ///
@@ -51,7 +51,7 @@ pub mod v3 {
     }
 
     /// Response type for the `search` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A grouping of search results by category.
         pub search_categories: ResultCategories,

@@ -27,7 +27,7 @@ pub mod v1 {
     }
 
     /// Request type for the `transports` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
@@ -39,7 +39,7 @@ pub mod v1 {
     }
 
     /// Response type for the `transports` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {
         /// The RTC transports advertised by the homeserver.
@@ -184,7 +184,7 @@ pub mod v1 {
 
 #[cfg(test)]
 mod tests {
-    use assert_matches2::assert_matches;
+    use assert_matches2::assert_let;
     use ruma_common::canonical_json::assert_to_canonical_json_eq;
     use serde_json::{Value as JsonValue, from_value as from_json_value, json};
 
@@ -193,12 +193,11 @@ mod tests {
     #[test]
     fn serialize_roundtrip_custom_rtc_transport() {
         let transport_type = "local.custom.transport";
-        assert_matches!(
-            json!({
+        assert_let!(
+            JsonValue::Object(transport_data) = json!({
                 "foo": "bar",
                 "baz": true,
-            }),
-            JsonValue::Object(transport_data)
+            })
         );
         let transport =
             RtcTransport::new(transport_type.to_owned(), transport_data.clone()).unwrap();

@@ -10,7 +10,7 @@
 //! successful response. Such types can then be used by client code to make requests, and by server
 //! code to fulfill those requests.
 //!
-//! [apis]: https://spec.matrix.org/latest/#matrix-apis
+//! [apis]: https://spec.matrix.org/v1.18/#matrix-apis
 
 use std::{convert::TryInto as _, error::Error as StdError};
 
@@ -38,7 +38,7 @@ use bytes::BufMut;
 ///
 /// * `#[request(error = ERROR_TYPE)]`: Override the `EndpointError` associated type of the
 ///   `OutgoingRequest` and `IncomingRequest` implementations. The default error type is
-///   [`MatrixError`](error::MatrixError).
+///   [`Error`](error::Error).
 ///
 /// ## Field Attributes
 ///
@@ -160,8 +160,7 @@ pub use ruma_macros::request;
 /// ## Container Attributes
 ///
 /// * `#[response(error = ERROR_TYPE)]`: Override the `EndpointError` associated type of the
-///   `IncomingResponse` implementation. The default error type is
-///   [`MatrixError`](error::MatrixError).
+///   `IncomingResponse` implementation. The default error type is [`Error`](error::Error).
 /// * `#[response(status = HTTP_STATUS)]`: Override the status code of `OutgoingResponse`.
 ///   `HTTP_STATUS` must be a status code constant from [`http::StatusCode`], e.g.
 ///   `IM_A_TEAPOT`. The default status code is [`200 OK`](http::StatusCode::OK);
@@ -411,7 +410,7 @@ pub enum Direction {
 
 /// Data to [assert the identity] of an appservice virtual user.
 ///
-/// [assert the identity]: https://spec.matrix.org/latest/application-service-api/#identity-assertion
+/// [assert the identity]: https://spec.matrix.org/v1.18/application-service-api/#identity-assertion
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 #[non_exhaustive]
 pub struct AppserviceUserIdentity<'a> {

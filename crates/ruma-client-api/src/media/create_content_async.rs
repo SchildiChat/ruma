@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixmediav3uploadservernamemediaid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixmediav3uploadservernamemediaid
 
     use http::header::CONTENT_TYPE;
     use ruma_common::{
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_content_async` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The server name from the mxc:// URI (the authoritory component).
         #[ruma_api(path)]
@@ -51,7 +51,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_content_async` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {}
 
     impl Request {

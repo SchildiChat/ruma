@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3roomsroomidaliases
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomidaliases
 
     use ruma_common::{
         OwnedRoomAliasId, OwnedRoomId,
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `aliases` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room ID to get aliases of.
         #[ruma_api(path)]
@@ -33,7 +33,7 @@ pub mod v3 {
     }
 
     /// Response type for the `aliases` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The server's local aliases on the room.
         pub aliases: Vec<OwnedRoomAliasId>,

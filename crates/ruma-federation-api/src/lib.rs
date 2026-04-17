@@ -3,7 +3,7 @@
 //! (De)serializable types for the [Matrix Server-Server API][federation-api].
 //! These types are used by server code.
 //!
-//! [federation-api]: https://spec.matrix.org/latest/server-server-api/
+//! [federation-api]: https://spec.matrix.org/v1.18/server-server-api/
 
 #![warn(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -21,6 +21,7 @@ pub mod event;
 pub mod keys;
 pub mod membership;
 pub mod openid;
+pub mod policy;
 pub mod query;
 pub mod room;
 pub mod space;

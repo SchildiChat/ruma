@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixmediav3config
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixmediav3config
 
     use js_int::UInt;
     use ruma_common::{
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_media_config` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     #[deprecated = "\
         Since Matrix 1.11, clients should use `authenticated_media::get_media_config::v1::Request` \
@@ -34,7 +34,7 @@ pub mod v3 {
     pub struct Request {}
 
     /// Response type for the `get_media_config` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Maximum size of upload in bytes.
         #[serde(rename = "m.upload.size")]

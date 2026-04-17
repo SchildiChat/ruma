@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixmediav3upload
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixmediav3upload
 
     use http::header::CONTENT_TYPE;
     use ruma_common::{
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_media_content` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The name of the file being uploaded.
         #[ruma_api(query)]
@@ -55,7 +55,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_media_content` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The MXC URI for the uploaded content.
         pub content_uri: OwnedMxcUri,

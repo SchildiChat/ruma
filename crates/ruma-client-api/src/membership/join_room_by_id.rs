@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3roomsroomidjoin
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3roomsroomidjoin
 
     use ruma_common::{
         OwnedRoomId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `join_room_by_id` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room where the user should be invited.
         #[ruma_api(path)]
@@ -43,7 +43,7 @@ pub mod v3 {
     }
 
     /// Response type for the `join_room_by_id` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The room that the user joined.
         pub room_id: OwnedRoomId,

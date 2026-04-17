@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/application-service-api/#put_matrixclientv3directorylistappservicenetworkidroomid
+    //! [spec]: https://spec.matrix.org/v1.18/application-service-api/#put_matrixclientv3directorylistappservicenetworkidroomid
 
     use ruma_common::{
         OwnedRoomId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `set_room_visibility` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The protocol (network) ID to update the room list for.
         #[ruma_api(path)]
@@ -41,7 +41,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_room_visibility` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3thirdpartyprotocols
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3thirdpartyprotocols
 
     use std::collections::BTreeMap;
 
@@ -26,12 +26,12 @@ pub mod v3 {
     }
 
     /// Request type for the `get_protocols` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {}
 
     /// Response type for the `get_protocols` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Metadata about protocols supported by the homeserver.
         #[ruma_api(body)]

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3useruseridroomsroomidaccount_datatype
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3useruseridroomsroomidaccount_datatype
 
     use ruma_common::{
         OwnedRoomId, OwnedUserId,
@@ -29,7 +29,7 @@ pub mod v3 {
     }
 
     /// Request type for the `set_room_account_data` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the user to set account_data for.
         ///
@@ -55,7 +55,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_room_account_data` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3useruseridfilter
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3useruseridfilter
 
     use ruma_common::{
         OwnedUserId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_filter` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the user uploading the filter.
         ///
@@ -40,7 +40,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_filter` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The ID of the filter that was created.
         pub filter_id: String,

@@ -5,11 +5,11 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3roomsroomidstateeventtypestatekey
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomidstateeventtypestatekey
 
     use ruma_common::{
         OwnedRoomId,
-        api::{auth_scheme::AccessToken, response},
+        api::{auth_scheme::AccessToken, error::Error, response},
         metadata,
         serde::{Raw, StringEnum},
     };
@@ -77,7 +77,7 @@ pub mod v3 {
     ///
     /// While it's possible to access the raw value directly, it's recommended you use the
     /// provided helper methods to access it, and `From` to create it.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The full event (content) of the state event.
         #[ruma_api(body)]
@@ -125,7 +125,7 @@ pub mod v3 {
 
     #[cfg(feature = "client")]
     impl ruma_common::api::OutgoingRequest for Request {
-        type EndpointError = crate::Error;
+        type EndpointError = Error;
         type IncomingResponse = Response;
 
         fn try_into_http_request<T: Default + bytes::BufMut + AsRef<[u8]>>(
@@ -158,7 +158,7 @@ pub mod v3 {
 
     #[cfg(feature = "server")]
     impl ruma_common::api::IncomingRequest for Request {
-        type EndpointError = crate::Error;
+        type EndpointError = Error;
         type OutgoingResponse = Response;
 
         fn try_from_http_request<B, S>(

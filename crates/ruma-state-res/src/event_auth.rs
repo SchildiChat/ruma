@@ -39,7 +39,7 @@ use crate::{
 /// Returns an `Err(_)` if a field could not be deserialized because `content` does not respect the
 /// expected format for the `event_type`.
 ///
-/// [relevant auth events]: https://spec.matrix.org/latest/server-server-api/#auth-events-selection
+/// [relevant auth events]: https://spec.matrix.org/v1.18/server-server-api/#auth-events-selection
 pub fn auth_types_for_event(
     event_type: &TimelineEventType,
     sender: &UserId,
@@ -139,7 +139,7 @@ pub fn auth_types_for_event(
 ///
 /// If the check fails, this returns an `Err(_)` with a description of the check that failed.
 ///
-/// [authorization rules]: https://spec.matrix.org/latest/server-server-api/#authorization-rules
+/// [authorization rules]: https://spec.matrix.org/v1.18/server-server-api/#authorization-rules
 #[instrument(skip_all, fields(event_id = incoming_event.event_id().borrow().as_str()))]
 pub fn check_state_independent_auth_rules<E: Event>(
     rules: &AuthorizationRules,
@@ -262,8 +262,8 @@ pub fn check_state_independent_auth_rules<E: Event>(
 ///
 /// If the check fails, this returns an `Err(_)` with a description of the check that failed.
 ///
-/// [authorization rules]: https://spec.matrix.org/latest/server-server-api/#authorization-rules
-/// [checks on receipt of a PDU]: https://spec.matrix.org/latest/server-server-api/#checks-performed-on-receipt-of-a-pdu
+/// [authorization rules]: https://spec.matrix.org/v1.18/server-server-api/#authorization-rules
+/// [checks on receipt of a PDU]: https://spec.matrix.org/v1.18/server-server-api/#checks-performed-on-receipt-of-a-pdu
 #[instrument(skip_all, fields(event_id = incoming_event.event_id().borrow().as_str()))]
 pub fn check_state_dependent_auth_rules<E: Event>(
     rules: &AuthorizationRules,
@@ -295,9 +295,7 @@ pub fn check_state_dependent_auth_rules<E: Event>(
     let sender = incoming_event.sender();
 
     // v1-v5, if type is m.room.aliases:
-    if rules.special_case_room_aliases
-        && *incoming_event.event_type() == TimelineEventType::RoomAliases
-    {
+    if rules.special_case_room_aliases && *incoming_event.event_type() == "m.room.aliases".into() {
         debug!("starting m.room.aliases check");
         // v1-v5, if event has no state_key, reject.
         //
@@ -322,6 +320,7 @@ pub fn check_state_dependent_auth_rules<E: Event>(
 
     // Since v1, if the sender's current membership state is not join, reject.
     let sender_membership = fetch_state.user_membership(sender)?;
+    tracing::info!(?sender_membership);
 
     if sender_membership != MembershipState::Join {
         return Err("sender's membership is not `join`".to_owned());

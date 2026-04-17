@@ -3,7 +3,7 @@
 //! (De)serializable types for the [Matrix Client-Server API][client-api].
 //! These types can be shared by client and server code.
 //!
-//! [client-api]: https://spec.matrix.org/latest/client-server-api/
+//! [client-api]: https://spec.matrix.org/v1.18/client-server-api/
 
 #![cfg(any(feature = "client", feature = "server"))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -24,9 +24,7 @@ pub mod delayed_events;
 pub mod device;
 pub mod directory;
 pub mod discovery;
-pub mod error;
 pub mod filter;
-pub mod http_headers;
 pub mod keys;
 pub mod knock;
 pub mod media;
@@ -59,7 +57,5 @@ pub mod typing;
 pub mod uiaa;
 pub mod user_directory;
 pub mod voip;
-
-pub use error::Error;
 
 ruma_common::priv_owned_str!();

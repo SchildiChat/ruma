@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3directorylistroomroomid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3directorylistroomroomid
 
     use ruma_common::{
         OwnedRoomId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_room_visibility` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the room of which to request the visibility.
         #[ruma_api(path)]
@@ -34,7 +34,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_room_visibility` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Visibility of the room.
         pub visibility: Visibility,

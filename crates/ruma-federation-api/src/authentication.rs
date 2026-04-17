@@ -18,7 +18,7 @@ use tracing::debug;
 /// Authentication is performed by adding an `X-Matrix` header including a signature in the request
 /// headers, as defined in the [Matrix Server-Server API][spec].
 ///
-/// [spec]: https://spec.matrix.org/latest/server-server-api/#request-authentication
+/// [spec]: https://spec.matrix.org/v1.18/server-server-api/#request-authentication
 #[derive(Debug, Clone, Copy, Default)]
 #[allow(clippy::exhaustive_structs)]
 pub struct ServerSignatures;
@@ -78,7 +78,7 @@ impl<'a> ServerSignaturesInput<'a> {
 /// Typed representation of an `Authorization` header of scheme `X-Matrix`, as defined in the
 /// [Matrix Server-Server API][spec].
 ///
-/// [spec]: https://spec.matrix.org/latest/server-server-api/#request-authentication
+/// [spec]: https://spec.matrix.org/v1.18/server-server-api/#request-authentication
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct XMatrix {
@@ -235,7 +235,7 @@ impl XMatrix {
         }
 
         let mut request_object = Self::request_object(request, &self.origin, destination)
-            .map_err(|error| ruma_signatures::Error::Json(error.into()))?;
+            .map_err(|error| ruma_signatures::VerificationError::Json(error.into()))?;
         let entity_signature =
             CanonicalJsonObject::from([(self.key.to_string(), self.sig.encode().into())]);
         let signatures =
@@ -385,7 +385,7 @@ pub enum XMatrixVerificationError {
 
     /// The signature verification failed.
     #[error("signature verification failed: {0}")]
-    Signature(#[from] ruma_signatures::Error),
+    Signature(#[from] ruma_signatures::VerificationError),
 }
 
 #[cfg(test)]

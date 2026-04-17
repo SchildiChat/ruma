@@ -7,7 +7,7 @@ mod set_pusher_serde;
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#post_matrixclientv3pushersset
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3pushersset
 
     use ruma_common::{
         api::{auth_scheme::AccessToken, request, response},
@@ -28,7 +28,7 @@ pub mod v3 {
     }
 
     /// Request type for the `set_pusher` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The action to take.
         #[ruma_api(body)]
@@ -36,7 +36,7 @@ pub mod v3 {
     }
 
     /// Response type for the `set_pusher` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

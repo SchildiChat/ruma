@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3loginssoredirectidpid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3loginssoredirectidpid
 
     use http::header::{LOCATION, SET_COOKIE};
     use ruma_common::{
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `sso_login_with_provider` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the provider to use for SSO login.
         #[ruma_api(path)]
@@ -45,7 +45,7 @@ pub mod v3 {
     }
 
     /// Response type for the `sso_login_with_provider` endpoint.
-    #[response(error = crate::Error, status = FOUND)]
+    #[response(status = FOUND)]
     pub struct Response {
         /// Redirect URL to the SSO identity provider.
         #[ruma_api(header = LOCATION)]

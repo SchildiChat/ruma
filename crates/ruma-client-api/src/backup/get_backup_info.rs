@@ -6,7 +6,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3room_keysversionversion
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3room_keysversionversion
 
     use js_int::UInt;
     use ruma_common::{
@@ -30,7 +30,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_backup_info` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The backup version to retrieve info from.
         #[ruma_api(path)]
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_backup_info` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[ruma_api(manual_body_serde)]
     pub struct Response {
         /// The algorithm used for storing backups.

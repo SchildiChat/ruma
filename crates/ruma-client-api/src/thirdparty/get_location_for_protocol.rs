@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3thirdpartylocationprotocol
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3thirdpartylocationprotocol
 
     use std::collections::BTreeMap;
 
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_location_for_protocol` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The protocol used to communicate to the third party network.
         #[ruma_api(path)]
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_location_for_protocol` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// List of matched third party locations.
         #[ruma_api(body)]

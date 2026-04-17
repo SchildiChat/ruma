@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3directoryroomroomalias
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#put_matrixclientv3directoryroomroomalias
 
     use ruma_common::{
         OwnedRoomAliasId, OwnedRoomId,
@@ -24,7 +24,7 @@ pub mod v3 {
     }
 
     /// Request type for the `create_alias` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The room alias to set.
         #[ruma_api(path)]
@@ -35,7 +35,7 @@ pub mod v3 {
     }
 
     /// Response type for the `create_alias` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {}
 

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3roomsroomideventeventid
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomideventeventid
 
     use ruma_common::{
         OwnedEventId, OwnedRoomId,
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_room_event` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The ID of the room the event is in.
         #[ruma_api(path)]
@@ -38,7 +38,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_room_event` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// Arbitrary JSON of the event body.
         #[ruma_api(body)]

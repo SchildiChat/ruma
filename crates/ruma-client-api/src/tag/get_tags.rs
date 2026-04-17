@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3useruseridroomsroomidtags
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3useruseridroomsroomidtags
 
     use ruma_common::{
         OwnedRoomId, OwnedUserId,
@@ -25,7 +25,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_tags` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     pub struct Request {
         /// The user whose tags will be retrieved.
         #[ruma_api(path)]
@@ -37,7 +37,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_tags` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// The user's tags for the room.
         pub tags: Tags,

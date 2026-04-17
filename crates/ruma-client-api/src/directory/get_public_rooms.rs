@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3publicrooms
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3publicrooms
 
     use js_int::UInt;
     use ruma_common::{
@@ -26,7 +26,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_public_rooms` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[derive(Default)]
     pub struct Request {
         /// Limit for the number of results to return.
@@ -48,7 +48,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_public_rooms` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     pub struct Response {
         /// A paginated chunk of public rooms.
         pub chunk: Vec<PublicRoomsChunk>,

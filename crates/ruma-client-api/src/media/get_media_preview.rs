@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/latest/client-server-api/#get_matrixmediav3preview_url
+    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixmediav3preview_url
 
     use ruma_common::{
         MilliSecondsSinceUnixEpoch,
@@ -27,7 +27,7 @@ pub mod v3 {
     }
 
     /// Request type for the `get_media_preview` endpoint.
-    #[request(error = crate::Error)]
+    #[request]
     #[deprecated = "\
       Since Matrix 1.11, clients should use `authenticated_media::get_media_preview::v1::Request` \
       instead if the homeserver supports it.\
@@ -44,7 +44,7 @@ pub mod v3 {
     }
 
     /// Response type for the `get_media_preview` endpoint.
-    #[response(error = crate::Error)]
+    #[response]
     #[derive(Default)]
     pub struct Response {
         /// OpenGraph-like data for the URL.
