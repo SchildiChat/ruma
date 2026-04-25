@@ -55,6 +55,7 @@ unstable-msc4359 = []
 unstable-msc4362 = []
 unstable-msc4380 = []
 unstable-msc4385 = []
+unstable-space-catchall = []
 unstable-uniffi = ["dep:uniffi"]
 
 # Allow some mandatory fields to be missing, defaulting them to an empty string

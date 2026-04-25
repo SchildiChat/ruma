@@ -205,6 +205,9 @@ event_enum! {
         "m.room.topic" => super::room::topic,
         "m.space.child" => super::space::child,
         "m.space.parent" => super::space::parent,
+        #[cfg(feature = "unstable-space-catchall")]
+        #[ruma_enum(ident = SpaceCatchAll)]
+        "de.spiritcroc.space.catch_all" => super::space_catchall,
         #[cfg(feature = "unstable-msc2545")]
         #[ruma_enum(ident = RoomImagePack, alias = "m.image_pack")]
         "im.ponies.room_emotes" => super::image_pack,

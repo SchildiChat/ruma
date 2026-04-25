@@ -199,6 +199,9 @@ pub mod secret_storage;
 pub mod space;
 #[cfg(feature = "unstable-msc3230")]
 pub mod space_order;
+/// Types for the unstable `de.spiritcroc.space.catch_all` event.
+#[cfg(feature = "unstable-space-catchall")]
+pub mod space_catchall;
 pub mod sticker;
 pub mod tag;
 pub mod typing;
