@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.14.1"
+version = "0.15.1"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -185,6 +185,7 @@ unstable-msc4268 = ["ruma-events?/unstable-msc4268"]
 unstable-msc4274 = ["ruma-events?/unstable-msc4274"]
 unstable-msc4278 = ["ruma-events?/unstable-msc4278"]
 unstable-msc4286 = ["ruma-html?/unstable-msc4286"]
+unstable-msc4293 = ["ruma-client-api?/unstable-msc4293", "ruma-events?/unstable-msc4293"]
 # Thread subscription support.
 unstable-msc4306 = ["ruma-common/unstable-msc4306", "ruma-client-api?/unstable-msc4306"]
 unstable-msc4308 = ["ruma-client-api?/unstable-msc4308"]
@@ -193,9 +194,11 @@ unstable-msc4319 = ["ruma-events?/unstable-msc4319"]
 unstable-msc4334 = ["ruma-events?/unstable-msc4334", "dep:language-tags"]
 unstable-msc4359 = ["ruma-events?/unstable-msc4359"]
 unstable-msc4362 = ["ruma-events?/unstable-msc4362"]
+unstable-msc4373 = ["ruma-federation-api?/unstable-msc4373"]
 unstable-msc4380 = ["ruma-events?/unstable-msc4380"]
 unstable-msc4385 = ["ruma-events?/unstable-msc4385"]
 unstable-msc4388 = ["ruma-client-api?/unstable-msc4388"]
+unstable-msc4406 = ["ruma-common/unstable-msc4406"]
 unstable-msc4439 = ["ruma-client-api?/unstable-msc4439"]
 unstable-msc4446 = ["ruma-client-api?/unstable-msc4446"]
 unstable-space-catchall = ["ruma-events?/unstable-space-catchall"]

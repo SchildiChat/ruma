@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.15.0"
+version = "0.16.0"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -34,7 +34,6 @@ criterion = { workspace = true, optional = true }
 [dev-dependencies]
 assert_matches2 = { workspace = true }
 insta = { workspace = true }
-maplit = { workspace = true }
 similar = { workspace = true }
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
 

@@ -13,9 +13,9 @@ use ruma_common::{
     api::{auth_scheme::NoAccessToken, request, response},
     metadata,
 };
-#[cfg(feature = "unstable-msc4143")]
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "unstable-msc4143")]
+use serde::{Deserializer, de, de::DeserializeOwned};
 #[cfg(feature = "unstable-msc4143")]
 use serde_json::Value as JsonValue;
 
@@ -134,7 +134,7 @@ impl TileServerInfo {
 
 /// Information about a specific MatrixRTC focus.
 #[cfg(feature = "unstable-msc4143")]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
 #[serde(tag = "type")]
 pub enum RtcFocusInfo {
@@ -206,6 +206,28 @@ impl RtcFocusInfo {
     }
 }
 
+#[cfg(feature = "unstable-msc4143")]
+impl<'de> Deserialize<'de> for RtcFocusInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use as_variant::as_variant;
+
+        let mut data = JsonObject::deserialize(deserializer)?;
+        let focus_type = data
+            .remove("type")
+            .and_then(|value| as_variant!(value, JsonValue::String))
+            .ok_or_else(|| de::Error::missing_field("type"))?;
+
+        match focus_type.as_ref() {
+            "livekit" => serde_json::from_value(data.into()).map(Self::LiveKit),
+            _ => Ok(Self::_Custom(CustomRtcFocusInfo { focus_type, data })),
+        }
+        .map_err(de::Error::custom)
+    }
+}
+
 /// Information about a LiveKit RTC focus.
 #[cfg(feature = "unstable-msc4143")]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -219,7 +241,7 @@ pub struct LiveKitRtcFocusInfo {
 /// Information about a custom RTC focus type.
 #[doc(hidden)]
 #[cfg(feature = "unstable-msc4143")]
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct CustomRtcFocusInfo {
     /// The type of RTC focus.
     #[serde(rename = "type")]

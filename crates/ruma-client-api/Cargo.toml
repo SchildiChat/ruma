@@ -7,7 +7,7 @@ license = "MIT"
 name = "ruma-client-api"
 readme = "README.md"
 repository = "https://github.com/ruma/ruma"
-version = "0.22.1"
+version = "0.23.1"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -48,6 +48,7 @@ unstable-msc4140 = ["ruma-common/unstable-msc4140"]
 unstable-msc4143 = []
 unstable-msc4186 = ["ruma-common/unstable-msc4186"]
 unstable-msc4195 = ["unstable-msc4143"]
+unstable-msc4293 = ["ruma-events/unstable-msc4293"]
 # Thread subscription support.
 unstable-msc4306 = []
 unstable-msc4308 = []

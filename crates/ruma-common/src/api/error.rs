@@ -37,10 +37,23 @@ impl Error {
         Self { status_code, body }
     }
 
-    /// If `self` is a server error in the `errcode` + `error` format expected
-    /// for client-server API endpoints, returns the error kind (`errcode`).
+    /// If this is an error with a [`StandardErrorBody`], returns the [`ErrorKind`].
     pub fn error_kind(&self) -> Option<&ErrorKind> {
         as_variant!(&self.body, ErrorBody::Standard(StandardErrorBody { kind, .. }) => kind)
+    }
+
+    /// Whether this error matches the expected format for an endpoint that is not implemented by
+    /// the homeserver.
+    ///
+    /// Return `true` if this contains an [`ErrorKind::Unrecognized`] with a
+    /// [`http::StatusCode::NOT_FOUND`].
+    ///
+    /// [unsupported endpoint]:
+    pub fn is_endpoint_not_implemented(&self) -> bool {
+        self.status_code == http::StatusCode::NOT_FOUND
+            && self
+                .error_kind()
+                .is_some_and(|error_kind| matches!(error_kind, ErrorKind::Unrecognized))
     }
 }
 

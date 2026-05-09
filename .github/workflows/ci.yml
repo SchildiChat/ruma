@@ -4,7 +4,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
   # Keep in sync with version in `rust-toolchain.toml` and `xtask/src/main.rs`
-  NIGHTLY: nightly-2026-03-06
+  NIGHTLY: nightly-2026-04-17
 
 on:
   push:
@@ -18,31 +18,15 @@ jobs:
 
   style:
     name: Style
+    uses: ./.github/workflows/style.yml
+
+  style-custom:
+    name: Style / Custom Scripts
     needs: xtask
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
-
-      - name: Install rust nightly toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.NIGHTLY }}
-
-      - uses: Swatinem/rust-cache@v2
-
-      - name: Check spelling
-        uses: crate-ci/typos@v1.44.0
-
-      - name: Install cargo-sort
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-sort@2.1.1
-
-      - name: Install cargo-machete
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-machete@0.9.1
 
       - name: Get xtask
         uses: actions/cache@v5
@@ -51,7 +35,7 @@ jobs:
           key: xtask-${{ hashFiles('Cargo.toml', 'xtask/src/**', 'xtask/Cargo.toml') }}
 
       - name: Run lints
-        run: target/debug/xtask ci lint
+        run: target/debug/xtask ci lint-custom
 
   msrv:
     name: Minimum Supported Rust Version / ${{ matrix.name }}

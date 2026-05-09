@@ -1,6 +1,6 @@
 [package]
 name = "ruma-events"
-version = "0.32.1"
+version = "0.33.0"
 description = "Serializable types for the events in the Matrix specification."
 homepage = "https://ruma.dev/"
 keywords = ["matrix", "chat", "messaging", "ruma"]
@@ -48,6 +48,7 @@ unstable-msc4171 = []
 unstable-msc4268 = []
 unstable-msc4274 = []
 unstable-msc4278 = []
+unstable-msc4293 = []
 unstable-msc4310 = []
 unstable-msc4319 = []
 unstable-msc4334 = ["dep:language-tags"]
