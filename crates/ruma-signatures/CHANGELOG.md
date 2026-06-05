@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.21.0
+
+Breaking changes:
+
+- Refactor the variants of `JsonError`: `InvalidType` and `JsonFieldMissingFromObject` were merged
+  into a single `Field` variant that uses the `CanonicalJsonFieldError` enum from `ruma-common`.
+
+Improvements:
+
+- The two steps of `hash_and_sign_event()` are now available as separate functions:
+  `add_content_hash_to_event()` and `sign_event()`. This is to help servers that need to add extra
+  signatures on an already hashed and signed event, like policy servers.
+
 ## 0.20.0
 
 Breaking changes:

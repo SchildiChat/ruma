@@ -204,6 +204,8 @@ pub mod space_order;
 #[cfg(feature = "unstable-space-catchall")]
 pub mod space_catchall;
 pub mod sticker;
+#[cfg(feature = "unstable-msc4471")]
+pub mod stream;
 pub mod tag;
 pub mod typing;
 #[cfg(feature = "unstable-msc3553")]
@@ -217,7 +219,10 @@ pub use self::{
     kinds::*,
     relation::{BundledMessageLikeRelations, BundledStateRelations},
     state_key::EmptyStateKey,
-    unsigned::{MessageLikeUnsigned, RedactedUnsigned, StateUnsigned, UnsignedRoomRedactionEvent},
+    unsigned::{
+        AnyRedactionEvent, MessageLikeUnsigned, RedactedUnsigned, StateUnsigned,
+        UnsignedRoomRedactionEvent,
+    },
 };
 
 /// Trait to define the behavior of redact an event's content object.
