@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+Bug fixes:
+
+- Add `StatusProfileField::new()` and `CallProfileField::new()` constructors for MSC4426
+
+Improvements:
+
+- Add `From` conversions between `MatrixToUri` and `MatrixUri`.
+- Extract a common `UserProfile` type out of `ruma_client_api::profile::get_profile`.
+- Add `M_CONCURRENT_WRITE` error code, used by [MSC4438].
+- Add `canonical_json::RedactingSerializer` to serialize a `CanonicalJsonObject`
+  while redacting it on the fly.
+
+[MSC4438]: https://github.com/matrix-org/matrix-spec-proposals/pull/4438
+
 ## 0.19.0
 
 Bug fixes:

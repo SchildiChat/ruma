@@ -5,11 +5,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use ruma_common::{
     AnyKeyName, CanonicalJsonObject, CanonicalJsonValue, IdParseError, OwnedEventId,
     OwnedServerName, SigningKeyAlgorithm, SigningKeyId, UserId,
-    canonical_json::{CanonicalJsonFieldError, CanonicalJsonObjectExt, CanonicalJsonType, redact},
+    canonical_json::{
+        CanonicalJsonFieldError, CanonicalJsonObjectExt, CanonicalJsonType, RedactingSerializer,
+    },
     room_version_rules::{RoomVersionRules, SignaturesRules},
     serde::{Base64, base64::Standard},
 };
-use serde_json::to_string as to_json_string;
+use ruma_events::{
+    StaticEventContent,
+    room::policy::{POLICY_SERVER_ED25519_SIGNING_KEY_ID, RoomPolicyEventContent},
+};
 
 #[cfg(test)]
 mod tests;
@@ -95,14 +100,15 @@ pub fn verify_event(
     object: &CanonicalJsonObject,
     rules: &RoomVersionRules,
 ) -> Result<Verified, VerificationError> {
-    let redacted = redact(object.clone(), &rules.redaction, None)?;
-
     let hashes = object.get_as_required_object("hashes", "hashes")?;
     let hash = hashes.get_as_required_string("sha256", "hashes.sha256")?;
     let signature_map = object.get_as_required_object("signatures", "signatures")?;
 
     let servers_to_check = required_server_signatures_to_verify_event(object, &rules.signatures)?;
-    let canonical_json = to_canonical_json_string_for_signing(&redacted)?;
+    let canonical_json = RedactingSerializer::new()
+        .rules(&rules.redaction)
+        .custom_redacted_root_fields(FIELDS_TO_REMOVE_FOR_SIGNING)
+        .serialize(object)?;
 
     for entity_id in servers_to_check {
         verify_canonical_json_for_entity(
@@ -122,6 +128,51 @@ pub fn verify_event(
     }
 
     Ok(Verified::Signatures)
+}
+
+/// Verify that the given event has a valid signature from the given policy server.
+///
+/// If the event is an `m.room.policy` event with an empty `state_key` string, this function
+/// succeeds without checking the signature.
+///
+/// For other cases, this returns an error if the signature is missing or invalid.
+///
+/// # Parameters
+///
+/// * `room_policy`: The `content` of the `m.room.policy` event in the current state of the room. If
+///   there is no `m.room.policy` event in the state of the room or it is invalid, it is assumed
+///   that the room has no policy server so this function should not be called to check for the
+///   policy server signature.
+/// * `object`: The JSON object of the event that was signed.
+/// * `rules`: The rules of the version of the event's room.
+pub fn verify_policy_server_signature(
+    room_policy: &RoomPolicyEventContent,
+    object: &CanonicalJsonObject,
+    rules: &RoomVersionRules,
+) -> Result<(), VerificationError> {
+    let event_type = object.get_as_required_string("type", "type")?;
+
+    if event_type == RoomPolicyEventContent::TYPE
+        && object
+            .get_as_required_string("state_key", "state_key")
+            .is_ok_and(|state_key| state_key.is_empty())
+    {
+        // Don't check the policy server signature.
+        return Ok(());
+    }
+
+    let signature_map = object.get_as_required_object("signatures", "signatures")?;
+    let canonical_json = RedactingSerializer::new()
+        .rules(&rules.redaction)
+        .custom_redacted_root_fields(FIELDS_TO_REMOVE_FOR_SIGNING)
+        .serialize(object)?;
+
+    verify_canonical_json_for_entity(
+        room_policy.via.as_str(),
+        room_policy,
+        signature_map,
+        canonical_json.as_bytes(),
+    )
 }
 
 /// Uses a set of public keys to verify a signed JSON object.
@@ -253,21 +304,9 @@ pub fn verify_canonical_json_bytes(
 pub fn to_canonical_json_string_for_signing(
     object: &CanonicalJsonObject,
 ) -> Result<String, JsonError> {
-    to_canonical_json_string_with_fields_to_remove(object, FIELDS_TO_REMOVE_FOR_SIGNING)
-}
-
-/// Serialize the given JSON object to the canonical JSON form without the given fields.
-pub(crate) fn to_canonical_json_string_with_fields_to_remove(
-    object: &CanonicalJsonObject,
-    fields: &[&str],
-) -> Result<String, JsonError> {
-    let mut owned_object = object.clone();
-
-    for field in fields {
-        owned_object.remove(*field);
-    }
-
-    to_json_string(&owned_object).map_err(Into::into)
+    Ok(RedactingSerializer::new()
+        .custom_redacted_root_fields(FIELDS_TO_REMOVE_FOR_SIGNING)
+        .serialize(object)?)
 }
 
 /// Uses a set of public keys to verify signed canonical JSON bytes for a given entity.
@@ -277,7 +316,7 @@ pub(crate) fn to_canonical_json_string_with_fields_to_remove(
 /// # Parameters
 ///
 /// * `entity_id`: The entity to check the signatures for.
-/// * `public_key_map`: A map from entity identifiers to a map from key identifiers to public keys.
+/// * `fetch_public_keys`: A type to get the public signing keys of servers by key ID.
 /// * `signature_map`: The map of signatures from the signed JSON object.
 /// * `canonical_json`: The signed canonical JSON bytes. Can be obtained by calling
 ///   [`to_canonical_json_string_for_signing()`].
@@ -289,7 +328,7 @@ pub(crate) fn to_canonical_json_string_with_fields_to_remove(
 /// [checking signatures]: https://spec.matrix.org/v1.18/appendices/#checking-for-a-signature
 fn verify_canonical_json_for_entity(
     entity_id: &str,
-    public_key_map: &PublicKeyMap,
+    fetch_public_keys: &impl FetchEntityPublicSigningKey,
     signature_map: &CanonicalJsonObject,
     canonical_json: &[u8],
 ) -> Result<(), VerificationError> {
@@ -297,14 +336,10 @@ fn verify_canonical_json_for_entity(
         .get_as_object(entity_id, format!("signatures.{entity_id}"))?
         .ok_or_else(|| VerificationError::NoSignaturesForEntity(entity_id.to_owned()))?;
 
-    let public_keys = public_key_map
-        .get(entity_id)
-        .ok_or_else(|| VerificationError::NoPublicKeysForEntity(entity_id.to_owned()))?;
-
     let mut checked = false;
     for (key_id, signature) in signature_set {
         // If the key is not in the map of public keys, ignore.
-        let Some(public_key) = public_keys.get(key_id) else {
+        let Some(public_key) = fetch_public_keys.public_signing_key(entity_id, key_id)? else {
             continue;
         };
 
@@ -334,12 +369,7 @@ fn verify_canonical_json_for_entity(
             }
         })?;
 
-        verify_canonical_json_with(
-            &verifier,
-            public_key.as_bytes(),
-            signature.as_bytes(),
-            canonical_json,
-        )?;
+        verify_canonical_json_with(&verifier, public_key, signature.as_bytes(), canonical_json)?;
         checked = true;
     }
 
@@ -521,3 +551,45 @@ pub type PublicKeyMap = BTreeMap<String, PublicKeySet>;
 ///
 /// This is represented as a map from key ID to base64-encoded signature.
 pub type PublicKeySet = BTreeMap<String, Base64>;
+
+/// A trait implemented by types that allow to get the public signing keys for a given entity.
+trait FetchEntityPublicSigningKey {
+    /// Get the bytes of the public signing key with the given ID for the given entity.
+    fn public_signing_key(
+        &self,
+        entity: &str,
+        key_id: &str,
+    ) -> Result<Option<&[u8]>, VerificationError>;
+}
+
+impl FetchEntityPublicSigningKey for PublicKeyMap {
+    fn public_signing_key(
+        &self,
+        entity: &str,
+        key_id: &str,
+    ) -> Result<Option<&[u8]>, VerificationError> {
+        Ok(self
+            .get(entity)
+            .ok_or_else(|| VerificationError::NoPublicKeysForEntity(entity.to_owned()))?
+            .get(key_id)
+            .map(Base64::as_bytes))
+    }
+}
+
+impl FetchEntityPublicSigningKey for RoomPolicyEventContent {
+    fn public_signing_key(
+        &self,
+        entity: &str,
+        key_id: &str,
+    ) -> Result<Option<&[u8]>, VerificationError> {
+        if entity != self.via {
+            return Err(VerificationError::NoPublicKeysForEntity(entity.to_owned()));
+        }
+
+        if key_id != POLICY_SERVER_ED25519_SIGNING_KEY_ID {
+            return Ok(None);
+        }
+
+        Ok(self.public_keys.get(&SigningKeyAlgorithm::Ed25519).map(Base64::as_bytes))
+    }
+}

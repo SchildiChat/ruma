@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Improvements:
+
+- Add `replaces_state` field to `StateUnsigned`, due to a clarification in the Matrix spec.
+
 ## 0.34.0
 
 Breaking changes:
@@ -12,6 +16,8 @@ Breaking changes:
 Bug fixes:
 
 - Export `AnyRedactionEvent`.
+- Added a `AnyTimelineEventContent` enum which may contain either
+  a `StateEventContent` or a `MessageLIkeEventContent`
 
 Improvements:
 
