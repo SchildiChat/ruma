@@ -68,8 +68,8 @@ event_enum! {
         #[ruma_enum(ident = AccountImagePack, alias = "m.image_pack")]
         "im.ponies.user_emotes" => super::image_pack,
         #[cfg(feature = "unstable-msc2545")]
-        #[ruma_enum(alias = "im.ponies.emote_rooms")]
-        "m.image_pack.rooms" => super::image_pack,
+        #[ruma_enum(ident = ImagePackRooms, alias = "m.image_pack.rooms")]
+        "im.ponies.emote_rooms" => super::image_pack,
         "m.recent_emoji" => super::recent_emoji,
         "m.key_backup" => super::key_backup,
     }
@@ -210,8 +210,8 @@ event_enum! {
         #[ruma_enum(ident = SpaceCatchAll)]
         "de.spiritcroc.space.catch_all" => super::space_catchall,
         #[cfg(feature = "unstable-msc2545")]
-        #[ruma_enum(ident = RoomImagePack, alias = "im.ponies.room_emotes")]
-        "m.image_pack" => super::image_pack,
+        #[ruma_enum(ident = RoomImagePack, alias = "m.image_pack")]
+        "im.ponies.room_emotes" => super::image_pack,
         #[cfg(feature = "unstable-msc3489")]
         #[ruma_enum(alias = "m.beacon_info")]
         "org.matrix.msc3672.beacon_info" => super::beacon_info,

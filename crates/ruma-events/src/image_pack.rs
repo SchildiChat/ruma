@@ -16,7 +16,7 @@ use crate::{PrivOwnedStr, room::ImageInfo};
 /// State key is the identifier for the image pack in [ImagePackRoomsEventContent].
 #[derive(Clone, Debug, Default, Deserialize, Serialize, EventContent)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
-#[ruma_event(type = "m.image_pack", alias = "im.ponies.room_emotes", kind = State, state_key_type = String)]
+#[ruma_event(type = "im.ponies.room_emotes", kind = State, state_key_type = String)]
 pub struct RoomImagePackEventContent {
     /// A list of images available in this image pack.
     ///
@@ -142,7 +142,7 @@ pub enum PackUsage {
 /// the unstable version of `m.image_pack.rooms`.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, EventContent)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
-#[ruma_event(type = "m.image_pack.rooms", alias = "im.ponies.emote_rooms", kind = GlobalAccountData)]
+#[ruma_event(type = "im.ponies.emote_rooms", kind = GlobalAccountData)]
 pub struct ImagePackRoomsEventContent {
     /// A map of enabled image packs in each room.
     pub rooms: BTreeMap<OwnedRoomId, BTreeMap<String, ImagePackRoomContent>>,
