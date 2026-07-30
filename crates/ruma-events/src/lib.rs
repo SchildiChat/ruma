@@ -166,7 +166,6 @@ pub mod identity_server;
 pub mod ignored_user_list;
 #[cfg(feature = "unstable-msc3552")]
 pub mod image;
-#[cfg(feature = "unstable-msc2545")]
 pub mod image_pack;
 pub mod invite_permission_config;
 pub mod key;
@@ -204,6 +203,8 @@ pub mod space_order;
 #[cfg(feature = "unstable-space-catchall")]
 pub mod space_catchall;
 pub mod sticker;
+#[cfg(feature = "unstable-msc4354")]
+pub mod sticky;
 #[cfg(feature = "unstable-msc4471")]
 pub mod stream;
 pub mod tag;

@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3loginssoredirectidpid
+    //! [spec]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3loginssoredirectidpid
 
     use http::header::{LOCATION, SET_COOKIE};
     use ruma_common::{
@@ -75,7 +75,7 @@ pub mod v3 {
         use std::borrow::Cow;
 
         use ruma_common::api::{
-            MatrixVersion, OutgoingRequest as _, SupportedVersions, auth_scheme::SendAccessToken,
+            MatrixVersion, OutgoingRequestExt as _, SupportedVersions, auth_scheme::SendAccessToken,
         };
 
         use super::Request;

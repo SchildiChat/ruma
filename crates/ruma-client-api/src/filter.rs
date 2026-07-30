@@ -97,7 +97,7 @@ pub struct RoomEventFilter {
     ///
     /// Only applies to the [`sync_events`] endpoint.
     ///
-    /// [per-thread notification counts]: https://spec.matrix.org/v1.18/client-server-api/#receiving-notifications
+    /// [per-thread notification counts]: https://spec.matrix.org/v1.19/client-server-api/#receiving-notifications
     /// [`sync_events`]: crate::sync::sync_events
     #[serde(default, skip_serializing_if = "ruma_common::serde::is_default")]
     pub unread_thread_notifications: bool,
@@ -120,7 +120,7 @@ impl RoomEventFilter {
     ///
     /// Redundant membership events are disabled.
     ///
-    /// [room member lazy-loading]: https://spec.matrix.org/v1.18/client-server-api/#lazy-loading-room-members
+    /// [room member lazy-loading]: https://spec.matrix.org/v1.19/client-server-api/#lazy-loading-room-members
     pub fn with_lazy_loading() -> Self {
         Self {
             lazy_load_options: LazyLoadOptions::Enabled { include_redundant_members: false },
@@ -130,16 +130,28 @@ impl RoomEventFilter {
 
     /// Returns `true` if all fields are empty.
     pub fn is_empty(&self) -> bool {
-        self.not_types.is_empty()
-            && self.not_rooms.is_empty()
-            && self.limit.is_none()
-            && self.rooms.is_none()
-            && self.not_senders.is_empty()
-            && self.senders.is_none()
-            && self.types.is_none()
-            && self.url_filter.is_none()
-            && self.lazy_load_options.is_disabled()
-            && !self.unread_thread_notifications
+        let Self {
+            not_types,
+            not_rooms,
+            limit,
+            rooms,
+            not_senders,
+            senders,
+            types,
+            url_filter,
+            lazy_load_options,
+            unread_thread_notifications,
+        } = self;
+        not_types.is_empty()
+            && not_rooms.is_empty()
+            && limit.is_none()
+            && rooms.is_none()
+            && not_senders.is_empty()
+            && senders.is_none()
+            && types.is_none()
+            && url_filter.is_none()
+            && lazy_load_options.is_disabled()
+            && !unread_thread_notifications
     }
 }
 
@@ -203,20 +215,22 @@ impl RoomFilter {
     ///
     /// Redundant membership events are disabled.
     ///
-    /// [room member lazy-loading]: https://spec.matrix.org/v1.18/client-server-api/#lazy-loading-room-members
+    /// [room member lazy-loading]: https://spec.matrix.org/v1.19/client-server-api/#lazy-loading-room-members
     pub fn with_lazy_loading() -> Self {
         Self { state: RoomEventFilter::with_lazy_loading(), ..Default::default() }
     }
 
     /// Returns `true` if all fields are empty.
     pub fn is_empty(&self) -> bool {
-        !self.include_leave
-            && self.account_data.is_empty()
-            && self.timeline.is_empty()
-            && self.ephemeral.is_empty()
-            && self.state.is_empty()
-            && self.not_rooms.is_empty()
-            && self.rooms.is_none()
+        let Self { include_leave, account_data, timeline, ephemeral, state, not_rooms, rooms } =
+            self;
+        !include_leave
+            && account_data.is_empty()
+            && timeline.is_empty()
+            && ephemeral.is_empty()
+            && state.is_empty()
+            && not_rooms.is_empty()
+            && rooms.is_none()
     }
 }
 
@@ -272,11 +286,12 @@ impl Filter {
 
     /// Returns `true` if all fields are empty.
     pub fn is_empty(&self) -> bool {
-        self.not_types.is_empty()
-            && self.limit.is_none()
-            && self.senders.is_none()
-            && self.types.is_none()
-            && self.not_senders.is_empty()
+        let Self { not_types, limit, senders, types, not_senders } = self;
+        not_types.is_empty()
+            && limit.is_none()
+            && senders.is_none()
+            && types.is_none()
+            && not_senders.is_empty()
     }
 }
 
@@ -335,18 +350,19 @@ impl FilterDefinition {
     ///
     /// Redundant membership events are disabled.
     ///
-    /// [room member lazy-loading]: https://spec.matrix.org/v1.18/client-server-api/#lazy-loading-room-members
+    /// [room member lazy-loading]: https://spec.matrix.org/v1.19/client-server-api/#lazy-loading-room-members
     pub fn with_lazy_loading() -> Self {
         Self { room: RoomFilter::with_lazy_loading(), ..Default::default() }
     }
 
     /// Returns `true` if all fields are empty.
     pub fn is_empty(&self) -> bool {
-        self.event_fields.is_none()
-            && self.event_format == EventFormat::Client
-            && self.presence.is_empty()
-            && self.account_data.is_empty()
-            && self.room.is_empty()
+        let Self { event_fields, event_format, presence, account_data, room } = self;
+        event_fields.is_none()
+            && *event_format == EventFormat::Client
+            && presence.is_empty()
+            && account_data.is_empty()
+            && room.is_empty()
     }
 }
 

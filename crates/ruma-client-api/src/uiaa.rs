@@ -1,6 +1,6 @@
 //! Module for [User-Interactive Authentication API][uiaa] types.
 //!
-//! [uiaa]: https://spec.matrix.org/v1.18/client-server-api/#user-interactive-authentication-api
+//! [uiaa]: https://spec.matrix.org/v1.19/client-server-api/#user-interactive-authentication-api
 
 use std::{borrow::Cow, fmt, marker::PhantomData};
 
@@ -97,7 +97,7 @@ pub struct UiaaInfo {
 
     /// Authentication-related errors for previous request returned by homeserver.
     #[serde(flatten, skip_serializing_if = "Option::is_none")]
-    pub auth_error: Option<StandardErrorBody>,
+    pub auth_error: Option<Box<StandardErrorBody>>,
 }
 
 impl UiaaInfo {

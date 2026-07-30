@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#post_matrixclientv3useruseridfilter
+    //! [spec]: https://spec.matrix.org/v1.19/client-server-api/#post_matrixclientv3useruseridfilter
 
     use ruma_common::{
         OwnedUserId,
@@ -90,7 +90,8 @@ pub mod v3 {
 
             use ruma_common::{
                 api::{
-                    MatrixVersion, OutgoingRequest, SupportedVersions, auth_scheme::SendAccessToken,
+                    MatrixVersion, OutgoingRequestExt as _, SupportedVersions,
+                    auth_scheme::SendAccessToken,
                 },
                 owned_user_id,
             };

@@ -18,7 +18,7 @@ use tracing::debug;
 /// Authentication is performed by adding an `X-Matrix` header including a signature in the request
 /// headers, as defined in the [Matrix Server-Server API][spec].
 ///
-/// [spec]: https://spec.matrix.org/v1.18/server-server-api/#request-authentication
+/// [spec]: https://spec.matrix.org/v1.19/server-server-api/#request-authentication
 #[derive(Debug, Clone, Copy, Default)]
 #[allow(clippy::exhaustive_structs)]
 pub struct ServerSignatures;
@@ -39,7 +39,7 @@ impl AuthScheme for ServerSignatures {
         Ok(())
     }
 
-    fn extract_authentication<T: AsRef<[u8]>>(
+    fn extract_authentication<T>(
         request: &http::Request<T>,
     ) -> Result<Self::Output, Self::ExtractAuthenticationError> {
         let value = request
@@ -78,7 +78,7 @@ impl<'a> ServerSignaturesInput<'a> {
 /// Typed representation of an `Authorization` header of scheme `X-Matrix`, as defined in the
 /// [Matrix Server-Server API][spec].
 ///
-/// [spec]: https://spec.matrix.org/v1.18/server-server-api/#request-authentication
+/// [spec]: https://spec.matrix.org/v1.19/server-server-api/#request-authentication
 #[derive(Clone)]
 #[non_exhaustive]
 pub struct XMatrix {

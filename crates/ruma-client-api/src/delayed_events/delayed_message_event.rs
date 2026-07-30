@@ -53,7 +53,7 @@ pub mod unstable {
         ///
         /// It will be used by the server to ensure idempotency of requests.
         ///
-        /// [access token is refreshed]: https://spec.matrix.org/v1.18/client-server-api/#refreshing-access-tokens
+        /// [access token is refreshed]: https://spec.matrix.org/v1.19/client-server-api/#refreshing-access-tokens
         #[ruma_api(path)]
         pub txn_id: OwnedTransactionId,
 
@@ -127,7 +127,8 @@ pub mod unstable {
 
         use ruma_common::{
             api::{
-                MatrixVersion, OutgoingRequest, SupportedVersions, auth_scheme::SendAccessToken,
+                MatrixVersion, OutgoingRequestExt as _, SupportedVersions,
+                auth_scheme::SendAccessToken,
             },
             owned_room_id,
         };

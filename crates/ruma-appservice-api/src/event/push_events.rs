@@ -5,7 +5,7 @@
 pub mod v1 {
     //! `/v1/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/v1.18/application-service-api/#put_matrixappv1transactionstxnid
+    //! [spec]: https://spec.matrix.org/v1.19/application-service-api/#put_matrixappv1transactionstxnid
 
     use std::borrow::Cow;
     #[cfg(feature = "unstable-msc3202")]
@@ -153,7 +153,8 @@ pub mod v1 {
 
         /// Returns true if there are no device list updates.
         pub fn is_empty(&self) -> bool {
-            self.changed.is_empty() && self.left.is_empty()
+            let Self { changed, left } = self;
+            changed.is_empty() && left.is_empty()
         }
     }
 
@@ -340,7 +341,7 @@ pub mod v1 {
         #[cfg(feature = "client")]
         #[test]
         fn request_contains_events_field() {
-            use ruma_common::api::{OutgoingRequest, auth_scheme::SendAccessToken};
+            use ruma_common::api::{OutgoingRequestExt as _, auth_scheme::SendAccessToken};
 
             let dummy_event_json = json!({
                 "type": "m.room.message",

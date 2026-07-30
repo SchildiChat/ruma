@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+Breaking changes:
+
+- `UiaaInfo`s field `auth_error` from `Option<StandardErrorBody>` to `Option<Box<StandardErrorBody>>`
+  (this saves a couple bytes when the field is not set, and gets rid of a default-warn clippy
+  lint that was showing up in ruma-client and matrix-sdk)
+
+Bug fixes:
+
+- In the `sync_events::v3` module, fix the serialization of `Response` when only the `knock`
+  field was non-empty.
+- In the `room::create_room::v3` module, fix the serialization of `CreationContent` when only
+  the `additional_creators` field was non-empty.
+
 Improvements:
 
 - `profile::get_profile` is now using `ruma_common::profile::UserProfile` for its underlying data
@@ -13,6 +26,15 @@ Improvements:
   `delete_profile_field`) to the stable `/v3/profile/{user}/{field}` path when a homeserver
   advertises the `uk.tcpip.msc4133.stable` unstable feature, even if it has not yet advertised
   Matrix v1.16 in its `/versions` response.
+- Add unstable support for [MSC4354](https://github.com/matrix-org/matrix-spec-proposals/pull/4354) Sticky Events behind
+  the `unstable-msc4354` feature flag. Adds a `sticky_duration_ms` query parameter to `send_message_event`
+  and `send_state_event` as well as sync v3 support. Add sync extension v5 behind the `unstable-msc4480`
+  feature flag as per [MSC4480](https://github.com/matrix-org/matrix-spec-proposals/pull/4480).
+- The `Profiles` sliding sync extension request no longer contains an `include_history` field as
+  this was removed from the MSC.
+- The `Profiles` sliding sync extension response data is wrapped in a `users` field instead of
+  being decoded directly. The profile updates now use a `UserProfileUpdate` enum to signal if the
+  profile changed or should be dropped.
 
 ## 0.24.0
 

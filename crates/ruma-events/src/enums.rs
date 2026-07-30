@@ -16,7 +16,7 @@ use super::room::encrypted;
 /// Event types that servers should send as [stripped state] to help clients identify a room when
 /// they can't access the full room state.
 ///
-/// [stripped state]: https://spec.matrix.org/v1.18/client-server-api/#stripped-state
+/// [stripped state]: https://spec.matrix.org/v1.19/client-server-api/#stripped-state
 pub const RECOMMENDED_STRIPPED_STATE_EVENT_TYPES: &[StateEventType] = &[
     StateEventType::RoomCreate,
     StateEventType::RoomName,
@@ -30,7 +30,7 @@ pub const RECOMMENDED_STRIPPED_STATE_EVENT_TYPES: &[StateEventType] = &[
 /// Event types that servers should transfer upon [room upgrade]. The exact details for what is
 /// transferred is left as an implementation detail.
 ///
-/// [room upgrade]: https://spec.matrix.org/v1.18/client-server-api/#server-behaviour-21
+/// [room upgrade]: https://spec.matrix.org/v1.19/client-server-api/#server-behaviour-21
 pub const RECOMMENDED_TRANSFERABLE_STATE_EVENT_TYPES: &[StateEventType] = &[
     StateEventType::RoomServerAcl,
     StateEventType::RoomEncryption,
@@ -56,6 +56,7 @@ event_enum! {
         #[ruma_enum(ident = UnstableInvitePermissionConfig)]
         "org.matrix.msc4380.invite_permission_config" => super::invite_permission_config,
         "m.ignored_user_list" => super::ignored_user_list,
+        "m.image_pack.rooms" => super::image_pack::rooms,
         "m.push_rules" => super::push_rules,
         "m.secret_storage.default_key" => super::secret_storage::default_key,
         "m.secret_storage.key.*" => super::secret_storage::key,
@@ -64,12 +65,6 @@ event_enum! {
         #[cfg(feature = "unstable-msc4278")]
         #[ruma_enum(ident = UnstableMediaPreviewConfig)]
         "io.element.msc4278.media_preview_config" => super::media_preview_config,
-        #[cfg(feature = "unstable-msc2545")]
-        #[ruma_enum(ident = AccountImagePack, alias = "m.image_pack")]
-        "im.ponies.user_emotes" => super::image_pack,
-        #[cfg(feature = "unstable-msc2545")]
-        #[ruma_enum(ident = ImagePackRooms, alias = "m.image_pack.rooms")]
-        "im.ponies.emote_rooms" => super::image_pack,
         "m.recent_emoji" => super::recent_emoji,
         "m.key_backup" => super::key_backup,
     }
@@ -191,6 +186,7 @@ event_enum! {
         "m.room.encrypted" => super::room::encrypted::unstable_state,
         "m.room.guest_access" => super::room::guest_access,
         "m.room.history_visibility" => super::room::history_visibility,
+        "m.room.image_pack" => super::room::image_pack,
         "m.room.join_rules" => super::room::join_rules,
         #[cfg(feature = "unstable-msc4334")]
         #[ruma_enum(alias = "m.room.language")]
@@ -209,9 +205,6 @@ event_enum! {
         #[cfg(feature = "unstable-space-catchall")]
         #[ruma_enum(ident = SpaceCatchAll)]
         "de.spiritcroc.space.catch_all" => super::space_catchall,
-        #[cfg(feature = "unstable-msc2545")]
-        #[ruma_enum(ident = RoomImagePack, alias = "m.image_pack")]
-        "im.ponies.room_emotes" => super::image_pack,
         #[cfg(feature = "unstable-msc3489")]
         #[ruma_enum(alias = "m.beacon_info")]
         "org.matrix.msc3672.beacon_info" => super::beacon_info,

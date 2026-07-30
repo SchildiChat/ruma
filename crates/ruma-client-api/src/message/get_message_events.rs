@@ -5,7 +5,7 @@
 pub mod v3 {
     //! `/v3/` ([spec])
     //!
-    //! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3roomsroomidmessages
+    //! [spec]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3roomsroomidmessages
 
     use js_int::{UInt, uint};
     use ruma_common::{
@@ -178,7 +178,7 @@ pub mod v3 {
         use js_int::uint;
         use ruma_common::{
             api::{
-                Direction, MatrixVersion, OutgoingRequest, SupportedVersions,
+                Direction, MatrixVersion, OutgoingRequestExt as _, SupportedVersions,
                 auth_scheme::SendAccessToken,
             },
             owned_room_id,

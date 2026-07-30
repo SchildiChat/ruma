@@ -1,6 +1,6 @@
 //! `/v3/` ([spec])
 //!
-//! [spec]: https://spec.matrix.org/v1.18/client-server-api/#get_matrixclientv3sync
+//! [spec]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3sync
 
 use std::{collections::BTreeMap, time::Duration};
 
@@ -209,7 +209,8 @@ impl Rooms {
 
     /// Returns true if there is no update in any room.
     pub fn is_empty(&self) -> bool {
-        self.leave.is_empty() && self.join.is_empty() && self.invite.is_empty()
+        let Self { leave, join, invite, knock } = self;
+        leave.is_empty() && join.is_empty() && invite.is_empty() && knock.is_empty()
     }
 }
 
@@ -239,7 +240,8 @@ impl LeftRoom {
 
     /// Returns true if there are updates in the room.
     pub fn is_empty(&self) -> bool {
-        self.timeline.is_empty() && self.state.is_empty() && self.account_data.is_empty()
+        let Self { timeline, state, account_data } = self;
+        timeline.is_empty() && state.is_empty() && account_data.is_empty()
     }
 }
 
@@ -257,7 +259,7 @@ pub struct JoinedRoom {
     /// If `unread_thread_notifications` was set to `true` in the [`RoomEventFilter`], these
     /// include only the unread notifications for the main timeline.
     ///
-    /// [unread notifications]: https://spec.matrix.org/v1.18/client-server-api/#receiving-notifications
+    /// [unread notifications]: https://spec.matrix.org/v1.19/client-server-api/#receiving-notifications
     /// [`RoomEventFilter`]: crate::filter::RoomEventFilter
     #[serde(skip_serializing_if = "UnreadNotificationsCount::is_empty")]
     pub unread_notifications: UnreadNotificationsCount,
@@ -268,7 +270,7 @@ pub struct JoinedRoom {
     ///
     /// Only set if `unread_thread_notifications` was set to `true` in the [`RoomEventFilter`].
     ///
-    /// [unread notifications]: https://spec.matrix.org/v1.18/client-server-api/#receiving-notifications
+    /// [unread notifications]: https://spec.matrix.org/v1.19/client-server-api/#receiving-notifications
     /// [`RoomEventFilter`]: crate::filter::RoomEventFilter
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub unread_thread_notifications: BTreeMap<OwnedEventId, UnreadNotificationsCount>,
@@ -292,6 +294,13 @@ pub struct JoinedRoom {
     #[serde(skip_serializing_if = "Ephemeral::is_empty")]
     pub ephemeral: Ephemeral,
 
+    /// The sticky events in the room that aren't recorded in the timeline of the room.
+    ///
+    /// See [MSC4354](https://github.com/matrix-org/matrix-spec-proposals/pull/4354).
+    #[cfg(feature = "unstable-msc4354")]
+    #[serde(rename = "msc4354_sticky", skip_serializing_if = "Sticky::is_empty")]
+    pub sticky: Sticky,
+
     /// The number of unread events since the latest read receipt.
     ///
     /// This uses the unstable prefix in [MSC2654].
@@ -310,19 +319,39 @@ impl JoinedRoom {
 
     /// Returns true if there are no updates in the room.
     pub fn is_empty(&self) -> bool {
-        let is_empty = self.summary.is_empty()
-            && self.unread_notifications.is_empty()
-            && self.unread_thread_notifications.is_empty()
-            && self.timeline.is_empty()
-            && self.state.is_empty()
-            && self.account_data.is_empty()
-            && self.ephemeral.is_empty();
+        let Self {
+            summary,
+            unread_notifications,
+            unread_thread_notifications,
+            timeline,
+            state,
+            account_data,
+            ephemeral,
+            #[cfg(feature = "unstable-msc4354")]
+            sticky,
+            #[cfg(feature = "unstable-msc2654")]
+            unread_count,
+        } = self;
 
         #[cfg(not(feature = "unstable-msc2654"))]
-        return is_empty;
-
+        let unread_count_is_none = true;
         #[cfg(feature = "unstable-msc2654")]
-        return is_empty && self.unread_count.is_none();
+        let unread_count_is_none = unread_count.is_none();
+
+        #[cfg(not(feature = "unstable-msc4354"))]
+        let sticky_is_empty = true;
+        #[cfg(feature = "unstable-msc4354")]
+        let sticky_is_empty = sticky.is_empty();
+
+        summary.is_empty()
+            && unread_notifications.is_empty()
+            && unread_thread_notifications.is_empty()
+            && timeline.is_empty()
+            && state.is_empty()
+            && account_data.is_empty()
+            && ephemeral.is_empty()
+            && unread_count_is_none
+            && sticky_is_empty
     }
 }
 
@@ -343,7 +372,8 @@ impl KnockedRoom {
 
     /// Whether there are updates for this room.
     pub fn is_empty(&self) -> bool {
-        self.knock_state.is_empty()
+        let Self { knock_state } = self;
+        knock_state.is_empty()
     }
 }
 
@@ -370,7 +400,8 @@ impl KnockState {
 
     /// Whether there are stripped state updates in this room.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -404,7 +435,8 @@ impl Timeline {
     /// A `Timeline` is considered non-empty if it has at least one event, a
     /// `prev_batch` value, or `limited` is `true`.
     pub fn is_empty(&self) -> bool {
-        !self.limited && self.prev_batch.is_none() && self.events.is_empty()
+        let Self { limited, prev_batch, events } = self;
+        !limited && prev_batch.is_none() && events.is_empty()
     }
 }
 
@@ -470,7 +502,8 @@ impl StateEvents {
 
     /// Returns true if there are no state updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 
     /// Creates a `State` with events
@@ -502,7 +535,8 @@ impl GlobalAccountData {
 
     /// Returns true if there are no global account data updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -523,7 +557,8 @@ impl RoomAccountData {
 
     /// Returns true if there are no room account data updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -544,7 +579,34 @@ impl Ephemeral {
 
     /// Returns true if there are no ephemeral event updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
+    }
+}
+
+/// Sticky events in the room that aren't recorded in the timeline of the room.
+///
+/// See [MSC4354](https://github.com/matrix-org/matrix-spec-proposals/pull/4354).
+#[cfg(feature = "unstable-msc4354")]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+pub struct Sticky {
+    /// A list of sticky events.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<Raw<AnySyncTimelineEvent>>,
+}
+
+#[cfg(feature = "unstable-msc4354")]
+impl Sticky {
+    /// Creates an empty `Sticky`.
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Returns true if there are no sticky events.
+    pub fn is_empty(&self) -> bool {
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -579,9 +641,8 @@ impl RoomSummary {
 
     /// Returns true if there are no room summary updates.
     pub fn is_empty(&self) -> bool {
-        self.heroes.is_empty()
-            && self.joined_member_count.is_none()
-            && self.invited_member_count.is_none()
+        let Self { heroes, joined_member_count, invited_member_count } = self;
+        heroes.is_empty() && joined_member_count.is_none() && invited_member_count.is_none()
     }
 }
 
@@ -602,7 +663,8 @@ impl InvitedRoom {
 
     /// Returns true if there are no updates to this room.
     pub fn is_empty(&self) -> bool {
-        self.invite_state.is_empty()
+        let Self { invite_state } = self;
+        invite_state.is_empty()
     }
 }
 
@@ -629,7 +691,8 @@ impl InviteState {
 
     /// Returns true if there are no state updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -656,7 +719,8 @@ impl Presence {
 
     /// Returns true if there are no presence updates.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -677,7 +741,8 @@ impl ToDevice {
 
     /// Returns true if there are no to-device events.
     pub fn is_empty(&self) -> bool {
-        self.events.is_empty()
+        let Self { events } = self;
+        events.is_empty()
     }
 }
 
@@ -705,6 +770,59 @@ mod tests {
             from_json_value::<Timeline>(json!({ "events": [] })).unwrap();
         assert!(!timeline_default_deserialized.limited);
     }
+
+    #[cfg(feature = "unstable-msc4354")]
+    #[test]
+    fn joined_room_sticky_section_serde() {
+        use assert_matches2::assert_let;
+        use ruma_events::{AnySyncMessageLikeEvent, AnySyncTimelineEvent, SyncMessageLikeEvent};
+        use serde_json::to_value as to_json_value;
+
+        use super::JoinedRoom;
+
+        let sticky_event = json!({
+            "content": { "body": "sticky", "msgtype": "m.text" },
+            "event_id": "$1:example.com",
+            "origin_server_ts": 1,
+            "sender": "@alice:example.com",
+            "type": "m.room.message",
+            "msc4354_sticky": {
+                "duration_ms": 300_000
+            },
+            "unsigned": { "sticky_duration_ttl_ms": 258_113 }
+        });
+
+        // The unstable `msc4354_sticky` section is deserialized into `sticky`.
+        let joined_room = from_json_value::<JoinedRoom>(json!({
+            "msc4354_sticky": { "events": [sticky_event] }
+        }))
+        .unwrap();
+        assert_eq!(joined_room.sticky.events.len(), 1);
+
+        // A server sending both the stable and unstable keys must not error (no serde
+        // `alias` is used); the unstable key wins.
+        let joined_room = from_json_value::<JoinedRoom>(json!({
+            "sticky": { "events": [] },
+            "msc4354_sticky": { "events": [sticky_event] },
+        }))
+        .unwrap();
+        assert_eq!(joined_room.sticky.events.len(), 1);
+        let event_raw = joined_room.sticky.events.first().unwrap();
+
+        assert_let!(
+            AnySyncTimelineEvent::MessageLike(AnySyncMessageLikeEvent::RoomMessage(
+                SyncMessageLikeEvent::Original(ev)
+            )) = event_raw.deserialize().unwrap()
+        );
+
+        let duration = ev.sticky.map(|s| s.duration_ms.get());
+        assert_eq!(duration, Some(300_000));
+
+        // Serialization uses the unstable key.
+        let serialized = to_json_value(&joined_room).unwrap();
+        assert!(serialized.get("msc4354_sticky").is_some());
+        assert!(serialized.get("sticky").is_none());
+    }
 }
 
 #[cfg(all(test, feature = "client"))]
@@ -715,7 +833,7 @@ mod client_tests {
     use ruma_common::{
         RoomVersionId,
         api::{
-            IncomingResponse as _, MatrixVersion, OutgoingRequest as _, SupportedVersions,
+            IncomingResponse as _, MatrixVersion, OutgoingRequestExt as _, SupportedVersions,
             auth_scheme::SendAccessToken,
         },
         event_id, room_id, user_id,
@@ -1012,10 +1130,10 @@ mod server_tests {
         presence::PresenceState,
         serde::Raw,
     };
-    use ruma_events::AnySyncStateEvent;
+    use ruma_events::{AnyStrippedStateEvent, AnySyncStateEvent};
     use serde_json::{Value as JsonValue, from_slice as from_json_slice, json};
 
-    use super::{Filter, JoinedRoom, LeftRoom, Request, Response, State};
+    use super::{Filter, JoinedRoom, KnockedRoom, LeftRoom, Request, Response, State};
 
     fn sync_state_event() -> Raw<AnySyncStateEvent> {
         Raw::new(&json!({
@@ -1281,6 +1399,49 @@ mod server_tests {
                     "leave": {
                         left_room_id: {
                             "state_after": {
+                                "events": [
+                                    event,
+                                ],
+                            },
+                        },
+                    },
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn serialize_response_knocked_room() {
+        let knocked_room_id = owned_room_id!("!knocked:localhost");
+        let event: Raw<AnyStrippedStateEvent> = Raw::new(&json!({
+            "content": {
+              "avatar_url": "mxc://example.org/SEsfnsuifSDFSSEF",
+              "displayname": "Alice Margatroid",
+              "membership": "join",
+            },
+            "sender": "@alice:example.org",
+            "state_key": "@alice:example.org",
+            "type": "m.room.member",
+        }))
+        .unwrap()
+        .cast_unchecked();
+
+        let mut response = Response::new("aaa".to_owned());
+
+        let mut knocked_room = KnockedRoom::new();
+        knocked_room.knock_state.events.push(event.clone());
+        response.rooms.knock.insert(knocked_room_id.clone(), knocked_room);
+
+        let http_response = response.try_into_http_response::<Vec<u8>>().unwrap();
+
+        assert_eq!(
+            from_json_slice::<JsonValue>(http_response.body()).unwrap(),
+            json!({
+                "next_batch": "aaa",
+                "rooms": {
+                    "knock": {
+                        knocked_room_id: {
+                            "knock_state": {
                                 "events": [
                                     event,
                                 ],
