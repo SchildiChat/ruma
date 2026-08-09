@@ -43,6 +43,13 @@ mod url_preview;
 mod video;
 mod without_relation;
 
+// SC start
+#[cfg(feature = "unstable-msc4144")]
+mod per_message_profile;
+#[cfg(feature = "unstable-msc4144")]
+pub use self::per_message_profile::PerMessageProfile;
+// SC end
+
 #[cfg(feature = "unstable-msc3245-v1-compat")]
 pub use self::audio::{
     UnstableAmplitude, UnstableAudioDetailsContentBlock, UnstableVoiceContentBlock,
@@ -100,6 +107,11 @@ pub struct RoomMessageEventContent {
     #[serde(rename = "m.mentions", skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Mentions>,
 
+    /// SC
+    #[cfg(feature = "unstable-msc4144")]
+    #[serde(rename = "com.beeper.per_message_profile", skip_serializing_if = "Option::is_none")]
+    pub per_message_profile: Option<PerMessageProfile>,
+
     /// A descriptor advertising a live event stream for this message.
     ///
     /// This uses the unstable prefix defined in [MSC4471].
@@ -117,6 +129,8 @@ impl RoomMessageEventContent {
             msgtype,
             relates_to: None,
             mentions: None,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile: None,
             #[cfg(feature = "unstable-msc4471")]
             stream: None,
         }
@@ -274,11 +288,17 @@ impl RoomMessageEventContent {
         let RoomMessageEventContentWithoutRelation {
             msgtype,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         } = new_content;
         self.msgtype = msgtype;
         self.mentions = mentions;
+        #[cfg(feature = "unstable-msc4144")] // SC
+        {
+            self.per_message_profile = per_message_profile;
+        }
         #[cfg(feature = "unstable-msc4471")]
         {
             self.stream = stream;

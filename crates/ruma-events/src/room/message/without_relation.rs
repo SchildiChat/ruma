@@ -11,6 +11,11 @@ use crate::{
     relation::{InReplyTo, Replacement, Reply, Thread},
 };
 
+// SC start
+#[cfg(feature = "unstable-msc4144")]
+use super::PerMessageProfile;
+// SC end
+
 /// Form of [`RoomMessageEventContent`] without relation.
 #[derive(Clone, Debug, Serialize)]
 #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
@@ -27,6 +32,11 @@ pub struct RoomMessageEventContentWithoutRelation {
     #[serde(rename = "m.mentions", skip_serializing_if = "Option::is_none")]
     pub mentions: Option<Mentions>,
 
+    /// SC
+    #[cfg(feature = "unstable-msc4144")]
+    #[serde(rename = "com.beeper.per_message_profile", skip_serializing_if = "Option::is_none")]
+    pub per_message_profile: Option<PerMessageProfile>,
+
     /// See [`RoomMessageEventContent::stream`].
     ///
     /// [`RoomMessageEventContent::stream`]: super::RoomMessageEventContent::stream
@@ -41,6 +51,8 @@ impl RoomMessageEventContentWithoutRelation {
         Self {
             msgtype,
             mentions: None,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile: None,
             #[cfg(feature = "unstable-msc4471")]
             stream: None,
         }
@@ -102,6 +114,8 @@ impl RoomMessageEventContentWithoutRelation {
         let Self {
             msgtype,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         } = self;
@@ -109,6 +123,8 @@ impl RoomMessageEventContentWithoutRelation {
             msgtype,
             relates_to,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         }
@@ -251,6 +267,8 @@ impl RoomMessageEventContentWithoutRelation {
             new_content: RoomMessageEventContentWithoutRelation {
                 msgtype: self.msgtype.clone(),
                 mentions,
+                #[cfg(feature = "unstable-msc4144")] // SC
+                per_message_profile: self.per_message_profile.clone(),
                 #[cfg(feature = "unstable-msc4471")]
                 stream: self.stream.clone(),
             },
@@ -288,6 +306,8 @@ impl From<RoomMessageEventContent> for RoomMessageEventContentWithoutRelation {
         let RoomMessageEventContent {
             msgtype,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
             ..
@@ -295,6 +315,8 @@ impl From<RoomMessageEventContent> for RoomMessageEventContentWithoutRelation {
         Self {
             msgtype,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         }
@@ -306,6 +328,8 @@ impl From<RoomMessageEventContentWithoutRelation> for RoomMessageEventContent {
         let RoomMessageEventContentWithoutRelation {
             msgtype,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         } = value;
@@ -313,6 +337,8 @@ impl From<RoomMessageEventContentWithoutRelation> for RoomMessageEventContent {
             msgtype,
             relates_to: None,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         }

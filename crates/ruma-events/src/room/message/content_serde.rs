@@ -15,6 +15,11 @@ use super::{
 use crate::stream::StreamDescriptor;
 use crate::{Mentions, room::message::CustomMessageContent};
 
+// SC start
+#[cfg(feature = "unstable-msc4144")]
+use super::PerMessageProfile;
+// SC end
+
 impl<'de> Deserialize<'de> for RoomMessageEventContent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -27,6 +32,8 @@ impl<'de> Deserialize<'de> for RoomMessageEventContent {
 
         let MentionsDeHelper {
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         } = from_raw_json_value(&json)?;
@@ -35,6 +42,8 @@ impl<'de> Deserialize<'de> for RoomMessageEventContent {
             msgtype: from_raw_json_value(&json)?,
             relates_to,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         })
@@ -50,6 +59,8 @@ impl<'de> Deserialize<'de> for RoomMessageEventContentWithoutRelation {
 
         let MentionsDeHelper {
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         } = from_raw_json_value(&json)?;
@@ -57,6 +68,8 @@ impl<'de> Deserialize<'de> for RoomMessageEventContentWithoutRelation {
         Ok(Self {
             msgtype: from_raw_json_value(&json)?,
             mentions,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile,
             #[cfg(feature = "unstable-msc4471")]
             stream,
         })
@@ -67,6 +80,10 @@ impl<'de> Deserialize<'de> for RoomMessageEventContentWithoutRelation {
 struct MentionsDeHelper {
     #[serde(rename = "m.mentions")]
     mentions: Option<Mentions>,
+
+    #[cfg(feature = "unstable-msc4144")] // SC
+    #[serde(rename = "com.beeper.per_message_profile")]
+    per_message_profile: Option<PerMessageProfile>,
 
     #[cfg(feature = "unstable-msc4471")]
     #[serde(rename = "org.matrix.msc4471.stream")]

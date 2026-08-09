@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize, de};
 use crate::room::EncryptedFile;
 use crate::room::{ImageInfo, MediaSource, message::Relation};
 
+// SC start
+#[cfg(feature = "unstable-msc4144")]
+use crate::room::message::PerMessageProfile;
+// SC end
+
 /// The source of a sticker media file.
 #[derive(Clone, Debug, Serialize)]
 #[non_exhaustive]
@@ -96,6 +101,11 @@ pub struct StickerEventContent {
     #[serde(flatten)]
     pub source: StickerMediaSource,
 
+    /// SC: A profile to use for this sticker instead of the sender's room profile.
+    #[cfg(feature = "unstable-msc4144")]
+    #[serde(rename = "com.beeper.per_message_profile", skip_serializing_if = "Option::is_none")]
+    pub per_message_profile: Option<PerMessageProfile>,
+
     /// Information about related messages.
     #[serde(
         flatten,
@@ -108,11 +118,25 @@ pub struct StickerEventContent {
 impl StickerEventContent {
     /// Creates a new `StickerEventContent` with the given body, image info and URL.
     pub fn new(body: String, info: ImageInfo, url: OwnedMxcUri) -> Self {
-        Self { body, info, source: StickerMediaSource::Plain(url.clone()), relates_to: None }
+        Self {
+            body,
+            info,
+            source: StickerMediaSource::Plain(url.clone()),
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile: None,
+            relates_to: None,
+        }
     }
 
     /// Creates a new `StickerEventContent` with the given body, image info, URL, and media source.
     pub fn with_source(body: String, info: ImageInfo, source: StickerMediaSource) -> Self {
-        Self { body, info, source, relates_to: None }
+        Self {
+            body,
+            info,
+            source,
+            #[cfg(feature = "unstable-msc4144")] // SC
+            per_message_profile: None,
+            relates_to: None,
+        }
     }
 }
