@@ -15,6 +15,7 @@ all-features = true
 
 [features]
 matrix = ["dep:ruma-common"]
+unstable-msc4144 = [] # SC: Per-message profiles
 unstable-msc4286 = []
 
 [dependencies]

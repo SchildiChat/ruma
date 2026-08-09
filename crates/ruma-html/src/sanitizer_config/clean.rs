@@ -466,6 +466,8 @@ pub(crate) mod spec {
                 "data-msc4286-external-payment-details" => true,
                 _ => false,
             },
+            #[cfg(feature = "unstable-msc4144")] // SC: per-message profile fallback
+            "strong" => matches!(attribute_name, "data-mx-profile-fallback"),
             "a" => matches!(attribute_name, "target" | "href",),
             "img" => matches!(attribute_name, "width" | "height" | "alt" | "title" | "src" | "data-mx-emoticon",),
             "ol" => matches!(attribute_name, "start",),
