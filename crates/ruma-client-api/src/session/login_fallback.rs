@@ -61,13 +61,15 @@ impl Response {
 
 #[cfg(feature = "server")]
 impl ruma_common::api::OutgoingResponse for Response {
-    fn try_into_http_response<T: Default + bytes::BufMut>(
+    type Body = ruma_common::api::BytesBody;
+
+    fn try_into_http_response_inner(
         self,
-    ) -> Result<http::Response<T>, ruma_common::api::error::IntoHttpError> {
+    ) -> Result<http::Response<Self::Body>, ruma_common::api::error::IntoHttpError> {
         Ok(http::Response::builder()
             .status(http::StatusCode::OK)
             .header(http::header::CONTENT_TYPE, "text/html")
-            .body(ruma_common::serde::slice_to_buf(&self.body))?)
+            .body(ruma_common::api::BytesBody(self.body))?)
     }
 }
 
@@ -75,18 +77,10 @@ impl ruma_common::api::OutgoingResponse for Response {
 impl ruma_common::api::IncomingResponse for Response {
     type EndpointError = ruma_common::api::error::Error;
 
-    fn try_from_http_response<T: AsRef<[u8]>>(
-        response: http::Response<T>,
-    ) -> Result<Self, ruma_common::api::error::FromHttpResponseError<Self::EndpointError>> {
-        use ruma_common::api::{EndpointError, error::FromHttpResponseError};
-
-        if response.status().as_u16() >= 400 {
-            return Err(FromHttpResponseError::Server(Self::EndpointError::from_http_response(
-                response,
-            )));
-        }
-
-        let body = response.into_body().as_ref().to_owned();
+    fn try_from_http_response_inner(
+        response: http::Response<&[u8]>,
+    ) -> Result<Self, ruma_common::api::error::DeserializationError> {
+        let body = response.into_body().to_owned();
         Ok(Self { body })
     }
 }

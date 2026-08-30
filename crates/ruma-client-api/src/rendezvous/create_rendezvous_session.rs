@@ -10,7 +10,7 @@ pub mod unstable_msc4108 {
 
     use http::header::{CONTENT_TYPE, ETAG, EXPIRES, LAST_MODIFIED};
     #[cfg(feature = "client")]
-    use ruma_common::api::{BytesBody, error::FromHttpResponseError};
+    use ruma_common::api::{BytesBody, error::DeserializationError};
     use ruma_common::{
         api::{
             auth_scheme::NoAccessToken,
@@ -18,7 +18,6 @@ pub mod unstable_msc4108 {
         },
         metadata,
     };
-    use serde::{Deserialize, Serialize};
     use url::Url;
     use web_time::SystemTime;
 
@@ -135,8 +134,11 @@ pub mod unstable_msc4108 {
         pub last_modified: SystemTime,
     }
 
-    #[derive(Serialize, Deserialize)]
-    struct ResponseBody {
+    #[doc(hidden)]
+    #[derive(ruma_common::serde::_FakeDeriveSerde)]
+    #[cfg_attr(feature = "server", derive(serde::Serialize, ruma_common::api::OutgoingBodyJson))]
+    #[cfg_attr(feature = "client", derive(serde::Deserialize))]
+    pub struct ResponseBody {
         url: Url,
     }
 
@@ -144,18 +146,10 @@ pub mod unstable_msc4108 {
     impl ruma_common::api::IncomingResponse for Response {
         type EndpointError = Error;
 
-        fn try_from_http_response<T: AsRef<[u8]>>(
-            response: http::Response<T>,
-        ) -> Result<Self, FromHttpResponseError<Self::EndpointError>> {
-            use ruma_common::api::EndpointError;
-
-            if response.status().as_u16() >= 400 {
-                return Err(FromHttpResponseError::Server(
-                    Self::EndpointError::from_http_response(response),
-                ));
-            }
-
-            let get_date = |header: http::HeaderName| -> Result<SystemTime, FromHttpResponseError<Self::EndpointError>> {
+        fn try_from_http_response_inner(
+            response: http::Response<&[u8]>,
+        ) -> Result<Self, DeserializationError> {
+            let get_date = |header: http::HeaderName| -> Result<SystemTime, DeserializationError> {
                 let date = response
                     .headers()
                     .get(&header)
@@ -175,7 +169,7 @@ pub mod unstable_msc4108 {
             let expires = get_date(EXPIRES)?;
             let last_modified = get_date(LAST_MODIFIED)?;
 
-            let body: ResponseBody = serde_json::from_slice(response.body().as_ref())?;
+            let body: ResponseBody = serde_json::from_slice(response.body())?;
 
             Ok(Self { url: body.url, etag, expires, last_modified })
         }
@@ -183,14 +177,15 @@ pub mod unstable_msc4108 {
 
     #[cfg(feature = "server")]
     impl ruma_common::api::OutgoingResponse for Response {
-        fn try_into_http_response<T: Default + bytes::BufMut>(
+        type Body = ResponseBody;
+
+        fn try_into_http_response_inner(
             self,
-        ) -> Result<http::Response<T>, ruma_common::api::error::IntoHttpError> {
+        ) -> Result<http::Response<Self::Body>, ruma_common::api::error::IntoHttpError> {
             use http::header::{CACHE_CONTROL, PRAGMA};
             use ruma_common::http_headers::system_time_to_http_date;
 
             let body = ResponseBody { url: self.url };
-            let body = ruma_common::serde::json_to_buf(&body)?;
 
             let expires = system_time_to_http_date(&self.expires)?;
             let last_modified = system_time_to_http_date(&self.last_modified)?;

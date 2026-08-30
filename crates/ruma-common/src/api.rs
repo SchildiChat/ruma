@@ -259,6 +259,7 @@ pub mod error;
 mod metadata;
 pub mod path_builder;
 
+use self::error::DeserializationError;
 pub use self::{
     body::{BytesBody, EmptyBody, OutgoingBody},
     metadata::{FeatureFlag, MatrixVersion, Metadata, SupportedVersions},
@@ -347,10 +348,30 @@ pub trait IncomingResponse: Sized {
     type EndpointError: EndpointError;
 
     /// Tries to convert the given `http::Response` into this response type.
-    fn try_from_http_response<T: AsRef<[u8]>>(
-        response: http::Response<T>,
-    ) -> Result<Self, FromHttpResponseError<Self::EndpointError>>;
+    ///
+    /// Only called for successful responses (HTTP status code < 400).
+    fn try_from_http_response_inner(
+        response: http::Response<&[u8]>,
+    ) -> Result<Self, DeserializationError>;
 }
+
+/// Convenience functionality on top of [`IncomingResponse`].
+pub trait IncomingResponseExt: IncomingResponse {
+    /// Tries to convert the given `http::Response` into this response type.
+    fn try_from_http_response(
+        response: http::Response<&[u8]>,
+    ) -> Result<Self, FromHttpResponseError<Self::EndpointError>> {
+        if response.status().as_u16() >= 400 {
+            return Err(FromHttpResponseError::Server(Self::EndpointError::from_http_response(
+                response,
+            )));
+        }
+
+        Self::try_from_http_response_inner(response).map_err(Into::into)
+    }
+}
+
+impl<T: IncomingResponse> IncomingResponseExt for T {}
 
 /// An extension to [`OutgoingRequest`] which provides Appservice specific methods.
 ///
@@ -423,15 +444,32 @@ pub trait IncomingRequest: Metadata {
 }
 
 /// A request type for a Matrix API endpoint, used for sending responses.
-pub trait OutgoingResponse {
+pub trait OutgoingResponse: Sized {
+    /// HTTP body type pre-serialization.
+    type Body: OutgoingBody;
+
     /// Tries to convert this response into an `http::Response`.
     ///
-    /// This method should only fail when when invalid header values are specified. It may also
-    /// fail with a serialization error in case of bugs in Ruma though.
-    fn try_into_http_response<T: Default + BufMut>(
-        self,
-    ) -> Result<http::Response<T>, IntoHttpError>;
+    /// This method should only fail when invalid header values are specified. It may also fail with
+    /// a serialization error in case of bugs in Ruma though.
+    fn try_into_http_response_inner(self) -> Result<http::Response<Self::Body>, IntoHttpError>;
 }
+
+/// A request type for a Matrix API endpoint, used for sending responses.
+pub trait OutgoingResponseExt: OutgoingResponse {
+    /// Tries to convert this response into an `http::Response`.
+    ///
+    /// This method should only fail when invalid header values are specified. It may also fail with
+    /// a serialization error in case of bugs in Ruma though.
+    fn try_into_http_response<T: Default + BufMut + AsRef<[u8]>>(
+        self,
+    ) -> Result<http::Response<T>, IntoHttpError> {
+        let (parts, body) = self.try_into_http_response_inner()?.into_parts();
+        Ok(http::Response::from_parts(parts, body.try_into_buf().map_err(Into::into)?))
+    }
+}
+
+impl<T: OutgoingResponse> OutgoingResponseExt for T {}
 
 /// Gives users the ability to define their own serializable / deserializable errors.
 pub trait EndpointError: OutgoingResponse + StdError + Sized + Send + 'static {
@@ -439,7 +477,7 @@ pub trait EndpointError: OutgoingResponse + StdError + Sized + Send + 'static {
     ///
     /// This will always return `Err` variant when no `error` field is defined in
     /// the `ruma_api` macro.
-    fn from_http_response<T: AsRef<[u8]>>(response: http::Response<T>) -> Self;
+    fn from_http_response(response: http::Response<&[u8]>) -> Self;
 }
 
 /// The direction to return events from.
