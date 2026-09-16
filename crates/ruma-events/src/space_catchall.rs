@@ -16,4 +16,8 @@ pub struct SpaceCatchAllEventContent {
     /// Wheter to filter for DMs or group chats or allow both (when omitted).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filter_is_dm: Option<bool>,
+
+    /// Wheter to filter for invites, non-invites, or allow both (when omitted).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter_is_invite: Option<bool>,
 }
