@@ -119,28 +119,13 @@ impl Headers {
     pub(super) fn expand_serialize(
         &self,
         kind: MacroKind,
-        body: &Body,
-        ruma_common: &RumaCommon,
         http: &TokenStream,
     ) -> Option<TokenStream> {
-        let mut serialize = TokenStream::new();
-
-        // If there is no `CONTENT_TYPE` header, add one if necessary.
-        let content_type: syn::Ident = parse_quote!(CONTENT_TYPE);
-        if !self.0.contains_key(&content_type)
-            && let Some(content_type) = body.content_type(kind)
-        {
-            serialize.extend(quote! {
-                headers.insert(
-                    #http::header::CONTENT_TYPE,
-                    #ruma_common::http_headers::#content_type,
-                );
-            });
-        }
-
-        if serialize.is_empty() && self.0.is_empty() {
+        if self.0.is_empty() {
             return None;
         }
+
+        let mut serialize = TokenStream::new();
 
         for (header_name, field) in &self.0 {
             let ident = field.ident();
@@ -283,28 +268,6 @@ impl Body {
         }
     }
 
-    /// The content type of the body, if it can be determined.
-    ///
-    /// Returns a `const` from `ruma_common::http_headers`.
-    fn content_type(&self, kind: MacroKind) -> Option<syn::Ident> {
-        match &self.fields {
-            BodyFields::Empty if matches!(kind, MacroKind::Request) => {
-                // If there are no body fields, the request body might be empty (not `{}`), so the
-                // `application/json` content-type would be wrong. It may also cause problems with
-                // CORS policies that don't allow the `Content-Type` header (for things such as
-                // `.well-known` that are commonly handled by something else than a
-                // homeserver). However, a server should always return a JSON body.
-                None
-            }
-            BodyFields::Empty | BodyFields::JsonFields(_) | BodyFields::JsonAll(_) => {
-                Some(parse_quote! { APPLICATION_JSON })
-            }
-            // This might not be the actual content type, but this is a better default than
-            // `application/json` when sending raw data.
-            BodyFields::Raw(_) => Some(parse_quote! { APPLICATION_OCTET_STREAM }),
-        }
-    }
-
     /// Generate code for a comma-separated list of field names.
     ///
     /// Only the `#[cfg]` attributes on the fields are forwarded.
@@ -405,18 +368,12 @@ impl Body {
         let body_fields = expand_fields_as_list(fields);
 
         quote! {
-            let body: #body_ident = {
-                let body = ::std::convert::AsRef::<[::std::primitive::u8]>::as_ref(
-                    #src.body(),
-                );
-
-                #serde_json::from_slice(match body {
-                    // If the body is completely empty, pretend it is an empty JSON object instead.
-                    // This allows bodies with only optional fields to be deserialized in that case.
-                    [] => b"{}",
-                    b => b,
-                })?
-            };
+            let body: #body_ident = #serde_json::from_slice(match *#src.body() {
+                // If the body is completely empty, pretend it is an empty JSON object instead.
+                // This allows bodies with only optional fields to be deserialized in that case.
+                [] => b"{}",
+                b => b,
+            })?;
 
             let #body_ident {
                 #body_fields

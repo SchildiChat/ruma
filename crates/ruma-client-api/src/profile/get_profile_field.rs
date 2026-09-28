@@ -97,23 +97,15 @@ pub mod v3 {
         type EndpointError = Error;
         type OutgoingResponse = Response;
 
-        fn try_from_http_request<B, S>(
-            request: http::Request<B>,
-            path_args: &[S],
-        ) -> Result<Self, ruma_common::api::error::FromHttpRequestError>
-        where
-            B: AsRef<[u8]>,
-            S: AsRef<str>,
-        {
-            Self::check_request_method(request.method())?;
-
+        fn try_from_http_request_inner(
+            _request: http::Request<&[u8]>,
+            path_args: &[&str],
+        ) -> Result<Self, ruma_common::api::error::DeserializationError> {
             let (user_id, field) =
                 serde::Deserialize::deserialize(serde::de::value::SeqDeserializer::<
                     _,
                     serde::de::value::Error,
-                >::new(
-                    path_args.iter().map(::std::convert::AsRef::as_ref),
-                ))?;
+                >::new(path_args.iter().copied()))?;
 
             Ok(Self { user_id, field })
         }
@@ -239,7 +231,6 @@ pub mod v3 {
         ) -> Result<http::Response<Self::Body>, ruma_common::api::error::IntoHttpError> {
             Ok(http::Response::builder()
                 .status(http::StatusCode::OK)
-                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .body(ResponseBody(self.value))?)
         }
     }
@@ -443,13 +434,13 @@ mod tests_server {
 
     #[test]
     fn deserialize_request() {
-        use ruma_common::api::IncomingRequest;
+        use ruma_common::api::IncomingRequestExt as _;
 
         let request = Request::try_from_http_request(
             http::Request::get(
                 "http://localhost/_matrix/client/v3/profile/@alice:localhost/displayname",
             )
-            .body(Vec::<u8>::new())
+            .body(&[] as &[u8])
             .unwrap(),
             &["@alice:localhost", "displayname"],
         )

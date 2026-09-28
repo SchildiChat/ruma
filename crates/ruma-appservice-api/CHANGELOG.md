@@ -2,10 +2,13 @@
 
 ## Unreleased
 
+## 0.17.0
+
 Breaking changes:
 
 - Export nothing from the crate if neither the `client` nor the `server` feature is active, because
   the crate is not useful without them.
+- All appservice API routes now use the new `HomeserverToken` auth scheme struct.
 
 ## 0.16.0
 

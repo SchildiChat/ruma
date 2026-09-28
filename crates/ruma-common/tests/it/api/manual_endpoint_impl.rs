@@ -6,14 +6,14 @@
 use std::borrow::Cow;
 
 use bytes::BufMut;
-use http::{header::CONTENT_TYPE, method::Method};
+use http::method::Method;
 use ruma_common::{
     OwnedRoomAliasId, OwnedRoomId,
     api::{
         EmptyBody, IncomingRequest, IncomingResponse, MatrixVersion, Metadata, OutgoingBody,
         OutgoingRequest, OutgoingResponse, SupportedVersions,
         auth_scheme::NoAuthentication,
-        error::{DeserializationError, Error, FromHttpRequestError, IntoHttpError},
+        error::{DeserializationError, Error, IntoHttpError},
         path_builder::{StablePathSelector, VersionHistory},
     },
     serde::json_to_buf,
@@ -88,24 +88,16 @@ impl IncomingRequest for Request {
     type EndpointError = Error;
     type OutgoingResponse = Response;
 
-    fn try_from_http_request<B, S>(
-        request: http::Request<B>,
-        path_args: &[S],
-    ) -> Result<Self, FromHttpRequestError>
-    where
-        B: AsRef<[u8]>,
-        S: AsRef<str>,
-    {
-        Self::check_request_method(request.method())?;
-
+    fn try_from_http_request_inner(
+        request: http::Request<&[u8]>,
+        path_args: &[&str],
+    ) -> Result<Self, DeserializationError> {
         let (room_alias,) = Deserialize::deserialize(serde::de::value::SeqDeserializer::<
             _,
             serde::de::value::Error,
-        >::new(
-            path_args.iter().map(::std::convert::AsRef::as_ref),
-        ))?;
+        >::new(path_args.iter().copied()))?;
 
-        let request_body: RequestBody = serde_json::from_slice(request.body().as_ref())?;
+        let request_body: RequestBody = serde_json::from_slice(request.into_body())?;
 
         Ok(Request { room_id: request_body.room_id, room_alias })
     }
@@ -118,6 +110,10 @@ pub struct RequestBody {
 
 impl OutgoingBody for RequestBody {
     type Error = serde_json::Error;
+
+    fn content_type(&self) -> Option<http::HeaderValue> {
+        Some(ruma_common::http_headers::APPLICATION_JSON)
+    }
 
     fn try_into_buf<T: Default + BufMut + AsRef<[u8]>>(self) -> serde_json::Result<T> {
         json_to_buf(&self)
@@ -142,11 +138,6 @@ impl OutgoingResponse for Response {
     type Body = EmptyBody<false>;
 
     fn try_into_http_response_inner(self) -> Result<http::Response<Self::Body>, IntoHttpError> {
-        let response = http::Response::builder()
-            .header(CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
-            .body(EmptyBody)
-            .unwrap();
-
-        Ok(response)
+        Ok(http::Response::new(EmptyBody))
     }
 }

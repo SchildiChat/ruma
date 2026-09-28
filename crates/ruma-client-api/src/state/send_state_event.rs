@@ -129,12 +129,9 @@ pub mod v3 {
     }
 
     #[doc(hidden)]
-    #[derive(ruma_common::serde::_FakeDeriveSerde)]
-    #[cfg_attr(feature = "client", derive(serde::Serialize, ruma_common::api::OutgoingBodyJson))]
-    #[cfg_attr(feature = "server", derive(serde::Deserialize))]
+    #[cfg(feature = "client")]
+    #[derive(serde::Serialize, ruma_common::api::OutgoingBodyJson)]
     #[serde(transparent)]
-    // attribute will go away when we update IncomingRequest to also use RequestBody
-    #[cfg_attr(not(feature = "client"), expect(dead_code))]
     pub struct RequestBody(Raw<AnyStateEventContent>);
 
     #[cfg(feature = "client")]
@@ -164,7 +161,6 @@ pub mod v3 {
                     &[&self.room_id, &self.event_type, &self.state_key],
                     &query_string,
                 )?)
-                .header(http::header::CONTENT_TYPE, ruma_common::http_headers::APPLICATION_JSON)
                 .body(RequestBody(self.body))?;
 
             Ok(http_request)
@@ -176,16 +172,10 @@ pub mod v3 {
         type EndpointError = Error;
         type OutgoingResponse = Response;
 
-        fn try_from_http_request<B, S>(
-            request: http::Request<B>,
-            path_args: &[S],
-        ) -> Result<Self, ruma_common::api::error::FromHttpRequestError>
-        where
-            B: AsRef<[u8]>,
-            S: AsRef<str>,
-        {
-            Self::check_request_method(request.method())?;
-
+        fn try_from_http_request_inner(
+            request: http::Request<&[u8]>,
+            path_args: &[&str],
+        ) -> Result<Self, ruma_common::api::error::DeserializationError> {
             // FIXME: find a way to make this if-else collapse with serde recognizing trailing
             // Option
             let (room_id, event_type, state_key): (OwnedRoomId, StateEventType, String) =
@@ -194,7 +184,7 @@ pub mod v3 {
                         _,
                         serde::de::value::Error,
                     >::new(
-                        path_args.iter().map(::std::convert::AsRef::as_ref),
+                        path_args.iter().copied()
                     ))?
                 } else {
                     let (a, b) =
@@ -202,7 +192,7 @@ pub mod v3 {
                             _,
                             serde::de::value::Error,
                         >::new(
-                            path_args.iter().map(::std::convert::AsRef::as_ref),
+                            path_args.iter().copied()
                         ))?;
 
                     (a, b, "".into())
@@ -212,7 +202,7 @@ pub mod v3 {
                 serde_html_form::from_str(request.uri().query().unwrap_or(""))?;
 
             let body: Raw<AnyStateEventContent> = ruma_common::serde::deserialize_raw_object(
-                &mut serde_json::Deserializer::from_slice(request.body().as_ref()),
+                &mut serde_json::Deserializer::from_slice(request.into_body()),
             )?;
 
             Ok(Self {
@@ -315,5 +305,30 @@ mod tests {
             .unwrap();
 
         assert_eq!(http_req.uri().query().unwrap(), "org.matrix.msc4354.sticky_duration_ms=1000");
+    }
+}
+
+#[cfg(all(test, feature = "server", feature = "unstable-msc4354"))]
+mod server_tests {
+    use ruma_common::{api::IncomingRequestExt as _, owned_room_id};
+
+    use super::v3::Request;
+
+    #[test]
+    fn deserialize_sticky_duration() {
+        let request = http::Request::builder()
+            .method("PUT")
+            .uri(
+                "/_matrix/client/v3/rooms/!roomid:example.org/state/m.room.name/?org.matrix.msc4354.sticky_duration_ms=123456",
+            )
+            .body(br#"{"name":"A room"}"# as &[u8])
+            .unwrap();
+
+        let request =
+            Request::try_from_http_request(request, &["!roomid:example.org", "m.room.name", ""])
+                .unwrap();
+
+        assert_eq!(request.room_id, owned_room_id!("!roomid:example.org"));
+        assert_eq!(request.sticky_duration_ms.map(|duration| duration.get()), Some(123_456));
     }
 }

@@ -262,7 +262,7 @@ pub mod path_builder;
 use self::error::DeserializationError;
 pub use self::{
     body::{BytesBody, EmptyBody, OutgoingBody},
-    metadata::{FeatureFlag, MatrixVersion, Metadata, SupportedVersions},
+    metadata::{FeatureFlag, MatrixVersion, Metadata, OAuthClientScope, SupportedVersions},
 };
 
 /// A request type for a Matrix API endpoint, used for sending requests.
@@ -325,8 +325,15 @@ pub trait OutgoingRequestExt: OutgoingRequest {
         authentication_input: <Self::Authentication as auth_scheme::AuthScheme>::Input<'_>,
         path_builder_input: <Self::PathBuilder as path_builder::PathBuilder>::Input<'_>,
     ) -> Result<http::Request<T>, IntoHttpError> {
-        let (parts, body) =
+        let (mut parts, body) =
             self.try_into_http_request_inner(base_url, path_builder_input)?.into_parts();
+
+        if let Some(content_type) = body.content_type()
+            && !parts.headers.contains_key(&http::header::CONTENT_TYPE)
+        {
+            parts.headers.insert(http::header::CONTENT_TYPE, content_type);
+        }
+
         let mut request =
             http::Request::from_parts(parts, body.try_into_buf().map_err(Into::into)?);
 
@@ -415,9 +422,28 @@ pub trait IncomingRequest: Metadata {
     /// Response type to return when the request is successful.
     type OutgoingResponse: OutgoingResponse;
 
-    /// Check whether the given HTTP method from an incoming request is compatible with the expected
-    /// [`METHOD`](Metadata::METHOD) of this endpoint.
-    fn check_request_method(method: &http::Method) -> Result<(), FromHttpRequestError> {
+    /// Tries to turn the given `http::Request` into this request type,
+    /// together with the corresponding path arguments.
+    ///
+    /// Note: The strings in `path_args` need to be percent-decoded.
+    ///
+    /// This function should not check the method of the HTTP request, this check is performed
+    /// in [`IncomingRequestExt::try_from_http_request()`].
+    fn try_from_http_request_inner(
+        request: http::Request<&[u8]>,
+        path_args: &[&str],
+    ) -> Result<Self, DeserializationError>;
+}
+
+/// Convenience functionality on top of [`IncomingRequest`].
+pub trait IncomingRequestExt: IncomingRequest {
+    /// Tries to convert the given `http::Request` into this request type.
+    fn try_from_http_request(
+        request: http::Request<&[u8]>,
+        path_args: &[&str],
+    ) -> Result<Self, FromHttpRequestError> {
+        let method = request.method();
+
         if !(method == Self::METHOD
             || (Self::METHOD == http::Method::GET && method == http::Method::HEAD))
         {
@@ -427,21 +453,11 @@ pub trait IncomingRequest: Metadata {
             });
         }
 
-        Ok(())
+        Ok(Self::try_from_http_request_inner(request, path_args)?)
     }
-
-    /// Tries to turn the given `http::Request` into this request type,
-    /// together with the corresponding path arguments.
-    ///
-    /// Note: The strings in path_args need to be percent-decoded.
-    fn try_from_http_request<B, S>(
-        req: http::Request<B>,
-        path_args: &[S],
-    ) -> Result<Self, FromHttpRequestError>
-    where
-        B: AsRef<[u8]>,
-        S: AsRef<str>;
 }
+
+impl<T: IncomingRequest> IncomingRequestExt for T {}
 
 /// A request type for a Matrix API endpoint, used for sending responses.
 pub trait OutgoingResponse: Sized {
@@ -464,7 +480,14 @@ pub trait OutgoingResponseExt: OutgoingResponse {
     fn try_into_http_response<T: Default + BufMut + AsRef<[u8]>>(
         self,
     ) -> Result<http::Response<T>, IntoHttpError> {
-        let (parts, body) = self.try_into_http_response_inner()?.into_parts();
+        let (mut parts, body) = self.try_into_http_response_inner()?.into_parts();
+
+        if let Some(content_type) = body.content_type()
+            && !parts.headers.contains_key(&http::header::CONTENT_TYPE)
+        {
+            parts.headers.insert(http::header::CONTENT_TYPE, content_type);
+        }
+
         Ok(http::Response::from_parts(parts, body.try_into_buf().map_err(Into::into)?))
     }
 }

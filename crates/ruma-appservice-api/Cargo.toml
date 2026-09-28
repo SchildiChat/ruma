@@ -7,7 +7,7 @@ license = "MIT"
 name = "ruma-appservice-api"
 readme = "README.md"
 repository = "https://github.com/ruma/ruma"
-version = "0.16.0"
+version = "0.17.0"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -22,6 +22,7 @@ unstable-msc3202 = []
 unstable-msc4203 = []
 
 [dependencies]
+http = { workspace = true }
 js_int = { workspace = true, features = ["serde"] }
 ruma-common = { workspace = true, features = ["api"] }
 ruma-events = { workspace = true }

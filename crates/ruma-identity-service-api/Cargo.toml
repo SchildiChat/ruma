@@ -1,6 +1,6 @@
 [package]
 name = "ruma-identity-service-api"
-version = "0.15.0"
+version = "0.16.0"
 description = "Types for the endpoints in the Matrix identity service API."
 homepage = "https://ruma.dev/"
 keywords = ["matrix", "chat", "messaging", "ruma"]
@@ -18,6 +18,7 @@ client = []
 server = []
 
 [dependencies]
+http = { workspace = true }
 js_int = { workspace = true, features = ["serde"] }
 ruma-common = { workspace = true, features = ["api"] }
 ruma-events = { workspace = true }
