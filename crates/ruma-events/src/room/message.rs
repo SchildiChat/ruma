@@ -835,7 +835,9 @@ pub struct CustomMessageContent {
 pub(crate) fn parse_markdown(text: &str) -> Option<String> {
     use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 
-    const OPTIONS: Options = Options::ENABLE_TABLES.union(Options::ENABLE_STRIKETHROUGH);
+    const OPTIONS: Options = Options::ENABLE_TABLES
+        .union(Options::ENABLE_STRIKETHROUGH)
+        .union(Options::ENABLE_SPOILERS);
 
     let parser_events: Vec<_> = Parser::new_ext(text, OPTIONS)
         .map(|event| match event {

@@ -96,7 +96,7 @@ indexmap = { version = "2.0.0", features = ["serde"] }
 js_int = { workspace = true, features = ["serde"] }
 js_option = { workspace = true }
 language-tags = { workspace = true, optional = true }
-pulldown-cmark = { version = "0.13.0", optional = true, default-features = false, features = ["html"] }
+pulldown-cmark = { git = "https://github.com/SchildiChat/pulldown-cmark.git", rev = "15d30e4", optional = true, default-features = false, features = ["std", "html"] }
 ruma-common = { workspace = true }
 ruma-html = { workspace = true, optional = true }
 ruma-macros = { workspace = true }
