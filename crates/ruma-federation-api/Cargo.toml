@@ -7,7 +7,7 @@ license = "MIT"
 name = "ruma-federation-api"
 readme = "README.md"
 repository = "https://github.com/ruma/ruma"
-version = "0.16.0"
+version = "0.16.1"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -25,7 +25,9 @@ unstable-msc3618 = []
 unstable-msc3723 = []
 unstable-msc3843 = ["ruma-common/unstable-msc3843"]
 unstable-msc4125 = []
+unstable-msc4195 = []
 unstable-msc4495 = ["ruma-events/unstable-msc4495"]
+unstable-msc4560 = ["ruma-events/unstable-msc4560"]
 
 [dependencies]
 bytes = { workspace = true, optional = true }

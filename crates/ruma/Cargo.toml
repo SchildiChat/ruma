@@ -7,7 +7,7 @@ homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 readme = "README.md"
 license = "MIT"
-version = "0.17.0"
+version = "0.17.1"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -139,6 +139,7 @@ unstable-extensible-events = [
     "unstable-msc3954",
     "unstable-msc3955",
 ]
+unstable-identifier-ref-macros = ["ruma-common/unstable-identifier-ref-macros"]
 unstable-msc1763 = ["ruma-client-api?/unstable-msc1763", "ruma-events?/unstable-msc1763"]
 unstable-msc1767 = ["ruma-events?/unstable-msc1767"]
 unstable-msc2448 = ["ruma-client-api?/unstable-msc2448", "ruma-events?/unstable-msc2448"]
@@ -187,7 +188,7 @@ unstable-msc4143 = ["ruma-client-api?/unstable-msc4143"]
 unstable-msc4144 = ["ruma-events?/unstable-msc4144", "ruma-html?/unstable-msc4144"] # SC: Per-message profiles
 unstable-msc4171 = ["ruma-events?/unstable-msc4171"]
 unstable-msc4186 = ["ruma-common/unstable-msc4186", "ruma-client-api?/unstable-msc4186"]
-unstable-msc4195 = ["unstable-msc4143", "ruma-client-api?/unstable-msc4195"]
+unstable-msc4195 = ["unstable-msc4143", "ruma-client-api?/unstable-msc4195", "ruma-federation-api?/unstable-msc4195"]
 unstable-msc4203 = ["ruma-appservice-api?/unstable-msc4203"]
 unstable-msc4262 = ["ruma-common/unstable-msc4262", "ruma-client-api?/unstable-msc4262"]
 unstable-msc4274 = ["ruma-events?/unstable-msc4274"]
@@ -208,6 +209,7 @@ unstable-msc4383 = ["ruma-client-api?/unstable-msc4383"]
 unstable-msc4385 = ["ruma-events?/unstable-msc4385"]
 unstable-msc4388 = ["ruma-common/unstable-msc4388", "ruma-client-api?/unstable-msc4388"]
 unstable-msc4406 = ["ruma-common/unstable-msc4406"]
+unstable-msc4417 = ["ruma-appservice-api?/unstable-msc4417"]
 unstable-msc4426 = ["ruma-common/unstable-msc4426"]
 unstable-msc4439 = ["ruma-client-api?/unstable-msc4439"]
 unstable-msc4446 = ["ruma-client-api?/unstable-msc4446"]
@@ -222,6 +224,9 @@ unstable-msc4495 = [
     "ruma-federation-api?/unstable-msc4495",
     "ruma-events?/unstable-msc4495"
 ]
+unstable-msc4540 = ["ruma-client-api?/unstable-msc4540"]
+unstable-msc4546 = ["ruma-events?/unstable-msc4546"]
+unstable-msc4560 = ["ruma-common/unstable-msc4560", "ruma-events?/unstable-msc4560", "ruma-client-api?/unstable-msc4560", "ruma-federation-api?/unstable-msc4560"]
 unstable-uniffi = ["ruma-events?/unstable-uniffi"]
 
 [dependencies]
