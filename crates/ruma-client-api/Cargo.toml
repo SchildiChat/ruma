@@ -7,7 +7,7 @@ license = "MIT"
 name = "ruma-client-api"
 readme = "README.md"
 repository = "https://github.com/ruma/ruma"
-version = "0.25.1"
+version = "0.25.2"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -70,6 +70,7 @@ unstable-msc4446 = []
 unstable-msc4466 = []
 unstable-msc4480 = ["unstable-msc4354"]
 unstable-msc4484 = ["ruma-common/unstable-msc4484"]
+unstable-msc4536 = ["ruma-common/unstable-msc4536"]
 unstable-msc4540 = []
 unstable-msc4560 = ["ruma-common/unstable-msc4560", "ruma-events/unstable-msc4560"]
 
