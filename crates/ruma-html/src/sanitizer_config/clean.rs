@@ -471,6 +471,7 @@ pub(crate) mod spec {
             "a" => matches!(attribute_name, "target" | "href",),
             "img" => matches!(attribute_name, "width" | "height" | "alt" | "title" | "src" | "data-mx-emoticon",),
             "ol" => matches!(attribute_name, "start",),
+            "li" => matches!(attribute_name, "value",),
             "code" => matches!(attribute_name, "class",),
             "div" => matches!(attribute_name, "data-mx-maths",),
             _ => false,
