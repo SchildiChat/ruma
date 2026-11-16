@@ -2,6 +2,51 @@
 
 ## Unreleased
 
+Breaking changes:
+
+- The `DeserializeOwned` bound on the `StaticStateEventContent::Unsigned` associated type is only
+  required when using the `Deserialize` implementation of `Original(Sync)StateEvent`.
+- The `shared_history` field of `ToDeviceForwardedRoomKeyEventContent` was removed, since it is
+  not part of the Matrix spec.
+
+Improvements:
+
+- Add unstable support for [MSC4532] "Revised Social Presence".
+- Make `livekit_alias` optional on RTC member events.
+- Add the `url` and `server_name` fields from [MSC4195] to `LivekitFocus`. The `livekit_service_url`
+  field (`service_url`) is now optional and deprecated. `LivekitFocus::new()` now only takes the `url`
+  of the LiveKit SFU. Constructing a `LivekitFocus` with the `service_url` of the LiveKit JWT service
+  is still possible with the deprecated `LivekitFocus::with_service_url()`.
+
+[MSC4532]: https://github.com/matrix-org/matrix-spec-proposals/pull/4532
+[MSC4195]: https://github.com/matrix-org/matrix-spec-proposals/pull/4195
+
+## 0.35.2
+
+Improvements:
+
+- Update ruma-macros and ruma-common to 0.20.2.
+
+## 0.35.1
+
+Bug fixes:
+
+- The `shared_history` field of `ToDeviceRoomKeyEventContent` is serialized as `shared_history`
+  rather than `m.shared_history`, to match the Matrix spec.
+- `StateUnsigned::is_empty()` returns `false` when `replaces_state` is set.
+- `RoomMemberUnsigned::is_empty()` returns `false` when `knock_room_state` is not empty.
+
+Improvements:
+
+- Add `replaces_state` field to `RoomMemberUnsigned`, due to a clarification in the Matrix spec.
+- Add unstable support for [MSC4546] (Circles) behind the `unstable-msc4546` feature flag.
+- The `shared_history` field of `ToDeviceForwardedRoomKeyEventContent` is deprecated, since it is
+  not part of the Matrix spec.
+- Add unstable support for [MSC4560] "Stripped state requests over federation".
+
+[MSC4560]: https://github.com/matrix-org/matrix-spec-proposals/pull/4560
+[MSC4546]: https://github.com/matrix-org/matrix-spec-proposals/pull/4546
+
 ## 0.35.0
 
 Bug fixes:

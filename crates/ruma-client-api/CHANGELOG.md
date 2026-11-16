@@ -2,6 +2,58 @@
 
 ## Unreleased
 
+Bug fixes:
+
+- Deserializing `Capabilities` no longer fails when the server sends both
+  `m.profile_fields` and `uk.tcpip.msc4133.profile_fields`. The stable name
+  takes precedence.
+
+Improvements:
+
+- Updated support for unstable MSC4388 with new `txn_id` field on update requests.
+- Delay fields in `send_delayed_event` requests are now `delay_ms` instead of `delay`.
+- Add unstable support for [MSC4532] "Revised Social Presence".
+- Add unstable support for the `presence` sliding sync extension, as defined in [MSC4559].
+- Add the `url` field from [MSC4195] to `LiveKitRtcTransport`. The
+  `livekit_service_url` field (`service_url`) is now optional and deprecated.
+  LiveKitRtcTransport::new()` and `RtcTransport::livekit()` now take the `url`
+  of the LiveKit SFU instead of the `service_url` of the LiveKit JWT service.
+  Constructing a `LiveKitRtcTransport` with the `service_url` is still possible
+  with the deprecated `LiveKitRtcTransport::with_service_url()`.
+
+[MSC4532]: https://github.com/matrix-org/matrix-spec-proposals/pull/4532
+[MSC4559]: https://github.com/matrix-org/matrix-spec-proposals/pull/4559
+
+## 0.25.2
+
+Improvements:
+
+- Add support for fetching multiple profiles with the `profile/query` endpoint from [MSC4536].
+
+[MSC4536]: https://github.com/matrix-org/matrix-spec-proposals/pull/4536
+
+## 0.25.1
+
+Bug fixes:
+
+- In the `session::login::v3` module, the `identity_server` field is no longer
+  serialized when it is `Option::None`.
+- `Capabilities::get` and `Capabilities::set` now handle the `m.profile_fields`
+  capability (and its unstable MSC4133 name) instead of using the custom
+  capabilities map.
+
+Improvements:
+
+- Add unstable support for [MSC4540] "`m.admin` capability".
+- Add unstable support for the `rtc::livekit::get_token` and
+  `rtc::livekit::delegate_delayed_leave` endpoints from [MSC4195], behind the
+  `unstable-msc4195` feature.
+- Add unstable support for [MSC4560] "Stripped state requests over federation".
+
+[MSC4560]: https://github.com/matrix-org/matrix-spec-proposals/pull/4560
+[MSC4540]: https://github.com/matrix-org/matrix-spec-proposals/pull/4540
+[MSC4195]: https://github.com/matrix-org/matrix-spec-proposals/pull/4195
+
 ## 0.25.0
 
 Breaking changes:

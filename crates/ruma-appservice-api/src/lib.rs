@@ -17,6 +17,8 @@ use ruma_common::api::auth_scheme::{
 use serde::{Deserialize, Serialize};
 
 pub mod event;
+#[cfg(feature = "unstable-msc4417")]
+pub mod media;
 pub mod ping;
 pub mod query;
 pub mod thirdparty;
@@ -30,7 +32,7 @@ pub struct Namespace {
     /// Whether this application service has exclusive access to events within this namespace.
     pub exclusive: bool,
 
-    /// A regular expression defining which values this namespace includes.
+    /// A POSIX regular expression defining which values this namespace includes.
     pub regex: String,
 }
 
@@ -58,6 +60,12 @@ pub struct Namespaces {
     /// Events which are sent in rooms with certain room IDs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rooms: Vec<Namespace>,
+
+    /// URLs that this appservice will be queried about.
+    #[cfg(feature = "unstable-msc4417")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(rename = "uk.half-shot.msc4417.preview_urls")]
+    pub preview_urls: Vec<Namespace>,
 }
 
 impl Namespaces {
@@ -180,10 +188,10 @@ impl From<RegistrationInit> for Registration {
 }
 
 /// Authentication is required, and can only be performed by a homeserver sending a request to an
-/// appservice, by including a homeserver access token in the `Authentication` http header, or an
+/// appservice, by including a homeserver access token in the `Authorization` http header, or an
 /// `access_token` query parameter.
 ///
-/// Using the query parameter is deprecated since Matrix 1.11.
+/// Using the query parameter is deprecated since Matrix 1.4.
 #[derive(Debug, Clone, Copy, Default)]
 #[allow(clippy::exhaustive_structs)]
 pub struct HomeserverToken;

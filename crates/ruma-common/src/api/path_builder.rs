@@ -632,7 +632,7 @@ mod tests {
         collections::{BTreeMap, BTreeSet},
     };
 
-    use assert_matches2::assert_matches;
+    use assert_matches::assert_matches;
 
     use super::{PathBuilder, StablePathSelector, VersionHistory};
     use crate::api::{
@@ -711,6 +711,20 @@ mod tests {
             )
             .unwrap();
         assert_eq!(url, "https://example.org/s/%23path");
+    }
+
+    #[test]
+    fn make_endpoint_url_with_path_args_with_backslash() {
+        let history = stable_only_history(&[(StablePathSelector::Version(V1_0), "/s/{x}")]);
+        let url = history
+            .make_endpoint_url(
+                Cow::Owned(version_only_supported(&[V1_0])),
+                "https://example.org",
+                &[&r"C:\Path\To"],
+                "",
+            )
+            .unwrap();
+        assert_eq!(url, "https://example.org/s/C:%5CPath%5CTo");
     }
 
     #[test]

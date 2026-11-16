@@ -64,6 +64,23 @@ pub struct Request {
     #[ruma_api(query)]
     pub set_presence: PresenceState,
 
+    /// Whether to use [MSC4532]'s revised presence states in responses (if the server supports
+    /// them).
+    ///
+    /// Defaults to `false`.
+    ///
+    /// This uses the unstable prefix defined in [MSC4532].
+    ///
+    /// [MSC4532]: https://github.com/matrix-org/matrix-spec-proposals/pull/4532
+    #[cfg(feature = "unstable-msc4532")]
+    #[serde(
+        default,
+        skip_serializing_if = "ruma_common::serde::is_default",
+        rename = "org.continuwuity.presence_v2.msc4532.revised_presence"
+    )]
+    #[ruma_api(query)]
+    pub revised_presence: bool,
+
     /// The maximum time to poll in milliseconds before returning this request.
     #[serde(
         with = "ruma_common::serde::duration::opt_ms",
@@ -774,9 +791,9 @@ mod tests {
     #[cfg(feature = "unstable-msc4354")]
     #[test]
     fn joined_room_sticky_section_serde() {
-        use assert_matches2::assert_let;
         use ruma_events::{AnySyncMessageLikeEvent, AnySyncTimelineEvent, SyncMessageLikeEvent};
         use serde_json::to_value as to_json_value;
+        use strass::assert_let;
 
         use super::JoinedRoom;
 
@@ -829,7 +846,6 @@ mod tests {
 mod client_tests {
     use std::{borrow::Cow, time::Duration};
 
-    use assert_matches2::assert_matches;
     use ruma_common::{
         RoomVersionId,
         api::{
@@ -840,6 +856,7 @@ mod client_tests {
     };
     use ruma_events::AnyStrippedStateEvent;
     use serde_json::{Value as JsonValue, json};
+    use strass::assert_let;
 
     use super::{Filter, PresenceState, Request, Response, State};
 
@@ -875,6 +892,8 @@ mod client_tests {
             set_presence: PresenceState::Offline,
             timeout: Some(Duration::from_millis(30000)),
             use_state_after: true,
+            #[cfg(feature = "unstable-msc4532")]
+            revised_presence: true,
         }
         .try_into_http_request(
             "https://homeserver.tld",
@@ -893,6 +912,8 @@ mod client_tests {
         assert!(query.contains("set_presence=offline"));
         assert!(query.contains("timeout=30000"));
         assert!(query.contains("use_state_after=true"));
+        #[cfg(feature = "unstable-msc4532")]
+        assert!(query.contains("revised_presence=true"));
     }
 
     #[test]
@@ -941,7 +962,7 @@ mod client_tests {
         let private_room = response.rooms.invite.get(room_id).unwrap();
 
         let first_event = private_room.invite_state.events[0].deserialize().unwrap();
-        assert_matches!(first_event, AnyStrippedStateEvent::RoomCreate(create_event));
+        assert_let!(AnyStrippedStateEvent::RoomCreate(create_event) = first_event);
         assert_eq!(create_event.sender, creator);
         assert_eq!(create_event.content.room_version, RoomVersionId::V11);
     }
@@ -1029,12 +1050,12 @@ mod client_tests {
 
         let joined_room = response.rooms.join.get(joined_room_id).unwrap();
         assert!(joined_room.timeline.is_empty());
-        assert_matches!(&joined_room.state, State::Before(state));
+        assert_let!(State::Before(state) = &joined_room.state);
         assert_eq!(state.events.len(), 1);
 
         let left_room = response.rooms.leave.get(left_room_id).unwrap();
         assert!(left_room.timeline.is_empty());
-        assert_matches!(&left_room.state, State::Before(state));
+        assert_let!(State::Before(state) = &left_room.state);
         assert_eq!(state.events.len(), 1);
     }
 
@@ -1067,12 +1088,12 @@ mod client_tests {
 
         let joined_room = response.rooms.join.get(joined_room_id).unwrap();
         assert!(joined_room.timeline.is_empty());
-        assert_matches!(&joined_room.state, State::After(state));
+        assert_let!(State::After(state) = &joined_room.state);
         assert_eq!(state.events.len(), 0);
 
         let left_room = response.rooms.leave.get(left_room_id).unwrap();
         assert!(left_room.timeline.is_empty());
-        assert_matches!(&left_room.state, State::After(state));
+        assert_let!(State::After(state) = &left_room.state);
         assert_eq!(state.events.len(), 0);
     }
 
@@ -1114,12 +1135,12 @@ mod client_tests {
 
         let joined_room = response.rooms.join.get(joined_room_id).unwrap();
         assert!(joined_room.timeline.is_empty());
-        assert_matches!(&joined_room.state, State::After(state));
+        assert_let!(State::After(state) = &joined_room.state);
         assert_eq!(state.events.len(), 1);
 
         let left_room = response.rooms.leave.get(left_room_id).unwrap();
         assert!(left_room.timeline.is_empty());
-        assert_matches!(&left_room.state, State::After(state));
+        assert_let!(State::After(state) = &left_room.state);
         assert_eq!(state.events.len(), 1);
     }
 }
@@ -1128,7 +1149,7 @@ mod client_tests {
 mod server_tests {
     use std::time::Duration;
 
-    use assert_matches2::assert_matches;
+    use assert_matches::assert_matches;
     use ruma_common::{
         api::{IncomingRequestExt as _, OutgoingResponseExt as _},
         owned_room_id,
@@ -1137,6 +1158,7 @@ mod server_tests {
     };
     use ruma_events::{AnyStrippedStateEvent, AnySyncStateEvent};
     use serde_json::{Value as JsonValue, from_slice as from_json_slice, json};
+    use strass::assert_let;
 
     use super::{Filter, JoinedRoom, KnockedRoom, LeftRoom, Request, Response, State};
 
@@ -1183,7 +1205,7 @@ mod server_tests {
         )
         .unwrap();
 
-        assert_matches!(req.filter, Some(Filter::FilterId(id)));
+        assert_let!(Some(Filter::FilterId(id)) = req.filter);
         assert_eq!(id, "myfilter");
         assert_eq!(req.since.as_deref(), Some("myts"));
         assert!(!req.full_state);
@@ -1192,6 +1214,7 @@ mod server_tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn deserialize_request_no_query_params() {
         let uri = http::Uri::builder()
             .scheme("https")
@@ -1209,11 +1232,15 @@ mod server_tests {
         assert_matches!(req.filter, None);
         assert_eq!(req.since, None);
         assert!(!req.full_state);
+        #[cfg(not(feature = "unstable-msc4532"))]
         assert_eq!(req.set_presence, PresenceState::Online);
+        #[cfg(feature = "unstable-msc4532")]
+        assert_eq!(req.set_presence, PresenceState::Active);
         assert_eq!(req.timeout, None);
     }
 
     #[test]
+    #[allow(deprecated)]
     fn deserialize_request_some_query_params() {
         let uri = http::Uri::builder()
             .scheme("https")
@@ -1232,11 +1259,14 @@ mod server_tests {
         )
         .unwrap();
 
-        assert_matches!(req.filter, Some(Filter::FilterId(id)));
+        assert_let!(Some(Filter::FilterId(id)) = req.filter);
         assert_eq!(id, "EOKFFmdZYF");
         assert_eq!(req.since, None);
         assert!(!req.full_state);
+        #[cfg(not(feature = "unstable-msc4532"))]
         assert_eq!(req.set_presence, PresenceState::Online);
+        #[cfg(feature = "unstable-msc4532")]
+        assert_eq!(req.set_presence, PresenceState::Active);
         assert_eq!(req.timeout, Some(Duration::from_millis(0)));
     }
 

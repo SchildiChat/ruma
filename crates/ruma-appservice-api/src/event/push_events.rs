@@ -329,7 +329,6 @@ pub mod v1 {
 
     #[cfg(test)]
     mod tests {
-        use assert_matches2::assert_let;
         use js_int::uint;
         use ruma_common::{
             MilliSecondsSinceUnixEpoch, canonical_json::assert_to_canonical_json_eq, event_id,
@@ -337,6 +336,7 @@ pub mod v1 {
         };
         use ruma_events::receipt::ReceiptType;
         use serde_json::{from_value as from_json_value, json};
+        use strass::assert_let;
 
         use super::EphemeralData;
 
@@ -392,7 +392,7 @@ pub mod v1 {
             let data = from_json_value::<EphemeralData>(typing_json.clone()).unwrap();
             assert_let!(EphemeralData::Typing(typing) = &data);
             assert_eq!(typing.room_id, room_id);
-            assert_eq!(typing.content.user_ids, &[user_id.to_owned()]);
+            assert_eq!(typing.content.user_ids, &[user_id]);
 
             assert_to_canonical_json_eq!(data, typing_json);
 
@@ -427,7 +427,7 @@ pub mod v1 {
                 "sender": user_id,
                 "content": {
                     "avatar_url": "mxc://localhost/wefuiwegh8742w",
-                    "currently_active": false,
+                    "currently_active": true,
                     "last_active_ago": 785,
                     "presence": "online",
                     "status_msg": "Making cupcakes",
@@ -437,8 +437,13 @@ pub mod v1 {
             let data = from_json_value::<EphemeralData>(presence_json.clone()).unwrap();
             assert_let!(EphemeralData::Presence(presence) = &data);
             assert_eq!(presence.sender, user_id);
-            assert_eq!(presence.content.currently_active, Some(false));
+            #[allow(deprecated)]
+            {
+                assert_eq!(presence.content.currently_active, Some(true));
+                assert_eq!(presence.content.status_msg.as_deref(), Some("Making cupcakes"));
+            }
 
+            #[cfg(not(feature = "unstable-msc4532"))]
             assert_to_canonical_json_eq!(data, presence_json);
 
             // Test custom serde.
@@ -458,8 +463,6 @@ pub mod v1 {
         #[test]
         #[cfg(feature = "unstable-msc4203")]
         fn serde_any_appservice_to_device_event() {
-            use ruma_common::{device_id, user_id};
-
             use super::AnyAppserviceToDeviceEvent;
 
             let event_json = json!({
@@ -479,9 +482,9 @@ pub mod v1 {
 
             // Test deserialization
             let event = from_json_value::<AnyAppserviceToDeviceEvent>(event_json.clone()).unwrap();
-            assert_eq!(event.sender(), user_id!("@alice:example.org"));
-            assert_eq!(event.to_user_id, user_id!("@bob:example.org"));
-            assert_eq!(event.to_device_id, device_id!("DEVICEID"));
+            assert_eq!(event.sender(), "@alice:example.org");
+            assert_eq!(event.to_user_id, "@bob:example.org");
+            assert_eq!(event.to_device_id, "DEVICEID");
             assert_eq!(event.event_type().to_string(), "m.key.verification.request");
         }
     }

@@ -3,7 +3,7 @@
 use as_variant::as_variant;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
-use syn::{meta::ParseNestedMeta, parse_quote};
+use syn::{meta::ParseNestedMeta, parse_quote, punctuated::Punctuated};
 
 use super::{IdDst, OwnedId, Types};
 use crate::util::RumaCommon;
@@ -15,16 +15,30 @@ impl IdDst {
     /// Parse the given `IdDst` macro input.
     pub(super) fn parse(input: syn::ItemStruct) -> syn::Result<Self> {
         let mut id_dst_attrs = IdDstAttrs::default();
+        let mut is_repr_transparent = false;
 
         for attr in &input.attrs {
-            if !attr.path().is_ident("ruma_id") {
-                continue;
+            if attr.path().is_ident("ruma_id") {
+                attr.parse_nested_meta(|meta| id_dst_attrs.try_merge(meta))?;
+            } else if !is_repr_transparent && attr.path().is_ident("repr") {
+                is_repr_transparent = attr
+                    .parse_args_with(Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated)?
+                    .iter()
+                    .any(|meta| meta.path().is_ident("transparent"));
             }
-
-            attr.parse_nested_meta(|meta| id_dst_attrs.try_merge(meta, attr))?;
         }
 
         let IdDstAttrs { validate, smallvec_inline_bytes } = id_dst_attrs;
+
+        if !is_repr_transparent {
+            // The generated code transmutes `&str` to `&Self`, which is only sound if the layout of
+            // the type is guaranteed to be the same as `str`. `cfg_attr`s are already expanded at
+            // this point, so this only sees the active attributes.
+            return Err(syn::Error::new_spanned(
+                &input.ident,
+                "IDs must be `#[repr(transparent)]` over `str`",
+            ));
+        }
 
         if validate.is_none() && !input.generics.params.is_empty() {
             return Err(syn::Error::new(
@@ -46,7 +60,16 @@ impl IdDst {
             &input.fields,
             syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) => unnamed
         )
-        .and_then(|unnamed| unnamed.len().checked_sub(1))
+        .and_then(|unnamed| {
+            // The generated code transmutes `&str` to `&Self`, so the last field must be `str`.
+            let last_field = unnamed.last()?;
+            let is_str = matches!(
+                &last_field.ty,
+                syn::Type::Path(syn::TypePath { qself: None, path, .. }) if path.is_ident("str")
+            );
+
+            is_str.then(|| unnamed.len() - 1)
+        })
         .ok_or_else(|| {
             syn::Error::new(
                 Span::call_site(),
@@ -98,12 +121,9 @@ impl IdDstAttrs {
     /// Set the path to the function to use to validate the identifier.
     ///
     /// Returns an error if it is already set.
-    fn set_validate(&mut self, validate: syn::Path, attr: &syn::Attribute) -> syn::Result<()> {
+    fn set_validate(&mut self, validate: syn::Path, meta: &ParseNestedMeta<'_>) -> syn::Result<()> {
         if self.validate.is_some() {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "cannot have multiple values for `validate` attribute",
-            ));
+            return Err(meta.error("cannot have multiple values for `validate` attribute"));
         }
 
         self.validate = Some(validate);
@@ -116,13 +136,12 @@ impl IdDstAttrs {
     fn set_smallvec_inline_bytes(
         &mut self,
         inline_bytes: syn::LitInt,
-        attr: &syn::Attribute,
+        meta: &ParseNestedMeta<'_>,
     ) -> syn::Result<()> {
         if self.smallvec_inline_bytes.is_some() {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "cannot have multiple values for `smallvec_inline_bytes` attribute",
-            ));
+            return Err(
+                meta.error("cannot have multiple values for `smallvec_inline_bytes` attribute")
+            );
         }
 
         self.smallvec_inline_bytes = Some(inline_bytes.base10_parse()?);
@@ -133,13 +152,13 @@ impl IdDstAttrs {
     ///
     /// Returns an error if an unknown `ruma_id` attribute is encountered, or if an attribute
     /// that accepts a single value appears several times.
-    fn try_merge(&mut self, meta: ParseNestedMeta<'_>, attr: &syn::Attribute) -> syn::Result<()> {
+    fn try_merge(&mut self, meta: ParseNestedMeta<'_>) -> syn::Result<()> {
         if meta.path.is_ident("validate") {
-            return self.set_validate(meta.value()?.parse()?, attr);
+            return self.set_validate(meta.value()?.parse()?, &meta);
         }
 
         if meta.path.is_ident("smallvec_inline_bytes") {
-            return self.set_smallvec_inline_bytes(meta.value()?.parse()?, attr);
+            return self.set_smallvec_inline_bytes(meta.value()?.parse()?, &meta);
         }
 
         Err(meta.error("unsupported `ruma_id` attribute"))

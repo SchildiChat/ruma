@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.14.0
+
+Breaking changes:
+
+- Change `key_id::validate` to return `Result<(), Error>` instead of `Result<NonZeroU8, Error>`
+  (nothing in Ruma was using the returned index anymore)
+
+Bug fixes:
+
+- Report empty algorithm name as `Error::Empty`, not `Error::MissingColon`
+
+## 0.13.0
+
+Breaking changes:
+
+- Allow `mxc://` URIs with a valid server name whose length is bigger than 249 bytes in
+  `mxc_uri::validate()`. This function now returns an `NonZeroU16` when the validation is
+  successful.
+
+Bug fixes:
+
+- Check the maximum allowed length of server names in `server_name::validate()`, according to the
+  Matrix specification.
+
 ## 0.12.1
 
 Bug fixes:

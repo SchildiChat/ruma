@@ -4,7 +4,7 @@ description = "Validation logic for ruma-common and ruma-macros"
 homepage = "https://ruma.dev/"
 repository = "https://github.com/ruma/ruma"
 license = "MIT"
-version = "0.12.1"
+version = "0.14.0"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -17,6 +17,9 @@ compat-arbitrary-length-ids = []
 
 # Don't validate the version in `server_signing_key_version::validate`.
 compat-server-signing-key-version = []
+
+# OAuth step up authentication
+unstable-msc4363 = []
 
 [dependencies]
 js_int = { workspace = true }

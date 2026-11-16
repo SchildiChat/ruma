@@ -10,9 +10,13 @@ pub mod v3 {
     //!
     //! [spec]: https://spec.matrix.org/v1.19/client-server-api/#get_matrixclientv3capabilities
 
+    #[cfg(feature = "unstable-msc4540")]
+    use std::collections::BTreeSet;
     use std::{borrow::Cow, collections::BTreeMap};
 
     use maplit::btreemap;
+    #[cfg(feature = "unstable-msc4540")]
+    use ruma_common::api::OAuthClientScope;
     use ruma_common::{
         RoomVersionId,
         api::{auth_scheme::AccessToken, request, response},
@@ -20,9 +24,10 @@ pub mod v3 {
         profile::ProfileFieldName,
         serde::StringEnum,
     };
-    use serde::{Deserialize, Serialize};
+    use serde::{Deserialize, Deserializer, Serialize, de};
     use serde_json::{
-        Value as JsonValue, from_value as from_json_value, to_value as to_json_value,
+        Map as JsonMap, Value as JsonValue, from_value as from_json_value,
+        to_value as to_json_value,
     };
 
     use crate::PrivOwnedStr;
@@ -70,7 +75,7 @@ pub mod v3 {
     }
 
     /// Contains information about all the capabilities that the server supports.
-    #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+    #[derive(Clone, Debug, Default, Serialize)]
     #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
     #[allow(deprecated)]
     pub struct Capabilities {
@@ -127,11 +132,7 @@ pub mod v3 {
         pub get_login_token: GetLoginTokenCapability,
 
         /// Capability to indicate if the user can set extended profile fields.
-        #[serde(
-            rename = "m.profile_fields",
-            alias = "uk.tcpip.msc4133.profile_fields",
-            skip_serializing_if = "Option::is_none"
-        )]
+        #[serde(rename = "m.profile_fields", skip_serializing_if = "Option::is_none")]
         pub profile_fields: Option<ProfileFieldsCapability>,
 
         /// Capability to indicate if the server automatically forgets rooms that the user leaves.
@@ -153,10 +154,77 @@ pub mod v3 {
         )]
         pub account_moderation: AccountModerationCapability,
 
+        /// Capability to indicate if the user can perform administrative actions. ([MSC4540])
+        ///
+        /// [MSC4540]: https://github.com/matrix-org/matrix-spec-proposals/pull/4540
+        #[cfg(feature = "unstable-msc4540")]
+        #[serde(
+            rename = "org.continuwuity.msc4540.admin",
+            default,
+            skip_serializing_if = "AdminCapability::is_default"
+        )]
+        pub admin: AdminCapability,
+
         /// Any other custom capabilities that the server supports outside of the specification,
         /// labeled using the Java package naming convention and stored as arbitrary JSON values.
         #[serde(flatten)]
         custom_capabilities: BTreeMap<String, JsonValue>,
+    }
+
+    impl<'de> Deserialize<'de> for Capabilities {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            #[derive(Deserialize)]
+            #[allow(deprecated)]
+            struct CapabilitiesDeHelper {
+                #[serde(rename = "m.change_password", default)]
+                change_password: ChangePasswordCapability,
+                #[serde(rename = "m.room_versions", default)]
+                room_versions: RoomVersionsCapability,
+                #[serde(rename = "m.set_displayname", default)]
+                set_displayname: SetDisplayNameCapability,
+                #[serde(rename = "m.set_avatar_url", default)]
+                set_avatar_url: SetAvatarUrlCapability,
+                #[serde(rename = "m.3pid_changes", default)]
+                thirdparty_id_changes: ThirdPartyIdChangesCapability,
+                #[serde(rename = "m.get_login_token", default)]
+                get_login_token: GetLoginTokenCapability,
+                #[serde(rename = "m.profile_fields", alias = "uk.tcpip.msc4133.profile_fields")]
+                profile_fields: Option<ProfileFieldsCapability>,
+                #[serde(rename = "m.forget_forced_upon_leave", default)]
+                forget_forced_upon_leave: ForgetForcedUponLeaveCapability,
+                #[serde(rename = "m.account_moderation", default)]
+                account_moderation: AccountModerationCapability,
+                #[cfg(feature = "unstable-msc4540")]
+                #[serde(rename = "org.continuwuity.msc4540.admin", default)]
+                admin: AdminCapability,
+                #[serde(flatten)]
+                custom_capabilities: BTreeMap<String, JsonValue>,
+            }
+
+            let mut capabilities = JsonMap::deserialize(deserializer)?;
+            // Servers may send both names, which serde rejects as a duplicate field.
+            if capabilities.contains_key("m.profile_fields") {
+                capabilities.remove("uk.tcpip.msc4133.profile_fields");
+            }
+            let helper = CapabilitiesDeHelper::deserialize(JsonValue::Object(capabilities))
+                .map_err(de::Error::custom)?;
+
+            #[allow(deprecated)]
+            Ok(Self {
+                change_password: helper.change_password,
+                room_versions: helper.room_versions,
+                set_displayname: helper.set_displayname,
+                set_avatar_url: helper.set_avatar_url,
+                thirdparty_id_changes: helper.thirdparty_id_changes,
+                get_login_token: helper.get_login_token,
+                profile_fields: helper.profile_fields,
+                forget_forced_upon_leave: helper.forget_forced_upon_leave,
+                account_moderation: helper.account_moderation,
+                #[cfg(feature = "unstable-msc4540")]
+                admin: helper.admin,
+                custom_capabilities: helper.custom_capabilities,
+            })
+        }
     }
 
     impl Capabilities {
@@ -183,10 +251,15 @@ pub mod v3 {
                 "m.set_avatar_url" => Some(Cow::Owned(serialize(&self.set_avatar_url))),
                 "m.3pid_changes" => Some(Cow::Owned(serialize(&self.thirdparty_id_changes))),
                 "m.get_login_token" => Some(Cow::Owned(serialize(&self.get_login_token))),
+                "m.profile_fields" | "uk.tcpip.msc4133.profile_fields" => {
+                    self.profile_fields.as_ref().map(|cap| Cow::Owned(serialize(cap)))
+                }
                 "m.forget_forced_upon_leave" => {
                     Some(Cow::Owned(serialize(&self.forget_forced_upon_leave)))
                 }
                 "m.account_moderation" => Some(Cow::Owned(serialize(&self.account_moderation))),
+                #[cfg(feature = "unstable-msc4540")]
+                "org.continuwuity.msc4540.admin" => Some(Cow::Owned(serialize(&self.admin))),
                 _ => self.custom_capabilities.get(capability).map(Cow::Borrowed),
             }
         }
@@ -206,12 +279,17 @@ pub mod v3 {
                 "m.set_avatar_url" => self.set_avatar_url = from_json_value(value)?,
                 "m.3pid_changes" => self.thirdparty_id_changes = from_json_value(value)?,
                 "m.get_login_token" => self.get_login_token = from_json_value(value)?,
+                "m.profile_fields" | "uk.tcpip.msc4133.profile_fields" => {
+                    self.profile_fields = from_json_value(value)?;
+                }
                 "m.forget_forced_upon_leave" => {
                     self.forget_forced_upon_leave = from_json_value(value)?;
                 }
                 "m.account_moderation" => {
                     self.account_moderation = from_json_value(value)?;
                 }
+                #[cfg(feature = "unstable-msc4540")]
+                "org.continuwuity.msc4540.admin" => self.admin = from_json_value(value)?,
                 _ => {
                     self.custom_capabilities.insert(capability.to_owned(), value);
                 }
@@ -499,6 +577,134 @@ pub mod v3 {
         /// Returns whether all fields have their default value.
         pub fn is_default(&self) -> bool {
             !self.suspend && !self.lock
+        }
+    }
+
+    /// Information about the `m.admin` capability. ([MSC4540])
+    ///
+    /// [MSC4540]: https://github.com/matrix-org/matrix-spec-proposals/pull/4540
+    #[cfg(feature = "unstable-msc4540")]
+    #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+    #[cfg_attr(not(ruma_unstable_exhaustive_types), non_exhaustive)]
+    pub struct AdminCapability {
+        /// The scopes the device may request to access administrative functionality.
+        pub allowed_scopes: BTreeSet<OAuthClientScope>,
+    }
+
+    #[cfg(feature = "unstable-msc4540")]
+    impl AdminCapability {
+        /// Create a new [`AdminCapability`].
+        pub fn new(allowed_scopes: BTreeSet<OAuthClientScope>) -> Self {
+            Self { allowed_scopes }
+        }
+
+        /// Returns whether the capability indicates that the authenticated user
+        /// is able to access some administrative functionality.
+        pub fn is_admin(&self) -> bool {
+            !self.allowed_scopes.is_empty()
+        }
+
+        /// Returns whether the admin functionality gated by a particular scope
+        /// is available to the authenticated user.
+        pub fn is_scope_allowed(&self, scope: &OAuthClientScope) -> bool {
+            self.allowed_scopes.contains(scope)
+        }
+
+        /// Returns whether all fields have their default value.
+        fn is_default(&self) -> bool {
+            let Self { allowed_scopes } = self;
+
+            allowed_scopes.is_empty()
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use ruma_common::RoomVersionId;
+        #[cfg(feature = "unstable-msc4540")]
+        use ruma_common::api::OAuthClientScope;
+        use serde_json::to_value as to_json_value;
+
+        #[allow(deprecated)]
+        use super::{
+            AccountModerationCapability, Capabilities, ChangePasswordCapability,
+            ForgetForcedUponLeaveCapability, GetLoginTokenCapability, ProfileFieldsCapability,
+            RoomVersionStability, RoomVersionsCapability, SetAvatarUrlCapability,
+            SetDisplayNameCapability, ThirdPartyIdChangesCapability,
+        };
+
+        /// Capabilities with every typed field set to a non-default value.
+        #[allow(deprecated)]
+        fn non_default_capabilities() -> Capabilities {
+            Capabilities {
+                change_password: ChangePasswordCapability::new(false),
+                room_versions: RoomVersionsCapability::new(
+                    RoomVersionId::V11,
+                    [(RoomVersionId::V11, RoomVersionStability::Stable)].into(),
+                ),
+                set_displayname: SetDisplayNameCapability::new(false),
+                set_avatar_url: SetAvatarUrlCapability::new(false),
+                thirdparty_id_changes: ThirdPartyIdChangesCapability::new(false),
+                get_login_token: GetLoginTokenCapability::new(true),
+                profile_fields: Some(ProfileFieldsCapability::new(true)),
+                forget_forced_upon_leave: ForgetForcedUponLeaveCapability::new(true),
+                account_moderation: AccountModerationCapability::new(true, true),
+                #[cfg(feature = "unstable-msc4540")]
+                admin: super::AdminCapability::new([OAuthClientScope::ApiFullAccess].into()),
+                custom_capabilities: Default::default(),
+            }
+        }
+
+        #[test]
+        fn get_and_set_cover_typed_fields() {
+            let caps = non_default_capabilities();
+            let serialized = to_json_value(&caps).unwrap();
+            let serialized = serialized.as_object().unwrap();
+
+            let mut copy = Capabilities::new();
+            for (name, value) in serialized {
+                assert_eq!(caps.get(name).as_deref(), Some(value), "get({name})");
+                copy.set(name, value.clone()).unwrap();
+            }
+
+            assert!(copy.custom_capabilities.is_empty(), "{:?}", copy.custom_capabilities);
+            assert_eq!(to_json_value(&copy).unwrap(), to_json_value(&caps).unwrap());
+        }
+
+        #[test]
+        fn serialize_deserialize_capabilities() {
+            for mut caps in [Capabilities::new(), non_default_capabilities()] {
+                caps.set("com.example.custom", serde_json::json!({ "enabled": true })).unwrap();
+                let serialized = to_json_value(&caps).unwrap();
+                let deserialized: Capabilities =
+                    serde_json::from_value(serialized.clone()).unwrap();
+
+                assert_eq!(to_json_value(&deserialized).unwrap(), serialized);
+            }
+        }
+
+        #[test]
+        fn deserialize_stable_and_unstable_profile_fields() {
+            let caps: Capabilities = serde_json::from_value(serde_json::json!({
+                "m.profile_fields": { "enabled": true },
+                "uk.tcpip.msc4133.profile_fields": { "enabled": false },
+                "m.room_versions": { "default": "11", "available": { "11": "stable" } },
+            }))
+            .unwrap();
+
+            assert!(caps.profile_fields.unwrap().enabled);
+            assert_eq!(caps.room_versions.default, RoomVersionId::V11);
+            assert!(caps.custom_capabilities.is_empty());
+        }
+
+        #[test]
+        fn deserialize_unstable_profile_fields() {
+            let caps: Capabilities = serde_json::from_value(serde_json::json!({
+                "uk.tcpip.msc4133.profile_fields": { "enabled": true },
+            }))
+            .unwrap();
+
+            assert!(caps.profile_fields.unwrap().enabled);
         }
     }
 }

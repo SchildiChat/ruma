@@ -7,7 +7,7 @@ license = "MIT"
 name = "ruma-client-api"
 readme = "README.md"
 repository = "https://github.com/ruma/ruma"
-version = "0.25.0"
+version = "0.25.2"
 edition = "2024"
 rust-version = { workspace = true }
 
@@ -70,6 +70,11 @@ unstable-msc4446 = []
 unstable-msc4466 = []
 unstable-msc4480 = ["unstable-msc4354"]
 unstable-msc4484 = ["ruma-common/unstable-msc4484"]
+unstable-msc4532 = ["ruma-common/unstable-msc4532", "ruma-events/unstable-msc4532"]
+unstable-msc4536 = ["ruma-common/unstable-msc4536"]
+unstable-msc4540 = []
+unstable-msc4559 = ["unstable-msc4532"]
+unstable-msc4560 = ["ruma-common/unstable-msc4560", "ruma-events/unstable-msc4560"]
 
 [dependencies]
 as_variant = { workspace = true }
@@ -89,7 +94,8 @@ url = { workspace = true, features = ["serde"] }
 web-time = { workspace = true }
 
 [dev-dependencies]
-assert_matches2 = { workspace = true }
+assert_matches = { workspace = true }
+strass = { workspace = true }
 
 [lints]
 workspace = true

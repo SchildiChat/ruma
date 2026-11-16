@@ -44,7 +44,7 @@ use super::{
 /// use ruma_common::{DeviceKeyAlgorithm, DeviceKeyId};
 ///
 /// let k = DeviceKeyId::from_parts(DeviceKeyAlgorithm::Curve25519, "MYDEVICE".into());
-/// assert_eq!(k.as_str(), "curve25519:MYDEVICE");
+/// assert_eq!(k, "curve25519:MYDEVICE");
 /// ```
 #[repr(transparent)]
 #[derive(IdDst)]
@@ -86,10 +86,10 @@ impl<A: KeyAlgorithm, K: KeyName + ?Sized> KeyId<A, K> {
     /// # Example
     ///
     /// ```
-    /// use ruma_common::{DeviceKeyId, device_id};
+    /// use ruma_common::DeviceKeyId;
     ///
     /// let k = DeviceKeyId::parse("ed25519:DEV1").unwrap();
-    /// assert_eq!(k.key_name(), device_id!("DEV1"));
+    /// assert_eq!(k.key_name(), "DEV1");
     /// ```
     pub fn key_name<'a>(&'a self) -> &'a K
     where
@@ -209,6 +209,7 @@ impl KeyAlgorithm for OneTimeKeyAlgorithm {}
 ///
 /// This type has no semantic value and no validation is done. It is meant to be able to use the
 /// [`KeyId`] API without validating the key name.
+#[repr(transparent)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, IdDst)]
 pub struct AnyKeyName(str);
 
@@ -220,7 +221,7 @@ impl KeyName for AnyKeyName {
 
 #[cfg(test)]
 mod tests {
-    use assert_matches2::assert_matches;
+    use assert_matches::assert_matches;
     use ruma_identifiers_validation::Error;
 
     use super::DeviceKeyId;
@@ -248,7 +249,6 @@ mod tests {
     #[test]
     fn empty_algorithm_fails_to_parse() {
         let error = DeviceKeyId::parse(":MYDEVICE").expect_err("Should fail to parse");
-        // Weirdly, this also reports MissingColon
-        assert_matches!(error, Error::MissingColon);
+        assert_matches!(error, Error::Empty);
     }
 }
