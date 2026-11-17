@@ -9,6 +9,11 @@ Breaking changes:
 - The `shared_history` field of `ToDeviceForwardedRoomKeyEventContent` was removed, since it is
   not part of the Matrix spec.
 
+Bug fixes:
+
+- `SessionMembershipData` no longer fails to deserialize when `foci_preferred` is missing. Before,
+  such call member events were deserialized as `CallMemberEventContent::Empty`.
+
 Improvements:
 
 - Add unstable support for [MSC4532] "Revised Social Presence".
@@ -17,6 +22,13 @@ Improvements:
   field (`service_url`) is now optional and deprecated. `LivekitFocus::new()` now only takes the `url`
   of the LiveKit SFU. Constructing a `LivekitFocus` with the `service_url` of the LiveKit JWT service
   is still possible with the deprecated `LivekitFocus::with_service_url()`.
+- `Focus::Livekit` now represents the `m.livekit` focus type from [MSC4195], so
+  `Focus::livekit()` now creates an `m.livekit` focus. The `livekit` focus type used by
+  implementations of earlier versions of MSC4195 moved to the deprecated `Focus::LegacyLivekit`
+  variant. Both variants hold a `LivekitFocus`, so the `livekit_service_url` field remains
+  supported independently of the focus type.
+- `Focus` can now hold foci of unknown types. Use its `new()`, `focus_type()` and `data()`
+  methods to construct and access them.
 
 [MSC4532]: https://github.com/matrix-org/matrix-spec-proposals/pull/4532
 [MSC4195]: https://github.com/matrix-org/matrix-spec-proposals/pull/4195

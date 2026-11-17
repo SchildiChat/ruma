@@ -2,11 +2,22 @@
 
 ## Unreleased
 
+Breaking changes:
+
+- The `membership::get_mutual_rooms::unstable` module is renamed to `msc2666` to match the new
+  unstable endpoint naming convention.
+- The `upload_size` field of the `Response` types of the
+  `authenticated_media::get_media_config::v1` and `media::get_media_config::v3`
+  modules is now an `Option<UInt>`, as `m.upload.size` is optional in the
+  spec. `Response::new()` takes an `Option<UInt>` accordingly.
+
 Bug fixes:
 
 - Deserializing `Capabilities` no longer fails when the server sends both
   `m.profile_fields` and `uk.tcpip.msc4133.profile_fields`. The stable name
   takes precedence.
+- The `sticky_duration_ms` field of `delayed_events::send_delayed_event::msc4140::Request` is now
+  sent in the request body instead of the query string, as required by [MSC4354].
 
 Improvements:
 
@@ -14,13 +25,29 @@ Improvements:
 - Delay fields in `send_delayed_event` requests are now `delay_ms` instead of `delay`.
 - Add unstable support for [MSC4532] "Revised Social Presence".
 - Add unstable support for the `presence` sliding sync extension, as defined in [MSC4559].
-- Add the `url` field from [MSC4195] to `LiveKitRtcTransport`. The
-  `livekit_service_url` field (`service_url`) is now optional and deprecated.
-  LiveKitRtcTransport::new()` and `RtcTransport::livekit()` now take the `url`
-  of the LiveKit SFU instead of the `service_url` of the LiveKit JWT service.
-  Constructing a `LiveKitRtcTransport` with the `service_url` is still possible
-  with the deprecated `LiveKitRtcTransport::with_service_url()`.
+- The following modules are renamed to match the new unstable endpoint naming convention:
+  - `dehydrated_device::*::unstable` are renamed to `msc3814`.
+  - `delayed_events::*::unstable(_v1)` are renamed to `msc4140(_v1)`.
+  - `keys::claim_keys::v4` is renamed to `msc3983`.
+  - `profile::query_profile::unstable` is renamed to `msc4536`.
+  - `rendezvous::create_rendezvous_session::unstable_msc4108` is renamed to `msc4108` and
+    `rendezvous::*::unstable(_msc4388)` are renamed to `msc4388`.
+  - `retention::get_retention_configuration::unstable` is renamed to `msc1763`.
+  - `rtc::livekit::*::v1` are renamed to `msc4195`.
+  - `rtc::transports::v1` is renamed to `msc4143`.
+  - `state::get_stripped_state::unstable` is renamed to `msc4560`.
+  - `sync::sync_events::v5` is renamed to `msc4186`.
+  - `threads::get_thread_subscriptions_changes::unstable` is renamed to `msc4308` and the other
+    `threads::*::unstable` are renamed to `msc4306`.
+- `LiveKitRtcTransport` now represents the `m.livekit` transport type from [MSC4195], so
+  `RtcTransport::LiveKit` and `RtcTransport::livekit()` now hold and create an `m.livekit`
+  transport. The `m.livekit` transport type requires the SFU's WebSocket URL in the `url`
+  field. The `service_url` is now optional and deprecated. The `livekit` transport type
+  used by implementations of earlier versions of MSC4195 moved to the deprecated
+  `RtcTransport::LegacyLiveKit` variant, which holds a deprecated `LegacyLiveKitRtcTransport`.
+  This type can hold either or both of `url` and `livekit_service_url`.
 
+[MSC4354]: https://github.com/matrix-org/matrix-spec-proposals/pull/4354
 [MSC4532]: https://github.com/matrix-org/matrix-spec-proposals/pull/4532
 [MSC4559]: https://github.com/matrix-org/matrix-spec-proposals/pull/4559
 
