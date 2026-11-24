@@ -203,7 +203,11 @@ event_enum! {
 
     /// Any state event.
     enum State {
-        "m.bridge" => super::bridge, // SC
+        // SC start
+        #[ruma_enum(ident = BeeperRoomFeatures)]
+        "com.beeper.room_features" => super::beeper_room_features,
+        "m.bridge" => super::bridge,
+        // SC end
         "m.policy.rule.room" => super::policy::rule::room,
         "m.policy.rule.server" => super::policy::rule::server,
         "m.policy.rule.user" => super::policy::rule::user,

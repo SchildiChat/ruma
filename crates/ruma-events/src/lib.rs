@@ -142,6 +142,8 @@ pub mod macros {
 
 /// SC: m.bridge event
 pub mod bridge;
+/// SC: com.beeper.room_features
+pub mod beeper_room_features;
 
 #[cfg(feature = "unstable-msc3927")]
 pub mod audio;
